@@ -10,7 +10,9 @@ echo "==> 최신 코드 받기"
 git pull --ff-only origin main
 
 echo "==> 의존성 설치"
-npm ci --omit=dev --no-audit --no-fund || npm ci --no-audit --no-fund
+# --omit=dev 를 쓰면 typescript 와 @types/* 가 빠져 바로 아래 빌드가 실패합니다.
+# next build 는 개발 의존성을 필요로 하므로 전체를 설치합니다.
+npm ci --no-audit --no-fund
 
 echo "==> 스키마 반영 (반복 실행 안전)"
 set -a; . ./.env.local; set +a
