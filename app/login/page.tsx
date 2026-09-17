@@ -4,14 +4,6 @@ import { Suspense, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 
-const inputStyle: React.CSSProperties = {
-  width: "100%",
-  padding: "9px 10px",
-  border: "1px solid var(--border)",
-  borderRadius: 6,
-  fontSize: 13,
-};
-
 function LoginForm() {
   const params = useSearchParams();
   const next = params.get("next") || "/";
@@ -53,64 +45,62 @@ function LoginForm() {
 
   return (
     <div className="auth-page">
-      <div style={{ width: "100%", maxWidth: 380 }}>
-        <div className="brand" style={{ marginBottom: 28, justifyContent: "center" }}>
+      <div className="auth-card">
+        <div className="auth-brand">
           <div className="brand-mark">DH</div>
           <div className="brand-text">
             <div className="t1">DH SMART POWER</div>
-            <div className="t2">로그인</div>
+            <div className="t2">변압기 통합 모니터링</div>
           </div>
         </div>
 
         <div className="card">
           <form onSubmit={handleSubmit}>
-            <div style={{ marginBottom: 14 }}>
-              <label style={{ display: "block", marginBottom: 6, fontSize: 12.5, color: "var(--muted)" }}>
-                이메일
-              </label>
+            <div className="auth-field">
+              <label htmlFor="email">이메일</label>
               <input
+                id="email"
                 type="email"
                 autoComplete="username"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="you@example.com"
-                style={inputStyle}
                 required
               />
             </div>
 
-            <div style={{ marginBottom: 14 }}>
-              <label style={{ display: "block", marginBottom: 6, fontSize: 12.5, color: "var(--muted)" }}>
-                비밀번호
-              </label>
+            <div className="auth-field">
+              <label htmlFor="password">비밀번호</label>
               <input
+                id="password"
                 type="password"
                 autoComplete="current-password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
-                style={inputStyle}
                 required
               />
             </div>
 
             {error && (
-              <p role="alert" style={{ color: "var(--danger)", fontSize: 12, marginTop: 10 }}>
+              <p role="alert" className="auth-error">
                 {error}
               </p>
             )}
 
-            <button className="btn primary" type="submit" disabled={loading} style={{ width: "100%", marginTop: 18 }}>
+            <button
+              className="btn primary lg"
+              type="submit"
+              disabled={loading}
+              style={{ width: "100%", marginTop: 14, justifyContent: "center" }}
+            >
               {loading ? "로그인 중..." : "로그인"}
             </button>
           </form>
         </div>
 
-        <p style={{ fontSize: 12.5, color: "var(--muted)", textAlign: "center", marginTop: 14 }}>
-          계정이 없으신가요?{" "}
-          <Link href="/signup" style={{ color: "var(--cyan)" }}>
-            회원가입
-          </Link>
+        <p className="auth-foot">
+          계정이 없으신가요? <Link href="/signup">회원가입</Link>
         </p>
       </div>
     </div>

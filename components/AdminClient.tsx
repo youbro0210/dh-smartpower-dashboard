@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import AppShell from "./AppShell";
+import PageHeader from "./PageHeader";
 
 interface AdminUser {
   id: string;
@@ -99,13 +99,12 @@ export default function AdminClient() {
   const loginPages = Math.max(1, Math.ceil(loginTotal / PAGE_SIZE));
 
   return (
-    <AppShell active="admin">
-      <div className="page-header">
-        <div>
-          <div className="page-title">회원 관리</div>
-          <div className="page-meta">회원 등급 변경 · 로그인 이력 조회</div>
-        </div>
-      </div>
+    <>
+      <PageHeader
+        title="회원 관리"
+        breadcrumb="홈 › 회원관리"
+        subtitle="회원 등급 변경 · 로그인 이력 조회"
+      />
 
       <div className="card">
         <div className="card-head"><div className="card-title"><span className="accent-bar" />전체 회원 ({userTotal})</div></div>
@@ -199,6 +198,6 @@ export default function AdminClient() {
           </div>
         )}
       </div>
-    </AppShell>
+    </>
   );
 }

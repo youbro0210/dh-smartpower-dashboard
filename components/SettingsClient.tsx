@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useDashboard } from "@/lib/configStore";
 import { ThresholdConfig } from "@/lib/types";
-import AppShell from "./AppShell";
+import PageHeader from "./PageHeader";
 
 export default function SettingsClient() {
   const { thresholds, bridges, devices, configVersion, saveThresholds, addDevice, removeDevice } =
@@ -79,15 +79,12 @@ export default function SettingsClient() {
   }
 
   return (
-    <AppShell active="settings">
-      <div className="page-header">
-        <div>
-          <div className="page-title">설정</div>
-          <div className="page-meta">
-            센서 임계치 · 복합 판정 규칙 · 설비 등록 · 설정 버전 {configVersion}
-          </div>
-        </div>
-      </div>
+    <>
+      <PageHeader
+        title="설정"
+        breadcrumb="홈 › 설정"
+        subtitle={`센서 임계치 · 복합 판정 규칙 · 설비 등록 · 설정 버전 ${configVersion}`}
+      />
 
       <div className="card">
         <div className="form-section">
@@ -277,6 +274,6 @@ export default function SettingsClient() {
         설정 값은 서버 데이터베이스(app_config)에 저장되어 모든 관리자에게 동일하게 적용됩니다.
         설정 버전이 올라가면 수집 서버가 이를 감지해 각 브릿지로 MQTT command 를 전달합니다.
       </footer>
-    </AppShell>
+    </>
   );
 }
