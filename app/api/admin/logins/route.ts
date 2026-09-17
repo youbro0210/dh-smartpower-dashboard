@@ -1,33 +1,45 @@
 import { NextResponse } from "next/server";
-import { createSupabaseServerClient } from "@/lib/supabaseServer";
-import { createSupabaseAdminClient } from "@/lib/supabaseAdmin";
+import { requireAdmin } from "@/lib/auth";
+import { query, one } from "@/lib/db";
+
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
 export async function GET(request: Request) {
-  const supabase = createSupabaseServerClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  const admin = await requireAdmin();
+  if (!admin) return NextResponse.json({ error: "관리자 권한이 필요합니다." }, { status: 403 });
 
-  const { data: profile } = await supabase.from("profiles").select("tier").eq("id", user.id).single();
-  if (profile?.tier !== "admin") return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  const params = new URL(request.url).searchParams;
+  const from = params.get("from");
+  const to = params.get("to");
+  const page = Math.max(1, parseInt(params.get("page") ?? "1", 10) || 1);
+  const pageSize = Math.min(100, Math.max(1, parseInt(params.get("pageSize") ?? "20", 10) || 20));
 
-  const { searchParams } = new URL(request.url);
-  const from = searchParams.get("from");
-  const to = searchParams.get("to");
-  const page = Math.max(1, parseInt(searchParams.get("page") ?? "1", 10));
-  const pageSize = Math.max(1, parseInt(searchParams.get("pageSize") ?? "20", 10));
-  const start = (page - 1) * pageSize;
+  const where: string[] = [];
+  const values: unknown[] = [];
 
-  const adminClient = createSupabaseAdminClient();
-  let query = adminClient
-    .from("login_events")
-    .select("*", { count: "exact" })
-    .order("created_at", { ascending: false });
+  if (from) {
+    values.push(from);
+    where.push(`created_at >= $${values.length}::date`);
+  }
+  if (to) {
+    values.push(to);
+    where.push(`created_at < ($${values.length}::date + interval '1 day')`);
+  }
+  const whereSql = where.length ? `WHERE ${where.join(" AND ")}` : "";
 
-  if (from) query = query.gte("created_at", from);
-  if (to) query = query.lte("created_at", `${to}T23:59:59`);
+  const total = await one<{ count: number }>(
+    `SELECT count(*)::int AS count FROM login_events ${whereSql}`,
+    values
+  );
 
-  const { data, error, count } = await query.range(start, start + pageSize - 1);
+  const events = await query(
+    `SELECT id, user_id, email, success, ip, created_at
+       FROM login_events ${whereSql}
+      ORDER BY created_at DESC
+      LIMIT $${values.length + 1} OFFSET $${values.length + 2}`,
+    [...values, pageSize, (page - 1) * pageSize]
+  );
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  return NextResponse.json({ events: data, total: count ?? 0, page, pageSize });
+  return NextResponse.json({ events, total: total?.count ?? 0, page, pageSize });
 }

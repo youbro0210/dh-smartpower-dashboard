@@ -9,7 +9,7 @@ interface AdminUser {
   full_name: string | null;
   tier: string;
   created_at: string;
-  last_sign_in_at: string | null;
+  last_login_at: string | null;
 }
 interface LoginEvent {
   id: number;
@@ -45,7 +45,7 @@ export default function AdminClient() {
     if (userFrom) params.set("from", userFrom);
     if (userTo) params.set("to", userTo);
     const res = await fetch(`/api/admin/users?${params}`);
-    const json = await res.json();
+    const json = await res.json().catch(() => ({}));
     if (!res.ok) {
       setUserError(json.error ?? "회원 목록을 불러오지 못했습니다.");
       setUsers([]);
@@ -65,7 +65,7 @@ export default function AdminClient() {
     if (loginFrom) params.set("from", loginFrom);
     if (loginTo) params.set("to", loginTo);
     const res = await fetch(`/api/admin/logins?${params}`);
-    const json = await res.json();
+    const json = await res.json().catch(() => ({}));
     if (!res.ok) {
       setLoginError(json.error ?? "로그인 이력을 불러오지 못했습니다.");
       setLogins([]);
@@ -138,7 +138,7 @@ export default function AdminClient() {
                   <td>{u.email}</td>
                   <td>{u.full_name ?? "-"}</td>
                   <td className="num" style={{ fontSize: 11.5 }}>{new Date(u.created_at).toLocaleDateString("ko-KR")}</td>
-                  <td className="num" style={{ fontSize: 11.5 }}>{u.last_sign_in_at ? new Date(u.last_sign_in_at).toLocaleString("ko-KR") : "-"}</td>
+                  <td className="num" style={{ fontSize: 11.5 }}>{u.last_login_at ? new Date(u.last_login_at).toLocaleString("ko-KR") : "-"}</td>
                   <td>
                     <select value={u.tier} disabled={savingId === u.id} onChange={(e) => changeTier(u.id, e.target.value)}>
                       <option value="viewer">뷰어</option>

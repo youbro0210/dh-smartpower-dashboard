@@ -1,96 +1,337 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState, ReactNode } from "react";
-import { AppConfig, DeviceRegistry, Bridge, ThresholdConfig } from "./types";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+  ReactNode,
+} from "react";
+import {
+  AlarmEvent,
+  Bridge,
+  DeviceBaseline,
+  DeviceEvaluated,
+  DeviceReading,
+  DeviceRegistry,
+  DeviceTrend,
+  DEFAULT_THRESHOLDS,
+  SensorLevels,
+  ThresholdConfig,
+} from "./types";
+import { evaluateDevice } from "./alarmEngine";
 
-const STORAGE_KEY = "dh-smartpower-config-v1";
-
-const DEFAULT_THRESHOLDS: ThresholdConfig = {
-  h2: { caution: 20, warning: 50, danger: 100 },
-  ch4: { caution: 15, warning: 30, danger: 60 },
-  temperature: { caution: 55, warning: 65, danger: 75 },
-  hysteresisMarginPct: 0.1,
-  compositeEnabled: true,
-  compositeMinSensors: 2,
-};
-
-const DEFAULT_BRIDGES: Bridge[] = [
-  { bridge_id: "BR-1", name: "브릿지 1 (A/B동)", online: true },
-  { bridge_id: "BR-2", name: "브릿지 2 (C/D동)", online: true },
-  { bridge_id: "BR-3", name: "브릿지 3 (E동)", online: true },
-];
-
-const DEFAULT_DEVICES: DeviceRegistry[] = [
-  { device_id: "1", name: "1호기", building: "A동", capacity: "3상 300kVA", bridge_id: "BR-1", base_h2: 6, base_ch4: 2, base_temperature: 52, base_oil_level: "정상" },
-  { device_id: "2", name: "2호기", building: "A동", capacity: "3상 300kVA", bridge_id: "BR-1", base_h2: 25, base_ch4: 6, base_temperature: 58, base_oil_level: "정상" },
-  { device_id: "3", name: "3호기", building: "A동", capacity: "3상 500kVA", bridge_id: "BR-1", base_h2: 9, base_ch4: 3, base_temperature: 50, base_oil_level: "정상" },
-  { device_id: "4", name: "4호기", building: "B동", capacity: "3상 500kVA", bridge_id: "BR-1", base_h2: 110, base_ch4: 35, base_temperature: 76, base_oil_level: "낮음" },
-  { device_id: "5", name: "5호기", building: "B동", capacity: "3상 750kVA", bridge_id: "BR-1", base_h2: 5, base_ch4: 2, base_temperature: 48, base_oil_level: "정상" },
-  { device_id: "6", name: "6호기", building: "C동", capacity: "3상 750kVA", bridge_id: "BR-2", base_h2: 11, base_ch4: 32, base_temperature: 56, base_oil_level: "정상" },
-  { device_id: "7", name: "7호기", building: "C동", capacity: "3상 500kVA", bridge_id: "BR-2", base_h2: 7, base_ch4: 3, base_temperature: 50, base_oil_level: "정상" },
-  { device_id: "8", name: "8호기", building: "D동", capacity: "3상 1000kVA", bridge_id: "BR-2", base_h2: 65, base_ch4: 55, base_temperature: 69, base_oil_level: "낮음" },
-  { device_id: "9", name: "9호기", building: "D동", capacity: "3상 500kVA", bridge_id: "BR-2", base_h2: 8, base_ch4: 3, base_temperature: 49, base_oil_level: "정상" },
-  { device_id: "10", name: "10호기", building: "E동", capacity: "3상 300kVA", bridge_id: "BR-3", base_h2: 22, base_ch4: 5, base_temperature: 55, base_oil_level: "정상" },
-];
-
-const DEFAULT_CONFIG: AppConfig = {
-  thresholds: DEFAULT_THRESHOLDS,
-  devices: DEFAULT_DEVICES,
-  bridges: DEFAULT_BRIDGES,
-};
-
-interface ConfigContextValue {
-  config: AppConfig;
-  updateThresholds: (t: ThresholdConfig) => void;
-  addDevice: (d: DeviceRegistry) => void;
-  removeDevice: (device_id: string) => void;
-  resetToDefault: () => void;
+interface DashboardState {
+  devices: DeviceEvaluated[];
+  bridges: Bridge[];
+  thresholds: ThresholdConfig;
+  alarms: AlarmEvent[];
+  alarms24h: number;
+  configVersion: number;
+  loading: boolean;
+  connected: boolean;
+  error: string | null;
+  refresh: () => Promise<void>;
+  saveThresholds: (next: ThresholdConfig) => Promise<{ ok: boolean; error?: string }>;
+  addDevice: (input: {
+    name: string;
+    building: string;
+    capacity: string;
+    bridge_id: string | null;
+  }) => Promise<{ ok: boolean; error?: string }>;
+  removeDevice: (deviceId: string) => Promise<{ ok: boolean; error?: string }>;
 }
 
-const ConfigContext = createContext<ConfigContextValue | null>(null);
+const DashboardContext = createContext<DashboardState | null>(null);
+
+interface ApiPayload {
+  devices: DeviceRegistry[];
+  bridges: Bridge[];
+  readings: DeviceReading[];
+  trends: Record<string, DeviceTrend>;
+  baselines: (DeviceBaseline & { device_id: string })[];
+  alarms: {
+    id: number;
+    device_id: string | null;
+    unit: string;
+    item: string;
+    level: AlarmEvent["level"];
+    detail: string;
+    created_at: string;
+  }[];
+  alarms24h: number;
+  thresholds: ThresholdConfig;
+  configVersion: number;
+}
+
+function formatTime(iso: string): string {
+  const d = new Date(iso);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
 
 export function ConfigProvider({ children }: { children: ReactNode }) {
-  const [config, setConfig] = useState<AppConfig>(DEFAULT_CONFIG);
-  const [loaded, setLoaded] = useState(false);
+  const [registry, setRegistry] = useState<DeviceRegistry[]>([]);
+  const [bridges, setBridges] = useState<Bridge[]>([]);
+  const [readings, setReadings] = useState<Record<string, DeviceReading>>({});
+  const [trends, setTrends] = useState<Record<string, DeviceTrend>>({});
+  const [baselines, setBaselines] = useState<Record<string, DeviceBaseline>>({});
+  const [thresholds, setThresholds] = useState<ThresholdConfig>(DEFAULT_THRESHOLDS);
+  const [alarms, setAlarms] = useState<AlarmEvent[]>([]);
+  const [alarms24h, setAlarms24h] = useState(0);
+  const [configVersion, setConfigVersion] = useState(1);
+  const [devices, setDevices] = useState<DeviceEvaluated[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [connected, setConnected] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [tick, setTick] = useState(0);
 
-  useEffect(() => {
-    const raw = typeof window !== "undefined" ? window.localStorage.getItem(STORAGE_KEY) : null;
-    if (raw) {
-      try {
-        setConfig(JSON.parse(raw));
-      } catch {
-        // 저장된 값이 손상된 경우 기본값 유지
+  // 센서별 직전 등급. 히스테리시스 판정의 입력이며 렌더 중에는 건드리지 않습니다.
+  const prevLevels = useRef<Record<string, SensorLevels>>({});
+
+  const refresh = useCallback(async () => {
+    try {
+      const res = await fetch("/api/devices", { cache: "no-store" });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        setError(body.error ?? "데이터를 불러오지 못했습니다.");
+        return;
       }
+      const data: ApiPayload = await res.json();
+
+      setRegistry(data.devices ?? []);
+      setBridges(data.bridges ?? []);
+      setTrends(data.trends ?? {});
+      setThresholds(data.thresholds ?? DEFAULT_THRESHOLDS);
+      setConfigVersion(data.configVersion ?? 1);
+      setAlarms24h(data.alarms24h ?? 0);
+
+      setReadings(
+        Object.fromEntries((data.readings ?? []).map((r) => [r.device_id, r]))
+      );
+      setBaselines(
+        Object.fromEntries(
+          (data.baselines ?? []).map((b) => [
+            b.device_id,
+            { h2: b.h2, ch4: b.ch4, temperature: b.temperature },
+          ])
+        )
+      );
+      setAlarms(
+        (data.alarms ?? []).map((a) => ({
+          id: a.id,
+          time: formatTime(a.created_at),
+          unit: a.unit,
+          item: a.item,
+          level: a.level,
+          detail: a.detail,
+          device_id: a.device_id,
+        }))
+      );
+      setError(null);
+    } catch {
+      setError("서버에 연결할 수 없습니다.");
+    } finally {
+      setLoading(false);
     }
-    setLoaded(true);
   }, []);
 
   useEffect(() => {
-    if (loaded) window.localStorage.setItem(STORAGE_KEY, JSON.stringify(config));
-  }, [config, loaded]);
+    void refresh();
+  }, [refresh]);
 
-  function updateThresholds(t: ThresholdConfig) {
-    setConfig((c) => ({ ...c, thresholds: t }));
-  }
-  function addDevice(d: DeviceRegistry) {
-    setConfig((c) => ({ ...c, devices: [...c.devices, d] }));
-  }
-  function removeDevice(device_id: string) {
-    setConfig((c) => ({ ...c, devices: c.devices.filter((d) => d.device_id !== device_id) }));
-  }
-  function resetToDefault() {
-    setConfig(DEFAULT_CONFIG);
-  }
+  // ---- 실시간 구독 (SSE) ----
+  useEffect(() => {
+    let source: EventSource | null = null;
+    let retry: ReturnType<typeof setTimeout> | null = null;
+    let closedByUs = false;
+
+    const connect = () => {
+      source = new EventSource("/api/stream");
+
+      source.addEventListener("ready", () => setConnected(true));
+
+      source.addEventListener("device_reading", (event) => {
+        try {
+          const row = JSON.parse((event as MessageEvent).data) as DeviceReading;
+          setReadings((prev) => ({ ...prev, [row.device_id]: row }));
+        } catch {
+          /* 무시 */
+        }
+      });
+
+      source.addEventListener("alarm_event", (event) => {
+        try {
+          const row = JSON.parse((event as MessageEvent).data);
+          setAlarms((prev) =>
+            [
+              {
+                id: row.id,
+                time: formatTime(row.created_at),
+                unit: row.unit,
+                item: row.item,
+                level: row.level,
+                detail: row.detail,
+                device_id: row.device_id,
+              },
+              ...prev,
+            ].slice(0, 50)
+          );
+          setAlarms24h((n) => n + 1);
+        } catch {
+          /* 무시 */
+        }
+      });
+
+      source.onerror = () => {
+        setConnected(false);
+        source?.close();
+        if (!closedByUs) retry = setTimeout(connect, 5000);
+      };
+    };
+
+    connect();
+
+    return () => {
+      closedByUs = true;
+      if (retry) clearTimeout(retry);
+      source?.close();
+    };
+  }, []);
+
+  // 통신단절은 시간이 지나야 판정되므로 주기적으로 재평가합니다.
+  useEffect(() => {
+    const id = setInterval(() => setTick((n) => n + 1), 30_000);
+    return () => clearInterval(id);
+  }, []);
+
+  // ---- 판정 ----
+  // 렌더 중에 ref 를 수정하면 StrictMode 의 이중 렌더에서 상태가 어긋나므로
+  // 평가는 반드시 이펙트 안에서 수행합니다.
+  useEffect(() => {
+    const evaluated = registry.map((device) => {
+      const reading = readings[device.device_id];
+
+      if (!reading) {
+        return {
+          ...device,
+          device_id: device.device_id,
+          h2: 0,
+          ch4: 0,
+          temperature: 0,
+          oil_level: "정상" as const,
+          updated_at: new Date(0).toISOString(),
+          status: "offline" as const,
+          sensorLevels: {
+            h2: "normal",
+            ch4: "normal",
+            temperature: "normal",
+            oil_level: "normal",
+          } as SensorLevels,
+          causes: ["데이터 없음"],
+          since: "-",
+          trend: trends[device.device_id],
+          baseline: baselines[device.device_id],
+        };
+      }
+
+      const result = evaluateDevice(
+        device,
+        reading,
+        prevLevels.current[device.device_id],
+        thresholds
+      );
+
+      return {
+        ...result,
+        trend: trends[device.device_id],
+        baseline: baselines[device.device_id],
+      };
+    });
+
+    // 다음 판정의 입력이 될 센서별 등급을 갱신합니다.
+    const next: Record<string, SensorLevels> = {};
+    for (const device of evaluated) next[device.device_id] = device.sensorLevels;
+    prevLevels.current = next;
+
+    setDevices(evaluated);
+  }, [registry, readings, thresholds, trends, baselines, tick]);
+
+  // ---- 변경 동작 ----
+  const saveThresholds = useCallback(
+    async (next: ThresholdConfig) => {
+      const res = await fetch("/api/config", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(next),
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) return { ok: false, error: body.error ?? "저장에 실패했습니다." };
+
+      setThresholds(body.thresholds);
+      setConfigVersion(body.version);
+      return { ok: true };
+    },
+    []
+  );
+
+  const addDevice = useCallback(
+    async (input: { name: string; building: string; capacity: string; bridge_id: string | null }) => {
+      const res = await fetch("/api/devices", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(input),
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) return { ok: false, error: body.error ?? "설비 추가에 실패했습니다." };
+      await refresh();
+      return { ok: true };
+    },
+    [refresh]
+  );
+
+  const removeDevice = useCallback(
+    async (deviceId: string) => {
+      const res = await fetch(`/api/devices?device_id=${encodeURIComponent(deviceId)}`, {
+        method: "DELETE",
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) return { ok: false, error: body.error ?? "설비 삭제에 실패했습니다." };
+      await refresh();
+      return { ok: true };
+    },
+    [refresh]
+  );
 
   return (
-    <ConfigContext.Provider value={{ config, updateThresholds, addDevice, removeDevice, resetToDefault }}>
+    <DashboardContext.Provider
+      value={{
+        devices,
+        bridges,
+        thresholds,
+        alarms,
+        alarms24h,
+        configVersion,
+        loading,
+        connected,
+        error,
+        refresh,
+        saveThresholds,
+        addDevice,
+        removeDevice,
+      }}
+    >
       {children}
-    </ConfigContext.Provider>
+    </DashboardContext.Provider>
   );
 }
 
-export function useConfig() {
-  const ctx = useContext(ConfigContext);
-  if (!ctx) throw new Error("useConfig는 ConfigProvider 내부에서만 사용할 수 있습니다");
-  return ctx;
+export function useDashboard(): DashboardState {
+  const context = useContext(DashboardContext);
+  if (!context) {
+    throw new Error("useDashboard 는 ConfigProvider 내부에서만 사용할 수 있습니다.");
+  }
+  return context;
 }

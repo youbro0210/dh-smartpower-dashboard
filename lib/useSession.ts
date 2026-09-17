@@ -1,44 +1,51 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { supabase } from "./supabaseClient";
 
-const AUTH_ENABLED = !!process.env.NEXT_PUBLIC_SUPABASE_URL && !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+export interface SessionUser {
+  id: string;
+  email: string;
+  full_name: string | null;
+  tier: "viewer" | "admin";
+}
 
 export function useSession() {
-  const [email, setEmail] = useState<string | null>(null);
-  const [tier, setTier] = useState<string | null>(null);
-  const [loading, setLoading] = useState(AUTH_ENABLED);
+  const [user, setUser] = useState<SessionUser | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!AUTH_ENABLED) return;
-    let mounted = true;
+    let cancelled = false;
 
     (async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!mounted) return;
-      setEmail(user?.email ?? null);
-      if (user) {
-        const { data } = await supabase.from("profiles").select("tier").eq("id", user.id).single();
-        if (mounted) setTier(data?.tier ?? "viewer");
+      try {
+        const res = await fetch("/api/me", { cache: "no-store" });
+        const json = await res.json();
+        if (!cancelled) setUser(json.user ?? null);
+      } catch {
+        if (!cancelled) setUser(null);
+      } finally {
+        if (!cancelled) setLoading(false);
       }
-      setLoading(false);
     })();
 
-    const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
-      setEmail(session?.user?.email ?? null);
-    });
-
     return () => {
-      mounted = false;
-      sub.subscription.unsubscribe();
+      cancelled = true;
     };
   }, []);
 
   async function logout() {
-    await supabase.auth.signOut();
-    window.location.href = "/login";
+    try {
+      await fetch("/api/auth/logout", { method: "POST" });
+    } finally {
+      window.location.href = "/login";
+    }
   }
 
-  return { email, tier, loading, authEnabled: AUTH_ENABLED, logout };
+  return {
+    user,
+    email: user?.email ?? null,
+    tier: user?.tier ?? null,
+    loading,
+    logout,
+  };
 }

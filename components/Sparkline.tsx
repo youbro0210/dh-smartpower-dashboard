@@ -1,41 +1,73 @@
-function seededSeries(seed: number, base: number, driftUp: boolean) {
-  let s = seed;
-  const rand = () => { s = (s * 9301 + 49297) % 233280; return s / 233280; };
-  const pts: number[] = [];
-  let v = base * 0.55;
-  for (let i = 0; i < 24; i++) {
-    const drift = driftUp ? (i / 24) * (base * 0.5) : 0;
-    v = v + (rand() - 0.45) * base * 0.08 + drift * 0.08;
-    pts.push(Math.max(0, v));
-  }
-  pts.push(base);
-  return pts;
-}
+import { DeviceTrend } from "@/lib/types";
 
-function pathFromSeries(pts: number[], w: number, h: number, min: number, max: number) {
-  const n = pts.length;
-  return pts
-    .map((p, i) => {
-      const x = (i / (n - 1)) * w;
-      const y = h - ((p - min) / (max - min || 1)) * h;
-      return (i === 0 ? "M" : "L") + x.toFixed(1) + "," + y.toFixed(1);
+function buildPath(points: number[], width: number, height: number): string | null {
+  if (points.length < 2) return null;
+
+  const max = Math.max(...points);
+  const min = Math.min(...points);
+  const span = max - min || 1;
+  const top = max + span * 0.15;
+  const bottom = min - span * 0.15;
+  const range = top - bottom || 1;
+
+  return points
+    .map((value, index) => {
+      const x = (index / (points.length - 1)) * width;
+      const y = height - ((value - bottom) / range) * height;
+      return `${index === 0 ? "M" : "L"}${x.toFixed(1)},${y.toFixed(1)}`;
     })
     .join(" ");
 }
 
-export default function Sparkline({ deviceId, temp, h2, isDanger, compact }: { deviceId: string; temp: number; h2: number; isDanger: boolean; compact?: boolean }) {
-  const seed = parseInt(deviceId, 10) || 1;
-  const tempSeries = seededSeries(seed * 7 + 1, temp, isDanger);
-  const h2Series = seededSeries(seed * 13 + 3, h2, isDanger);
-  const tMax = Math.max(...tempSeries) * 1.15, tMin = Math.min(...tempSeries) * 0.85;
-  const hMax = Math.max(...h2Series) * 1.15 || 1, hMin = Math.min(...h2Series) * 0.85;
+/**
+ * 최근 24시간 추세. telemetry 테이블을 시간 단위로 집계한 실측값이며,
+ * 데이터가 없으면 선을 그리지 않고 안내 문구를 표시합니다.
+ */
+export default function Sparkline({
+  trend,
+  compact,
+}: {
+  trend?: DeviceTrend;
+  compact?: boolean;
+}) {
+  const height = compact ? 26 : 70;
+  const width = 300;
 
-  const h = compact ? 26 : 70;
+  const temperaturePath = buildPath(trend?.temperature ?? [], width, height);
+  const h2Path = buildPath(trend?.h2 ?? [], width, height);
+
+  if (!temperaturePath && !h2Path) {
+    return compact ? (
+      <span style={{ fontSize: 11, color: "var(--muted)" }}>-</span>
+    ) : (
+      <div style={{ fontSize: 12, color: "var(--muted)", padding: "22px 0", textAlign: "center" }}>
+        최근 24시간 누적된 계측 이력이 없습니다.
+      </div>
+    );
+  }
 
   return (
-    <svg viewBox={`0 0 300 ${h}`} width="100%" height={h} preserveAspectRatio="none" className={compact ? "mini-spark" : undefined}>
-      <path d={pathFromSeries(tempSeries, 300, h, tMin, tMax)} fill="none" stroke="#d93a3a" strokeWidth={compact ? 1.5 : 2} />
-      <path d={pathFromSeries(h2Series, 300, h, hMin, hMax)} fill="none" stroke="#0e8f9c" strokeWidth={compact ? 1.5 : 2} opacity="0.9" />
+    <svg
+      viewBox={`0 0 ${width} ${height}`}
+      width="100%"
+      height={height}
+      preserveAspectRatio="none"
+      className={compact ? "mini-spark" : undefined}
+      role="img"
+      aria-label="최근 24시간 온도 및 수소가스 추세"
+    >
+      {temperaturePath && (
+        <path d={temperaturePath} fill="none" stroke="#d93a3a" strokeWidth={compact ? 1.5 : 2} />
+      )}
+      {h2Path && (
+        <path
+          d={h2Path}
+          fill="none"
+          stroke="#0e8f9c"
+          strokeWidth={compact ? 1.5 : 2}
+          opacity="0.9"
+        />
+      )}
     </svg>
   );
 }

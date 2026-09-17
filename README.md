@@ -1,263 +1,122 @@
-# DH 스마트파워 대시보드 (Next.js)
+# DH 스마트파워 변압기 통합 모니터링
 
-설계 회의 자료(문서) 기준으로 다시 구성한 버전입니다. 이전 버전과 달라진 점:
+유입변압기의 수소가스·메탄가스·절연유 유면·온도를 실시간으로 감시하고, 임계치와 복합 판정
+규칙에 따라 이상 등급을 산출하는 웹 대시보드입니다.
 
-- 상태 체계를 문서대로 **정상 · 주의 · 경고 · 위험 (+통신단절) 4단계**로 변경
-- KPI를 문서 5장에 나온 지표(정상/주의/경고/위험/통신단절 수, 24h 알람 수, 평균·최대 온도,
-  가스 기준 초과 장비, 브릿지 온라인 상태)로 재구성
-- **`/settings` 페이지**: 센서 임계치, 복합 판정 규칙, 설비 등록을 직접 입력
-- **복합 알람 판정 구조**: 여러 센서가 동시에 이상일 때 등급을 격상하는 로직 (`lib/alarmEngine.ts`)
+외부 서비스 의존 없이 **EC2 한 대에서 전부 동작**합니다. (Next.js + PostgreSQL)
 
-## 실행
+## 구성
+
+```
+현장 센서 ──RS-485(Modbus RTU)──> 브릿지 보드
+         ──MQTT over TLS(8883)──> EC2
+                                   ├─ MQTT 브로커 + 수집 서버
+                                   ├─ PostgreSQL
+                                   └─ nginx → Next.js (이 저장소)
+```
+
+| 계층 | 기술 |
+|---|---|
+| 프런트/서버 | Next.js 14 (App Router), React 18, TypeScript |
+| 데이터베이스 | PostgreSQL 16 (`pg` 드라이버, ORM 미사용) |
+| 인증 | 자체 구현 — scrypt 해시 + 서버 세션 + HMAC 서명 쿠키 |
+| 실시간 | PostgreSQL LISTEN/NOTIFY → Server-Sent Events |
+| 배포 | PM2 + nginx (EC2) |
+
+## 로컬 실행
 
 ```bash
+# PostgreSQL 준비
+createdb dhsmartpower
+
+cp .env.example .env.local
+# DATABASE_URL 을 채우고, AUTH_SECRET 은 아래 명령으로 생성해 넣습니다.
+#   openssl rand -base64 48
+# 로컬(HTTP)에서는 COOKIE_SECURE=false 여야 쿠키가 저장됩니다.
+
 npm install
-cp .env.local.example .env.local   # NEXT_PUBLIC_DATA_SOURCE=mock 상태로 바로 실행 가능
+npm run db:schema          # 스키마 반영 (반복 실행 안전)
+psql "$DATABASE_URL" -f db/seed.sql   # (선택) 설비 10대 등록
+npm run create-admin       # 관리자 계정 생성
 npm run dev
 ```
 
-`/` 가 대시보드, `/settings` 가 설정 화면입니다.
+## 화면
 
-## 판정 구조 (핵심)
+| 경로 | 설명 | 권한 |
+|---|---|---|
+| `/` | 대시보드 — 설비 현황, 상태 필터, 상세 확장, 알람 이력 | 로그인 |
+| `/settings` | 센서 임계치, 복합 판정 규칙, 설비 등록 | 관리자 |
+| `/admin` | 회원 등급 관리, 로그인 이력 | 관리자 |
+| `/login`, `/signup` | 로그인 / 회원가입 | 공개 |
 
-`lib/thresholds.ts`가 센서 하나의 값을 놓고 히스테리시스 판정을 합니다(진입값 이상이면 등급
-진입, 해제는 그보다 낮은 지점에서). `lib/alarmEngine.ts`가 그 결과를 모아서:
+최초 가입자는 자동으로 관리자가 되며, 이후 가입자는 모두 뷰어입니다.
 
-1. 수소·메탄·온도는 임계치로, 유면은 "정상/낮음" 범주로 각각 개별 등급을 매깁니다.
+## 판정 구조
+
+`lib/thresholds.ts` 가 센서 하나의 값을 히스테리시스로 판정하고,
+`lib/alarmEngine.ts` 가 그 결과를 모아 설비의 최종 등급을 냅니다.
+
+1. 수소·메탄·온도는 임계치로, 유면은 정상/낮음 범주로 **각각 개별 등급**을 매깁니다.
 2. 그중 가장 높은 등급을 기본 등급으로 삼습니다.
-3. **복합 판정**: 설정에서 켜져 있으면, 동시에 이상인 센서 수가 기준(기본 2개) 이상일 때
-   등급을 한 단계 더 올립니다. 예를 들어 온도와 수소가스가 각각 "주의" 수준이어도, 둘이
-   동시에 발생하면 "경고"로 격상됩니다 — 개별 지표만으로는 놓치기 쉬운 복합 이상을 잡기 위함입니다.
+3. **복합 판정** — 동시에 이상인 센서 수가 기준(기본 2개) 이상이면 한 단계 격상합니다.
+   온도와 수소가 각각 "주의" 수준이어도 동시에 발생하면 "경고"가 됩니다.
+4. 마지막 수신 후 설정된 시간(기본 15분, 전송 주기 5분 × 3회)이 지나면 통신단절입니다.
 
-이 로직은 설정(`/settings`)에서 바꾼 임계치·규칙을 그대로 읽어서 즉시 재계산하므로,
-설정을 바꾸면 대시보드의 등급 표시도 바로 바뀝니다.
+**히스테리시스의 이전 상태는 반드시 센서별로 보관해야 합니다.** 설비의 종합 등급을
+각 센서에 복사해 넣으면 한 센서의 이상이 다른 센서의 판정을 오염시킵니다.
+`evaluateDevice()` 가 돌려주는 `sensorLevels` 를 그대로 다음 호출에 넘기세요.
 
-## 설정 페이지에서 입력하는 것
+## 데이터 흐름
 
-- **센서 임계치**: 수소가스·메탄가스·온도 각각의 주의/경고/위험 진입값, 히스테리시스 여유
-- **복합 판정 규칙**: 사용 여부, 격상에 필요한 동시 이상 센서 개수
-- **설비 등록**: 이름/위치/용량/담당 브릿지 — 새 변압기를 추가하거나 기존 설비를 제거
+수집 서버(MQTT)는 다음 두 테이블에만 씁니다.
 
-지금은 브라우저의 localStorage에 저장됩니다. 문서 6장의 "설정 변경은 웹 요청 → 설정 버전
-생성 → MQTT command 전달 → 장비 적용 결과 수신" 흐름을 실제로 구현하려면, 이 저장 위치를
-Supabase의 `app_config` 테이블로 옮기고, 저장 시 AWS 수집 서버가 그 변경을 감지해 해당
-장비로 MQTT command를 내려보내는 백엔드 처리가 추가로 필요합니다.
+| 테이블 | 용도 |
+|---|---|
+| `telemetry` | 원본 계측 이력. `(device_id, measured_at)` 유일 제약이 QoS 1 중복 수신을 걸러냅니다. |
+| `device_readings` | 설비별 최신값. `upsert` 하면 트리거가 `NOTIFY` 를 발생시킵니다. |
 
----
+`NOTIFY` → `/api/stream`(SSE) → 브라우저 순으로 전달되며, 판정은 클라이언트에서
+수행되므로 설정 화면에서 임계치를 바꾸면 즉시 반영됩니다.
 
-## 실제 센서 데이터를 받아오는 방법
+설정을 저장하면 `app_config.version` 이 올라갑니다. 수집 서버가 이 값을 감지해
+각 브릿지로 MQTT `set_config` 명령을 내려보내는 구조입니다.
 
-### 1. 전체 그림
+## EC2 배포
 
-```
-현장 센서 → MQTT(AWS EC2) → FastAPI 수집기 → Supabase Postgres ← Next.js(실시간 구독)
-```
-
-AWS 수집 서버(지난번 만든 docker-compose 스캐폴드)가 Supabase의 Postgres에 원본값을
-직접 upsert 하고, Next.js는 그 값을 읽어와 위의 판정 로직(`evaluateDevice`)을 클라이언트에서
-동일하게 돌립니다. 판정 로직을 서버와 클라이언트 양쪽에 두지 않고 클라이언트(설정 화면과
-같은 곳)에만 두는 이유는, 설정을 바꾸는 즉시 화면에 반영되도록 하기 위해서입니다. 다만
-알람 이력을 남기거나 실제 현장에 조치를 내려야 하는 경우에는 AWS 쪽(Celery)에서도
-같은 로직으로 한 번 더 평가해 `alarm_events`에 기록하는 편이 안전합니다(이중 판정).
-
-### 2. Supabase 테이블
-
-```sql
-create table device_readings (
-  device_id text primary key,
-  h2 double precision,
-  ch4 double precision,
-  oil_level text,
-  temperature double precision,
-  updated_at timestamptz not null default now()
-);
-
-create table app_config (
-  id int primary key default 1,
-  thresholds jsonb not null,
-  updated_at timestamptz not null default now()
-);
-```
-AWS 수집 서버는 `device_readings`에만 씁니다(원본 telemetry는 지난번 스캐폴드의
-`telemetry` 테이블에 그대로 남깁니다). Realtime은 Database → Replication에서
-`device_readings` 테이블 토글을 켜야 동작합니다.
-
-### 3. AWS 수집 서버 쪽 변경
-
-`.env`의 `DATABASE_URL`을 Supabase 연결 문자열로 바꾸고, `docker-compose.yml`에서
-로컬 `postgres` 서비스를 제거합니다(Supabase가 그 역할을 대신). MQTT 메시지를 받아
-`telemetry`에 저장하는 것과 별도로, 최신값을 `device_readings`에도 upsert하도록
-`mqtt_client.py`의 `_persist` 함수에 한 단락만 추가하면 됩니다.
-
-### 4. Next.js 쪽 전환
-
-`.env.local`에서 세 줄만 바꾸면 됩니다.
-```
-NEXT_PUBLIC_DATA_SOURCE=live
-NEXT_PUBLIC_SUPABASE_URL=...
-NEXT_PUBLIC_SUPABASE_ANON_KEY=...
-```
-`lib/useDevices.ts`가 `device_readings`를 최초 조회 + 실시간 구독하고, 설정(`/settings`,
-지금은 localStorage 기반)에서 가져온 임계치로 즉시 판정합니다.
-
-### 5. RLS (회원등급별 접근 제어)
-
-```sql
-alter table device_readings enable row level security;
-
-create policy "로그인한 사용자는 조회 가능"
-  on device_readings for select
-  using (auth.role() = 'authenticated');
-```
-설정 화면(`app_config`)은 관리자 등급만 쓰기 가능하도록 별도 정책을 걸어야 합니다:
-```sql
-create policy "관리자만 설정 변경 가능"
-  on app_config for update
-  using (exists (select 1 from profiles where profiles.id = auth.uid() and profiles.tier = 'admin'));
+```bash
+# Ubuntu 24.04 인스턴스에서 (t3.small 이상 권장)
+curl -fsSL https://raw.githubusercontent.com/youbro0210/dh-smartpower-dashboard/main/deploy/provision.sh -o provision.sh
+sudo bash provision.sh monitor.회사도메인.com
 ```
 
-### 6. 아직 남은 작업
+스왑 구성, Node 20 · PostgreSQL 16 · nginx · PM2 설치, DB 생성, 스키마 반영,
+빌드, 기동, 방화벽 설정까지 한 번에 수행합니다.
 
-- 설정(`app_config`)을 localStorage 대신 Supabase로 옮기고, 저장 시 AWS 쪽에 변경을
-  알리는 방법(예: Supabase Realtime을 AWS 수집 서버도 함께 구독) 구현
-- 추세 그래프는 지금 의사 데이터입니다 — 실제로는 `telemetry`에서 최근 24시간을 집계해야 합니다
-- 알람 이력(`alarm_events`)을 실제 테이블로 옮기고 realtime 구독으로 전환
+이후 재배포는 `./deploy/deploy.sh` 입니다.
 
----
+### HTTPS
 
-## 회원 관리 / 로그인 이력
-
-`/admin` 페이지(사이드바 "회원관리", 관리자 등급만 보임)에서 전체 회원의 등급을 바꾸고
-최근 로그인 이력을 볼 수 있습니다.
-
-### 1. 필요한 테이블
-
-```sql
-create table login_events (
-  id bigint generated by default as identity primary key,
-  user_id uuid references auth.users(id) on delete set null,
-  email text,
-  created_at timestamptz not null default now()
-);
-
-alter table login_events enable row level security;
--- 별도 select/insert 정책을 만들지 않습니다 (deny-all).
--- 이 테이블은 서버의 service_role 클라이언트로만 읽고 씁니다.
+```bash
+sudo apt-get install -y certbot python3-certbot-nginx
+sudo certbot --nginx -d monitor.회사도메인.com
 ```
 
-### 2. service_role(Secret) 키 설정
+발급 후 `.env.local` 의 `COOKIE_SECURE=true` 로 바꾸고 `npm run build && pm2 reload dh-dashboard`.
 
-Supabase 대시보드 > Project Settings > API Keys > **Secret keys**에서
-`sb_secret_...` 값을 복사해 `.env.local`에 추가합니다.
+### 주의사항
 
-```
-SUPABASE_SERVICE_ROLE_KEY=sb_secret_...
-```
+- **SSE 는 nginx 버퍼링이 꺼져 있어야 동작합니다.** `deploy/nginx.conf` 의
+  `/api/stream` 블록에 `proxy_buffering off` 가 있습니다.
+- 빌드가 순간적으로 1GB 이상 쓰므로 1GB 인스턴스에서는 스왑이 필수입니다.
+- `AUTH_SECRET` 을 바꾸면 기존 로그인 세션이 전부 무효화됩니다.
 
-이 키는 RLS를 완전히 우회하는 강력한 키라서, **절대 `NEXT_PUBLIC_` 접두어를 붙이지 않고**
-서버 코드(`app/api/**/route.ts`)에서만 사용해야 합니다. `lib/supabaseAdmin.ts`가 이 역할을 합니다.
+## 보안
 
-### 3. 내 계정을 관리자로 올리기
-
-가입 직후에는 모두 `viewer` 등급입니다. 처음 관리자 계정을 만들 때는 Supabase
-Table Editor에서 직접 바꿔야 합니다: `profiles` 테이블 → 본인 이메일에 해당하는 행 →
-`tier` 컬럼을 `admin`으로 수정. 이후부터는 `/admin` 화면에서 다른 회원의 등급도
-바꿀 수 있습니다.
-
-### 4. 동작 방식
-
-- `/api/admin/users` (GET/PATCH): 관리자만 호출 가능. Supabase Auth의 전체 사용자 목록과
-  `profiles.tier`를 합쳐서 보여주고, PATCH로 등급을 변경합니다.
-- `/api/admin/logins` (GET): 관리자만 호출 가능. `login_events`에서 최근 100건을 가져옵니다.
-- `/api/log-login` (POST): 로그인 성공 직후 `app/login/page.tsx`에서 호출해
-  `login_events`에 한 줄을 남깁니다.
-
-
----
-
-## 회원가입 / 로그인 (Supabase Auth)
-
-`.env.local`에 `NEXT_PUBLIC_SUPABASE_URL`과 `NEXT_PUBLIC_SUPABASE_ANON_KEY`를 채우는
-순간부터 `middleware.ts`가 모든 경로를 로그인 필수로 바꿉니다. 그 전(순수 mock 실행)에는
-로그인 없이 그대로 동작합니다.
-
-### 1. profiles 테이블 (회원등급)
-
-```sql
-create table profiles (
-  id uuid primary key references auth.users(id) on delete cascade,
-  full_name text,
-  tier text not null default 'viewer',  -- 'viewer' | 'admin'
-  created_at timestamptz not null default now()
-);
-
-alter table profiles enable row level security;
-
-create policy "본인 프로필은 조회 가능"
-  on profiles for select
-  using (auth.uid() = id);
-
--- 회원가입 시 자동으로 profiles row 생성 (기본 등급 viewer)
-create function public.handle_new_user()
-returns trigger as $$
-begin
-  insert into public.profiles (id, full_name, tier)
-  values (new.id, new.raw_user_meta_data->>'full_name', 'viewer');
-  return new;
-end;
-$$ language plpgsql security definer;
-
-create trigger on_auth_user_created
-  after insert on auth.users
-  for each row execute procedure public.handle_new_user();
-```
-
-새 계정은 항상 `viewer`로 시작합니다. 관리자로 올리려면 Supabase Table Editor에서
-해당 사용자의 `tier`를 `admin`으로 직접 바꿔주면 됩니다(운영 초기엔 이 방식으로 충분하고,
-나중에 관리자 화면을 따로 만들어도 됩니다).
-
-### 2. 접근 제어가 적용되는 부분
-
-- **미들웨어**: 비로그인 사용자는 `/login`으로 강제 이동 (`/login`, `/signup`, `/auth/callback`은 예외)
-- **`/settings`**: 서버에서 `profiles.tier`를 확인해 `admin`이 아니면 대시보드로 안내만 하고 폼을 보여주지 않습니다
-- **`device_readings`, `telemetry` 등 실 데이터 테이블**: 이전에 안내한 RLS 정책(`auth.role() = 'authenticated'` 등)을 그대로 적용하면 됩니다
-
-### 3. Supabase 프로젝트 설정 (필수)
-
-Authentication → URL Configuration에서:
-- **Site URL**: 배포한 실제 도메인 (예: `https://dh-monitor.vercel.app`)
-- **Redirect URLs**: 위 도메인 + `/auth/callback` 추가
-
-로컬에서만 테스트할 땐 `http://localhost:3000`도 같이 등록해두면 편합니다.
-이메일 인증 확인 여부는 Authentication → Providers → Email 에서 켜고 끌 수 있습니다
-(테스트 단계에서는 꺼두면 가입 즉시 로그인 가능).
-
----
-
-## 외부에서 접근 가능하게 배포하기 (Vercel)
-
-로컬(`localhost:3000`)이 아니라 실제 URL로 접근하려면 Next.js 앱을 어딘가에 올려야 합니다.
-AWS EC2는 이미 MQTT 수집 서버로 쓰고 있으니, 프런트엔드는 **Vercel 무료 플랜**에 올리는 게
-가장 간단하고 비용도 들지 않습니다.
-
-1. 이 프로젝트를 GitHub 저장소로 올립니다 (`git init` → commit → push).
-2. [vercel.com](https://vercel.com) 에서 GitHub 저장소를 연결하고 "Import"만 누르면 됩니다
-   (Next.js는 별도 빌드 설정 없이 자동 인식됩니다).
-3. Vercel 프로젝트 설정 → Environment Variables에 `.env.local`과 동일하게 등록:
-   - `NEXT_PUBLIC_DATA_SOURCE=live`
-   - `NEXT_PUBLIC_SUPABASE_URL`
-   - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-4. 배포가 끝나면 `https://<프로젝트명>.vercel.app` 같은 주소가 생깁니다.
-   이 주소를 위 Supabase Site URL / Redirect URLs에 등록해야 로그인이 정상 동작합니다.
-5. 회사 도메인을 쓰고 싶다면 Vercel 프로젝트 → Domains에서 원하는 서브도메인
-   (예: `monitor.회사도메인.com`)을 연결하고, 도메인 DNS에 Vercel이 안내하는 CNAME을 추가합니다.
-
-이렇게 하면 최종 구조는:
-
-```
-현장 센서 → MQTT(AWS EC2) → Supabase Postgres ← Next.js(Vercel, 외부 접속 가능) → 사용자
-```
-
-AWS EC2는 계속 비공개로 두고(8883 포트만 현장 장비에 열어두고) MQTT 수집만 담당하며,
-사람이 접속하는 화면은 Vercel의 공개 URL로 분리되는 구조라 보안 관점에서도 깔끔합니다.
-
+- 비밀번호는 scrypt(N=16384)로 해시하며 평문은 저장하지 않습니다.
+- 세션은 서버 테이블에 보관하므로 즉시 폐기할 수 있습니다. 등급 변경 시 해당 사용자의
+  세션은 자동으로 끊깁니다.
+- 미들웨어는 쿠키 서명만 검증하고, **실제 권한 판정은 각 서버 컴포넌트와 API 라우트가
+  DB를 조회해 직접 수행합니다.** 미들웨어 우회 취약점이 있더라도 권한이 뚫리지 않습니다.
+- 로그인 실패는 계정당 10분 내 10회로 제한되며, 존재하지 않는 계정도 동일한 시간을
+  소비해 가입 여부가 드러나지 않습니다.

@@ -10,7 +10,7 @@ export default function AppShell({
   active: "dashboard" | "settings" | "admin";
   children: React.ReactNode;
 }) {
-  const { email, tier, authEnabled, logout } = useSession();
+  const { email, tier, loading, logout } = useSession();
 
   return (
     <div className="shell">
@@ -25,29 +25,36 @@ export default function AppShell({
 
         <nav className="sidebar-nav">
           <Link href="/" className={`nav-item${active === "dashboard" ? " active" : ""}`}>
-            <span className="nav-dot" />대시보드
+            <span className="nav-dot" />
+            대시보드
           </Link>
           {tier === "admin" && (
             <Link href="/admin" className={`nav-item${active === "admin" ? " active" : ""}`}>
-              <span className="nav-dot" />회원관리
+              <span className="nav-dot" />
+              회원관리
             </Link>
           )}
           <Link href="/settings" className={`nav-item${active === "settings" ? " active" : ""}`}>
-            <span className="nav-dot" />설정
+            <span className="nav-dot" />
+            설정
           </Link>
         </nav>
 
         <div className="sidebar-foot">
-          {authEnabled && email ? (
+          {loading ? (
+            <div className="sidebar-user">확인 중...</div>
+          ) : email ? (
             <>
               <div className="sidebar-user">
                 {email}
                 <span className="tier-tag">{tier === "admin" ? "관리자" : "뷰어"}</span>
               </div>
-              <button className="sidebar-logout" onClick={logout}>로그아웃</button>
+              <button className="sidebar-logout" onClick={logout}>
+                로그아웃
+              </button>
             </>
           ) : (
-            <div className="sidebar-user">가상 데이터 모드</div>
+            <div className="sidebar-user">로그인 필요</div>
           )}
         </div>
       </aside>

@@ -1,61 +1,99 @@
-import { DeviceReading, DeviceRegistry, DeviceEvaluated, SeverityLevel, ThresholdConfig } from "./types";
+import {
+  DeviceReading,
+  DeviceRegistry,
+  DeviceEvaluated,
+  SensorLevels,
+  SeverityLevel,
+  SEVERITY_ORDER,
+  ThresholdConfig,
+} from "./types";
 import { classifySensor, escalate } from "./thresholds";
 
-const OFFLINE_MINUTES = 15; // 문서 6장: Heartbeat 3회 누락 시 OFFLINE 판정 (전송 주기 5분 가정)
+const NORMAL_LEVELS: SensorLevels = {
+  h2: "normal",
+  ch4: "normal",
+  temperature: "normal",
+  oil_level: "normal",
+};
+
+const SENSOR_LABEL: Record<keyof SensorLevels, string> = {
+  h2: "수소가스",
+  ch4: "메탄가스",
+  temperature: "온도",
+  oil_level: "유면",
+};
+
+function maxLevel(levels: SeverityLevel[]): SeverityLevel {
+  return levels.reduce<SeverityLevel>(
+    (max, level) =>
+      SEVERITY_ORDER.indexOf(level) > SEVERITY_ORDER.indexOf(max) ? level : max,
+    "normal"
+  );
+}
 
 /**
  * 설비 하나의 h2 / ch4 / temperature / oil_level 값을 개별 판정한 뒤,
  * "동시에 몇 개 센서가 이상 상태인지"를 조합해 최종 등급을 결정합니다.
- * - 개별 임계치만으로는 각각 '주의'인 두 지표가, 동시에 발생하면 실제로는
- *   더 위험한 상황일 수 있다는 문서의 취지를 반영한 구조입니다.
+ *
+ * prev 에는 반드시 직전 호출이 돌려준 sensorLevels 를 그대로 넘겨야 합니다.
+ * 설비의 종합 등급을 각 센서에 복사해 넣으면 한 센서의 이상이 다른 센서의
+ * 히스테리시스 판정을 오염시켜 등급이 잘못 유지됩니다.
  */
 export function evaluateDevice(
   registry: DeviceRegistry,
   reading: DeviceReading,
-  prev: { h2: SeverityLevel; ch4: SeverityLevel; temperature: SeverityLevel } | undefined,
+  prev: SensorLevels | undefined,
   config: ThresholdConfig
 ): DeviceEvaluated {
-  const minutesSinceUpdate = (Date.now() - new Date(reading.updated_at).getTime()) / 60000;
-  if (minutesSinceUpdate > OFFLINE_MINUTES) {
+  const previous = prev ?? NORMAL_LEVELS;
+  const offlineMinutes = config.offlineMinutes ?? 15;
+  const minutesSinceUpdate =
+    (Date.now() - new Date(reading.updated_at).getTime()) / 60000;
+
+  if (!Number.isFinite(minutesSinceUpdate) || minutesSinceUpdate > offlineMinutes) {
     return {
       ...registry,
       ...reading,
       status: "offline",
+      sensorLevels: NORMAL_LEVELS,
       causes: ["통신 두절"],
       since: reading.updated_at,
     };
   }
 
-  const h2Level = classifySensor(reading.h2, config.h2, prev?.h2 ?? "normal", config.hysteresisMarginPct);
-  const ch4Level = classifySensor(reading.ch4, config.ch4, prev?.ch4 ?? "normal", config.hysteresisMarginPct);
-  const tempLevel = classifySensor(reading.temperature, config.temperature, prev?.temperature ?? "normal", config.hysteresisMarginPct);
-  const oilLevel: SeverityLevel = reading.oil_level === "낮음" ? "warning" : "normal";
+  const sensorLevels: SensorLevels = {
+    h2: classifySensor(reading.h2, config.h2, previous.h2, config.hysteresisMarginPct),
+    ch4: classifySensor(reading.ch4, config.ch4, previous.ch4, config.hysteresisMarginPct),
+    temperature: classifySensor(
+      reading.temperature,
+      config.temperature,
+      previous.temperature,
+      config.hysteresisMarginPct
+    ),
+    oil_level: reading.oil_level === "낮음" ? "warning" : "normal",
+  };
 
-  const levels: { name: string; level: SeverityLevel }[] = [
-    { name: "수소가스", level: h2Level },
-    { name: "메탄가스", level: ch4Level },
-    { name: "온도", level: tempLevel },
-    { name: "유면", level: oilLevel },
-  ];
+  const entries = Object.entries(sensorLevels) as [keyof SensorLevels, SeverityLevel][];
+  const abnormal = entries.filter(([, level]) => level !== "normal");
 
-  const abnormal = levels.filter((l) => l.level !== "normal");
-  let overall: SeverityLevel = levels.reduce(
-    (max, l) => (["normal", "caution", "warning", "danger"].indexOf(l.level) > ["normal", "caution", "warning", "danger"].indexOf(max) ? l.level : max),
-    "normal" as SeverityLevel
-  );
+  let overall = maxLevel(entries.map(([, level]) => level));
 
   // ---- 복합 판정: 동시에 이상인 센서가 기준 개수 이상이면 한 단계 격상 ----
   if (config.compositeEnabled && abnormal.length >= config.compositeMinSensors) {
     overall = escalate(overall);
   }
 
-  const causes = abnormal.map((l) => `${l.name} ${l.level === "danger" ? "급증/급상승" : "상승"}`);
+  const causes = abnormal.map(([key, level]) => {
+    if (key === "oil_level") return "유면 낮음";
+    return `${SENSOR_LABEL[key]} ${level === "danger" ? "급증/급상승" : "상승"}`;
+  });
 
   return {
     ...registry,
     ...reading,
     status: overall,
-    causes: causes.length ? causes : [],
+    sensorLevels,
+    causes,
     since: reading.updated_at,
   };
 }

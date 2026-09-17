@@ -1,43 +1,81 @@
 "use client";
 
-import { useState } from "react";
-import { useConfig } from "@/lib/configStore";
-import { ThresholdConfig, DeviceRegistry } from "@/lib/types";
+import { useEffect, useState } from "react";
+import { useDashboard } from "@/lib/configStore";
+import { ThresholdConfig } from "@/lib/types";
 import AppShell from "./AppShell";
 
 export default function SettingsClient() {
-  const { config, updateThresholds, addDevice, removeDevice, resetToDefault } = useConfig();
-  const [form, setForm] = useState<ThresholdConfig>(config.thresholds);
-  const [saved, setSaved] = useState(false);
+  const { thresholds, bridges, devices, configVersion, saveThresholds, addDevice, removeDevice } =
+    useDashboard();
 
-  const [newDevice, setNewDevice] = useState({ name: "", building: "", capacity: "", bridge_id: config.bridges[0]?.bridge_id ?? "" });
+  const [form, setForm] = useState<ThresholdConfig>(thresholds);
+  const [message, setMessage] = useState<{ kind: "ok" | "error"; text: string } | null>(null);
+  const [saving, setSaving] = useState(false);
 
-  function setSensor(sensor: "h2" | "ch4" | "temperature", tier: "caution" | "warning" | "danger", value: number) {
+  const [newDevice, setNewDevice] = useState({
+    name: "",
+    building: "",
+    capacity: "",
+    bridge_id: "",
+  });
+
+  // 서버에서 설정을 받아오면 폼 초기값을 맞춥니다.
+  useEffect(() => setForm(thresholds), [thresholds]);
+
+  useEffect(() => {
+    if (!newDevice.bridge_id && bridges.length) {
+      setNewDevice((prev) => ({ ...prev, bridge_id: bridges[0].bridge_id }));
+    }
+  }, [bridges, newDevice.bridge_id]);
+
+  function setSensor(
+    sensor: "h2" | "ch4" | "temperature",
+    tier: "caution" | "warning" | "danger",
+    value: number
+  ) {
     setForm((f) => ({ ...f, [sensor]: { ...f[sensor], [tier]: value } }));
   }
 
-  function handleSave() {
-    updateThresholds(form);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2500);
+  async function handleSave() {
+    setSaving(true);
+    setMessage(null);
+    const result = await saveThresholds(form);
+    setSaving(false);
+    setMessage(
+      result.ok
+        ? { kind: "ok", text: "저장되었습니다. 모든 사용자 화면에 즉시 반영됩니다." }
+        : { kind: "error", text: result.error ?? "저장에 실패했습니다." }
+    );
+    if (result.ok) setTimeout(() => setMessage(null), 4000);
   }
 
-  function handleAddDevice() {
-    if (!newDevice.name || !newDevice.building) return;
-    const nextId = String(Math.max(0, ...config.devices.map((d) => parseInt(d.device_id, 10))) + 1);
-    const device: DeviceRegistry = {
-      device_id: nextId,
-      name: newDevice.name,
-      building: newDevice.building,
-      capacity: newDevice.capacity || "3상 500kVA",
-      bridge_id: newDevice.bridge_id,
-      base_h2: 6,
-      base_ch4: 2,
-      base_temperature: 50,
-      base_oil_level: "정상",
-    };
-    addDevice(device);
-    setNewDevice({ name: "", building: "", capacity: "", bridge_id: config.bridges[0]?.bridge_id ?? "" });
+  async function handleAddDevice() {
+    if (!newDevice.name.trim() || !newDevice.building.trim()) {
+      setMessage({ kind: "error", text: "이름과 위치는 필수입니다." });
+      return;
+    }
+    const result = await addDevice({
+      name: newDevice.name.trim(),
+      building: newDevice.building.trim(),
+      capacity: newDevice.capacity.trim(),
+      bridge_id: newDevice.bridge_id || null,
+    });
+    if (result.ok) {
+      setNewDevice({ name: "", building: "", capacity: "", bridge_id: bridges[0]?.bridge_id ?? "" });
+      setMessage({ kind: "ok", text: "설비가 등록되었습니다." });
+    } else {
+      setMessage({ kind: "error", text: result.error ?? "설비 추가에 실패했습니다." });
+    }
+  }
+
+  async function handleRemoveDevice(deviceId: string, name: string) {
+    const result = await removeDevice(deviceId);
+    setMessage(
+      result.ok
+        ? { kind: "ok", text: `${name} 설비를 삭제했습니다.` }
+        : { kind: "error", text: result.error ?? "삭제에 실패했습니다." }
+    );
   }
 
   return (
@@ -45,7 +83,9 @@ export default function SettingsClient() {
       <div className="page-header">
         <div>
           <div className="page-title">설정</div>
-          <div className="page-meta">센서 임계치 · 복합 판정 규칙 · 설비 등록</div>
+          <div className="page-meta">
+            센서 임계치 · 복합 판정 규칙 · 설비 등록 · 설정 버전 {configVersion}
+          </div>
         </div>
       </div>
 
@@ -58,33 +98,65 @@ export default function SettingsClient() {
           </p>
           <table className="threshold-table">
             <thead>
-              <tr><th>센서</th><th>주의</th><th>경고</th><th>위험</th></tr>
+              <tr>
+                <th>센서</th>
+                <th>주의</th>
+                <th>경고</th>
+                <th>위험</th>
+              </tr>
             </thead>
             <tbody>
-              <tr>
-                <td>수소가스 (ppm)</td>
-                <td><input type="number" value={form.h2.caution} onChange={(e) => setSensor("h2", "caution", +e.target.value)} /></td>
-                <td><input type="number" value={form.h2.warning} onChange={(e) => setSensor("h2", "warning", +e.target.value)} /></td>
-                <td><input type="number" value={form.h2.danger} onChange={(e) => setSensor("h2", "danger", +e.target.value)} /></td>
-              </tr>
-              <tr>
-                <td>메탄가스 (ppm)</td>
-                <td><input type="number" value={form.ch4.caution} onChange={(e) => setSensor("ch4", "caution", +e.target.value)} /></td>
-                <td><input type="number" value={form.ch4.warning} onChange={(e) => setSensor("ch4", "warning", +e.target.value)} /></td>
-                <td><input type="number" value={form.ch4.danger} onChange={(e) => setSensor("ch4", "danger", +e.target.value)} /></td>
-              </tr>
-              <tr>
-                <td>온도 (℃)</td>
-                <td><input type="number" value={form.temperature.caution} onChange={(e) => setSensor("temperature", "caution", +e.target.value)} /></td>
-                <td><input type="number" value={form.temperature.warning} onChange={(e) => setSensor("temperature", "warning", +e.target.value)} /></td>
-                <td><input type="number" value={form.temperature.danger} onChange={(e) => setSensor("temperature", "danger", +e.target.value)} /></td>
-              </tr>
+              {(
+                [
+                  ["h2", "수소가스 (ppm)"],
+                  ["ch4", "메탄가스 (ppm)"],
+                  ["temperature", "온도 (℃)"],
+                ] as const
+              ).map(([key, label]) => (
+                <tr key={key}>
+                  <td>{label}</td>
+                  {(["caution", "warning", "danger"] as const).map((tier) => (
+                    <td key={tier}>
+                      <input
+                        type="number"
+                        value={form[key][tier]}
+                        onChange={(e) => setSensor(key, tier, Number(e.target.value))}
+                      />
+                    </td>
+                  ))}
+                </tr>
+              ))}
             </tbody>
           </table>
+
           <div className="form-row">
             <label>히스테리시스 여유</label>
-            <input type="number" step="0.01" value={form.hysteresisMarginPct} onChange={(e) => setForm((f) => ({ ...f, hysteresisMarginPct: +e.target.value }))} />
-            <span style={{ fontSize: 11.5, color: "var(--muted)" }}>비율 (0.1 = 진입값보다 10% 낮아지면 해제)</span>
+            <input
+              type="number"
+              step="0.01"
+              min={0}
+              max={0.99}
+              value={form.hysteresisMarginPct}
+              onChange={(e) =>
+                setForm((f) => ({ ...f, hysteresisMarginPct: Number(e.target.value) }))
+              }
+            />
+            <span style={{ fontSize: 11.5, color: "var(--muted)" }}>
+              비율 (0.1 = 진입값보다 10% 낮아지면 해제)
+            </span>
+          </div>
+
+          <div className="form-row">
+            <label>통신단절 판정</label>
+            <input
+              type="number"
+              min={1}
+              value={form.offlineMinutes}
+              onChange={(e) => setForm((f) => ({ ...f, offlineMinutes: Number(e.target.value) }))}
+            />
+            <span style={{ fontSize: 11.5, color: "var(--muted)" }}>
+              분 이상 데이터 미수신 시 통신단절 (전송 주기 5분 기준 15분 권장)
+            </span>
           </div>
         </div>
 
@@ -96,19 +168,41 @@ export default function SettingsClient() {
           </p>
           <div className="form-row">
             <label>복합 판정 사용</label>
-            <input type="checkbox" checked={form.compositeEnabled} onChange={(e) => setForm((f) => ({ ...f, compositeEnabled: e.target.checked }))} />
+            <input
+              type="checkbox"
+              checked={form.compositeEnabled}
+              onChange={(e) => setForm((f) => ({ ...f, compositeEnabled: e.target.checked }))}
+            />
           </div>
           <div className="form-row">
             <label>격상 기준 센서 수</label>
-            <input type="number" min={2} max={4} value={form.compositeMinSensors} onChange={(e) => setForm((f) => ({ ...f, compositeMinSensors: +e.target.value }))} />
-            <span style={{ fontSize: 11.5, color: "var(--muted)" }}>개 이상 동시 이상 시 한 단계 격상 (수소·메탄·온도·유면 중)</span>
+            <input
+              type="number"
+              min={2}
+              max={4}
+              value={form.compositeMinSensors}
+              onChange={(e) =>
+                setForm((f) => ({ ...f, compositeMinSensors: Number(e.target.value) }))
+              }
+            />
+            <span style={{ fontSize: 11.5, color: "var(--muted)" }}>
+              개 이상 동시 이상 시 한 단계 격상 (수소·메탄·온도·유면 중)
+            </span>
           </div>
         </div>
 
         <div className="save-bar">
-          <button className="btn primary" onClick={handleSave}>저장</button>
-          <button className="btn ghost" onClick={resetToDefault}>기본값으로 초기화</button>
-          {saved && <span className="save-msg">저장되었습니다 · 실제 운영에서는 이 변경이 MQTT command로 각 장비에 전달됩니다</span>}
+          <button className="btn primary" onClick={handleSave} disabled={saving}>
+            {saving ? "저장 중..." : "저장"}
+          </button>
+          {message && (
+            <span
+              className="save-msg"
+              style={{ color: message.kind === "error" ? "var(--danger)" : undefined }}
+            >
+              {message.text}
+            </span>
+          )}
         </div>
       </div>
 
@@ -118,35 +212,70 @@ export default function SettingsClient() {
           <p className="hint">현장에 새 변압기를 추가하거나 기존 설비를 제거합니다.</p>
 
           <div className="device-row head">
-            <span>이름</span><span>위치</span><span>용량</span><span>브릿지</span><span></span>
+            <span>이름</span>
+            <span>위치</span>
+            <span>용량</span>
+            <span>브릿지</span>
+            <span />
           </div>
-          {config.devices.map((d) => (
+
+          {devices.map((d) => (
             <div className="device-row" key={d.device_id}>
               <span>{d.name}</span>
               <span>{d.building}</span>
               <span>{d.capacity}</span>
-              <span>{config.bridges.find((b) => b.bridge_id === d.bridge_id)?.name ?? d.bridge_id}</span>
-              <button className="btn danger-outline" onClick={() => removeDevice(d.device_id)}>삭제</button>
+              <span>
+                {bridges.find((b) => b.bridge_id === d.bridge_id)?.name ?? d.bridge_id ?? "-"}
+              </span>
+              <button
+                className="btn danger-outline"
+                onClick={() => handleRemoveDevice(d.device_id, d.name)}
+              >
+                삭제
+              </button>
             </div>
           ))}
 
           <div className="form-row" style={{ marginTop: 16 }}>
-            <input type="text" placeholder="이름 (예: 11호기)" value={newDevice.name} onChange={(e) => setNewDevice((f) => ({ ...f, name: e.target.value }))} />
-            <input type="text" placeholder="위치 (예: F동)" value={newDevice.building} onChange={(e) => setNewDevice((f) => ({ ...f, building: e.target.value }))} />
-            <input type="text" placeholder="용량 (예: 3상 500kVA)" value={newDevice.capacity} onChange={(e) => setNewDevice((f) => ({ ...f, capacity: e.target.value }))} />
-            <select value={newDevice.bridge_id} onChange={(e) => setNewDevice((f) => ({ ...f, bridge_id: e.target.value }))} style={{ padding: "6px 8px", borderRadius: 6, border: "1px solid var(--border)" }}>
-              {config.bridges.map((b) => (
-                <option key={b.bridge_id} value={b.bridge_id}>{b.name}</option>
+            <input
+              type="text"
+              placeholder="이름 (예: 11호기)"
+              value={newDevice.name}
+              onChange={(e) => setNewDevice((f) => ({ ...f, name: e.target.value }))}
+            />
+            <input
+              type="text"
+              placeholder="위치 (예: F동)"
+              value={newDevice.building}
+              onChange={(e) => setNewDevice((f) => ({ ...f, building: e.target.value }))}
+            />
+            <input
+              type="text"
+              placeholder="용량 (예: 3상 500kVA)"
+              value={newDevice.capacity}
+              onChange={(e) => setNewDevice((f) => ({ ...f, capacity: e.target.value }))}
+            />
+            <select
+              value={newDevice.bridge_id}
+              onChange={(e) => setNewDevice((f) => ({ ...f, bridge_id: e.target.value }))}
+              style={{ padding: "6px 8px", borderRadius: 6, border: "1px solid var(--border)" }}
+            >
+              {bridges.map((b) => (
+                <option key={b.bridge_id} value={b.bridge_id}>
+                  {b.name}
+                </option>
               ))}
             </select>
-            <button className="btn primary" onClick={handleAddDevice}>설비 추가</button>
+            <button className="btn primary" onClick={handleAddDevice}>
+              설비 추가
+            </button>
           </div>
         </div>
       </div>
 
       <footer className="note">
-        설정 값은 이 브라우저에 저장됩니다 · 실 서비스에서는 Supabase의 설정 테이블에 저장해
-        모든 관리자에게 동일하게 반영해야 합니다
+        설정 값은 서버 데이터베이스(app_config)에 저장되어 모든 관리자에게 동일하게 적용됩니다.
+        설정 버전이 올라가면 수집 서버가 이를 감지해 각 브릿지로 MQTT command 를 전달합니다.
       </footer>
     </AppShell>
   );
