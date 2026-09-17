@@ -149,7 +149,7 @@ export default function AlarmsPage() {
 
         {error && <div className="empty" style={{ color: "var(--danger)" }}>{error}</div>}
 
-        <div style={{ overflowX: "auto" }}>
+        <div className="table-wrap">
           <table>
             <thead>
               <tr>

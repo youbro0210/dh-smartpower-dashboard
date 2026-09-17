@@ -20,7 +20,7 @@ export default function PageHeader({
         </div>
         {subtitle && <div className="page-sub">{subtitle}</div>}
       </div>
-      {actions && <div style={{ display: "flex", gap: 6 }}>{actions}</div>}
+      {actions && <div className="page-actions">{actions}</div>}
     </div>
   );
 }

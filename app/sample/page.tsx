@@ -168,7 +168,7 @@ export default function SamplePage() {
           </div>
           <span className="card-note">{alarms.length}건 · 최근순</span>
         </div>
-        <div style={{ overflowX: "auto" }}>
+        <div className="table-wrap">
           <table>
             <thead>
               <tr>

@@ -61,7 +61,7 @@ export default function TrendPage() {
           <span className="card-note">{devices.length}대</span>
         </div>
 
-        <div style={{ overflowX: "auto" }}>
+        <div className="table-wrap">
           <table>
             <thead>
               <tr>

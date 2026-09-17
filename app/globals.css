@@ -14,12 +14,14 @@
   --brand: #12704a;         /* 강조 · 활성 메뉴 · 링크 */
   --brand-strong: #0d5638;  /* 눌림 상태 */
   --brand-soft: #e5f2ea;    /* 활성 메뉴 배경 */
-  --ink: #16241e;           /* 본문 */
-  --muted: #566b60;         /* 보조 텍스트 */
-  --faint: #93a79b;         /* 더 연한 보조 */
-  --canvas: #eef3f0;        /* 페이지 배경 · hover */
-  --line: #d4ded8;          /* 테두리 */
-  --line-strong: #a3b5ab;   /* 진한 테두리 */
+  --ink: #0f1a14;           /* 본문 — 진하게 */
+  --muted: #415249;         /* 보조 텍스트 — 진하게 */
+  --faint: #6b7f75;         /* 더 연한 보조 — 진하게 */
+  --page: #ffffff;          /* 화면 바탕 — 흰색 */
+  --canvas: #eef2f0;        /* hover · 옅은 채움 (바탕과 별개) */
+  --line: #b7c6bf;          /* 테두리 — 진하게 */
+  --line-soft: #d3ded8;     /* 옅은 구분선 */
+  --line-strong: #8ca295;   /* 가장 진한 테두리 */
   --surface: #ffffff;       /* 카드 */
 
   /* ── 상태 색 ──────────────────────────────────────────────────────────────
@@ -50,7 +52,7 @@ body {
 }
 
 body {
-  background: var(--canvas);
+  background: var(--page);
   color: var(--ink);
   font-family: Pretendard, "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR",
     system-ui, sans-serif;
@@ -363,6 +365,12 @@ textarea {
   color: var(--muted);
 }
 
+.page-actions {
+  display: flex;
+  gap: 6px;
+  flex: none;
+}
+
 /* ---------------------------------------------------------------------------
    필터바
    --------------------------------------------------------------------------- */
@@ -573,8 +581,8 @@ textarea {
 }
 
 .card-note {
-  font-size: 12.5px;
-  color: var(--faint);
+  font-size: 13px;
+  color: var(--muted);
 }
 
 .grid-2 {
@@ -596,25 +604,26 @@ textarea {
 table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 14px;
+  font-size: 14.5px;
+  color: var(--ink);
 }
 
 /* 표는 엑셀처럼 모든 칸에 가로·세로 선을 넣어 눈으로 칸을 따라가기 쉽게 합니다. */
 thead th {
-  background: #e9f1ec;
+  background: #dde9e3;
   border: 1px solid var(--line);
   border-top: 0;
   padding: 10px 12px;
   text-align: left;
   font-weight: 700;
-  color: #3f564b;
-  font-size: 12.5px;
+  color: #22342b;
+  font-size: 13px;
   white-space: nowrap;
 }
 
 /* 머리글 아래는 한 단계 진하게 그어 본문과 구분합니다. */
 thead th {
-  border-bottom: 2px solid #bccdc4;
+  border-bottom: 2px solid #8ca295;
 }
 
 tbody td {
@@ -633,7 +642,7 @@ tbody td:last-child { border-right: 0; }
 tbody tr:last-child td { border-bottom: 0; }
 
 /* 짝수 행에 아주 옅은 음영을 넣어 가로줄을 따라가기 쉽게 합니다. */
-tbody tr:nth-child(2n) td { background: #f9fcfa; }
+tbody tr:nth-child(2n) td { background: #f3f7f5; }
 
 tbody tr:nth-child(n):hover td {
   background: #e9f4ee;
@@ -649,8 +658,8 @@ tbody tr.expanded:nth-child(n) td {
 
 .cell-sub {
   display: block;
-  font-size: 12px;
-  color: var(--faint);
+  font-size: 12.5px;
+  color: var(--muted);
   margin-top: 1px;
 }
 
@@ -690,8 +699,9 @@ tbody tr.expand-row:nth-child(n) > td {
   padding: 2px 7px;
   border-radius: 3px;
   background: var(--canvas);
+  border: 1px solid var(--line-soft);
   color: var(--muted);
-  font-size: 12px;
+  font-size: 12.5px;
   margin-left: 4px;
 }
 
@@ -763,7 +773,7 @@ tbody tr.expand-row:nth-child(n) > td {
   align-items: flex-start;
   gap: 11px;
   padding: 11px 2px;
-  border-bottom: 1px solid #e5ece8;
+  border-bottom: 1px solid var(--line-soft);
 }
 
 .todo-item:last-child {
@@ -791,7 +801,7 @@ tbody tr.expand-row:nth-child(n) > td {
   gap: 12px;
   align-items: center;
   padding: 10px 2px;
-  border-bottom: 1px solid #e5ece8;
+  border-bottom: 1px solid var(--line-soft);
   font-size: 13.5px;
 }
 
@@ -886,7 +896,7 @@ tbody tr.expand-row:nth-child(n) > td {
 .form-section {
   padding-bottom: 16px;
   margin-bottom: 16px;
-  border-bottom: 1px solid #e5ece8;
+  border-bottom: 1px solid var(--line-soft);
 }
 
 .form-section:last-child {
@@ -902,7 +912,7 @@ tbody tr.expand-row:nth-child(n) > td {
 }
 
 .hint {
-  font-size: 13px;
+  font-size: 13.5px;
   color: var(--muted);
   margin: 0 0 12px;
   line-height: 1.7;
@@ -967,7 +977,7 @@ tbody tr.expand-row:nth-child(n) > td {
   gap: 10px;
   align-items: center;
   padding: 10px 2px;
-  border-bottom: 1px solid #e5ece8;
+  border-bottom: 1px solid var(--line-soft);
   font-size: 14px;
 }
 
@@ -979,7 +989,7 @@ tbody tr.expand-row:nth-child(n) > td {
 }
 
 .note {
-  font-size: 13px;
+  font-size: 13.5px;
   color: var(--muted);
   padding: 6px 2px 0;
   line-height: 1.7;
@@ -1429,8 +1439,8 @@ tbody tr.expand-row:nth-child(n) > td {
 .attn-spacer { flex: 1; }
 
 .attn-since {
-  font-size: 12.5px;
-  color: var(--faint);
+  font-size: 13px;
+  color: var(--muted);
   white-space: nowrap;
 }
 
@@ -1555,7 +1565,7 @@ tbody tr.expand-row:nth-child(n) > td {
   position: relative;
   height: 7px;
   border-radius: 4px;
-  background: #e3ebe6;
+  background: #ccd8d2;
   margin: 8px 0 6px;
   overflow: visible;
 }
@@ -1579,8 +1589,8 @@ tbody tr.expand-row:nth-child(n) > td {
 .gauge-bar .tick.warning { background: var(--warning); }
 
 .gauge-foot {
-  font-size: 11.5px;
-  color: var(--faint);
+  font-size: 12px;
+  color: var(--muted);
   line-height: 1.5;
 }
 
@@ -1613,6 +1623,7 @@ tbody tr.expand-row:nth-child(n) > td {
 }
 
 .chart-tab {
+  font-weight: 500;
   appearance: none;
   border: 1px solid var(--line);
   background: var(--surface);
@@ -1645,7 +1656,7 @@ tbody tr.expand-row:nth-child(n) > td {
 
 .chart-last {
   margin-left: auto;
-  font-size: 12.5px;
+  font-size: 13px;
   color: var(--muted);
   font-variant-numeric: tabular-nums;
 }
@@ -1653,12 +1664,12 @@ tbody tr.expand-row:nth-child(n) > td {
 .chart-last b { font-size: 15px; }
 
 .chart-axis {
-  font-size: 10.5px;
-  fill: var(--faint);
+  font-size: 11.5px;
+  fill: var(--muted);
 }
 
 .chart-rule {
-  font-size: 10.5px;
+  font-size: 11.5px;
   font-weight: 600;
 }
 
@@ -1712,4 +1723,224 @@ td.num {
 
 .section-label:first-of-type {
   margin-top: 4px;
+}
+
+/* ===========================================================================
+   표 가로 스크롤
+   좁은 화면에서 칸이 짓눌려 글자가 세로로 쪼개지지 않도록,
+   표에 최소 폭을 주고 카드 안에서 좌우로 밀어 보게 합니다.
+   =========================================================================== */
+
+.table-wrap {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+@media (max-width: 900px) {
+  .table-wrap table {
+    min-width: 760px;
+  }
+}
+
+/* ===========================================================================
+   모바일 · 태블릿
+   =========================================================================== */
+
+@media (max-width: 1024px) {
+  .attn-split { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 720px) {
+  .main {
+    padding: 14px 16px 44px;
+  }
+
+  .topbar {
+    gap: 4px;
+    padding: 0 8px;
+  }
+
+  .topbar-brand {
+    font-size: 14.5px;
+  }
+
+  .topbar-right {
+    gap: 4px;
+  }
+
+  .page-title {
+    font-size: 19px;
+  }
+
+  /* 페이지 머리글의 버튼이 제목 아래로 내려가 가로로 넘치지 않게 합니다. */
+  .page-head {
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .page-actions {
+    width: 100%;
+  }
+
+  .page-actions .btn {
+    flex: 1;
+    justify-content: center;
+  }
+
+  .filterbar {
+    gap: 8px;
+    padding: 10px;
+  }
+
+  .filterbar .field {
+    flex: 1 1 130px;
+    min-width: 0;
+  }
+
+  .filterbar-right {
+    width: 100%;
+    display: flex;
+    gap: 8px;
+  }
+
+  .filterbar-right .btn {
+    flex: 1;
+    justify-content: center;
+  }
+
+  .card {
+    padding: 14px;
+  }
+
+  .card.flush .card-head {
+    padding: 14px 14px 0;
+  }
+
+  .card-head {
+    flex-wrap: wrap;
+    gap: 4px 10px;
+  }
+
+  .kpi {
+    padding: 12px 14px;
+  }
+
+  .st-tile {
+    padding: 12px 14px;
+  }
+
+  .st-num {
+    font-size: 25px;
+  }
+
+  /* 이상 설비 카드: 제목 줄이 넘치지 않게 접어 내립니다. */
+  .attn-head {
+    flex-wrap: wrap;
+    gap: 6px 8px;
+    padding: 10px 12px;
+  }
+
+  .attn-spacer {
+    display: none;
+  }
+
+  .attn-since {
+    order: 5;
+    width: 100%;
+    font-size: 12px;
+  }
+
+  .attn-toggle {
+    margin-left: auto;
+  }
+
+  .attn-body {
+    padding: 12px;
+  }
+
+  .attn-reason {
+    padding: 10px 12px;
+    font-size: 13.5px;
+  }
+
+  .gauge-val {
+    font-size: 24px;
+  }
+
+  .chart {
+    padding: 8px 10px 2px;
+  }
+
+  .chart-bar {
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .chart-last {
+    margin-left: 0;
+  }
+
+  .section-label {
+    margin: 14px 0 6px;
+  }
+
+  .sample-notice {
+    font-size: 13.5px;
+    padding: 10px 12px;
+  }
+
+  /* 탭바가 넘치면 좌우로 밀 수 있게 합니다. */
+  .tabbar {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* 사이드바가 열렸을 때 본문을 덮는 어두운 막. 누르면 닫힙니다. */
+  .sidebar-scrim {
+    display: block;
+    position: fixed;
+    inset: var(--topbar-h) 0 0 0;
+    border: 0;
+    padding: 0;
+    background: rgba(15, 26, 20, 0.38);
+    z-index: 35;
+    cursor: pointer;
+  }
+}
+
+@media (max-width: 520px) {
+  .main {
+    padding: 12px 12px 44px;
+  }
+
+  .gauge-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .st-tiles {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .kpi-strip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .page-title {
+    font-size: 18px;
+  }
+
+  .topbar-brand {
+    font-size: 13.5px;
+  }
+
+  /* 챗봇 버튼이 본문 마지막 줄을 가리지 않도록 조금 작게 */
+  .chat-fab {
+    right: 12px;
+    bottom: 12px;
+  }
+}
+
+/* 넓은 화면에서는 사이드바가 항상 보이므로 막이 필요 없습니다. */
+.sidebar-scrim {
+  display: none;
 }

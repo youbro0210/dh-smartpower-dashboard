@@ -120,6 +120,16 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         </div>
       </header>
 
+      {/* 모바일에서 메뉴가 열렸을 때, 본문을 덮는 막을 눌러 닫을 수 있게 합니다. */}
+      {sidebarOpen && (
+        <button
+          type="button"
+          className="sidebar-scrim"
+          aria-label="메뉴 닫기"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
       <aside className={`sidebar${sidebarOpen ? " open" : ""}`} aria-label="주 메뉴">
         <nav>
           {NAV.map((group) => {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useMemo, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { DeviceTrend, ThresholdRule } from "@/lib/types";
 
 export type MetricKey = "temperature" | "h2" | "ch4";
@@ -23,8 +23,9 @@ interface Props {
   height?: number;
 }
 
-const PAD = { top: 14, right: 14, bottom: 26, left: 44 };
-const WIDTH = 720;
+const PAD = { top: 14, right: 16, bottom: 28, left: 44 };
+const DEFAULT_WIDTH = 720;
+const MIN_WIDTH = 280;
 
 /** null 을 건너뛰며 연속 구간별로 path 를 만듭니다. 값이 끊긴 곳은 선도 끊깁니다. */
 function segments(series: (number | null)[]): { i: number; v: number }[][] {
@@ -75,6 +76,25 @@ export default function TrendChart({ trend, metrics, rule, height = 190 }: Props
   const metric = active && available.includes(active) ? active : available[0];
   const clipId = useId().replace(/:/g, "");
 
+  // viewBox 폭을 실제 그려지는 폭과 같게 맞춥니다.
+  // 그래야 축 글자가 화면 크기에 따라 줄어들지 않고 지정한 크기 그대로 보입니다.
+  const boxRef = useRef<HTMLDivElement>(null);
+  const [width, setWidth] = useState(DEFAULT_WIDTH);
+  useEffect(() => {
+    const el = boxRef.current;
+    if (!el) return;
+    const apply = () => {
+      const cs = getComputedStyle(el);
+      const inner = el.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+      setWidth(Math.max(MIN_WIDTH, Math.round(inner)));
+    };
+    apply();
+    if (typeof ResizeObserver === "undefined") return;
+    const ro = new ResizeObserver(apply);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
   if (!trend || available.length === 0) {
     return <div className="chart-empty">최근 24시간 누적된 계측 이력이 없습니다.</div>;
   }
@@ -91,7 +111,7 @@ export default function TrendChart({ trend, metrics, rule, height = 190 }: Props
     Math.max(...values, ...(marks.length ? [marks[2]] : []))
   );
 
-  const plotW = WIDTH - PAD.left - PAD.right;
+  const plotW = width - PAD.left - PAD.right;
   const plotH = height - PAD.top - PAD.bottom;
   const x = (i: number) => PAD.left + (series.length <= 1 ? plotW / 2 : (i / (series.length - 1)) * plotW);
   const y = (v: number) => PAD.top + plotH - ((v - lo) / (hi - lo || 1)) * plotH;
@@ -107,11 +127,12 @@ export default function TrendChart({ trend, metrics, rule, height = 190 }: Props
   });
 
   // 라벨이 겹치지 않도록 일정 간격으로만 표시합니다.
-  const labelStep = Math.max(1, Math.ceil(series.length / 8));
+  const maxLabels = Math.max(3, Math.floor(plotW / 58));
+  const labelStep = Math.max(1, Math.ceil(series.length / maxLabels));
   const last = [...series].reverse().find((v) => v !== null && Number.isFinite(v)) as number | undefined;
 
   return (
-    <div className="chart">
+    <div className="chart" ref={boxRef}>
       <div className="chart-bar">
         <div className="chart-tabs">
           {available.map((k) => (
@@ -134,7 +155,7 @@ export default function TrendChart({ trend, metrics, rule, height = 190 }: Props
       </div>
 
       <svg
-        viewBox={`0 0 ${WIDTH} ${height}`}
+        viewBox={`0 0 ${width} ${height}`}
         width="100%"
         height={height}
         role="img"
@@ -154,10 +175,10 @@ export default function TrendChart({ trend, metrics, rule, height = 190 }: Props
           <g key={t}>
             <line
               x1={PAD.left}
-              x2={WIDTH - PAD.right}
+              x2={width - PAD.right}
               y1={y(t)}
               y2={y(t)}
-              stroke="#e9ecf3"
+              stroke="var(--line-soft)"
               strokeWidth="1"
             />
             <text x={PAD.left - 8} y={y(t) + 4} textAnchor="end" className="chart-axis">
@@ -178,7 +199,7 @@ export default function TrendChart({ trend, metrics, rule, height = 190 }: Props
               <g key={name}>
                 <line
                   x1={PAD.left}
-                  x2={WIDTH - PAD.right}
+                  x2={width - PAD.right}
                   y1={y(value)}
                   y2={y(value)}
                   stroke={color}
@@ -186,7 +207,7 @@ export default function TrendChart({ trend, metrics, rule, height = 190 }: Props
                   strokeDasharray="5 4"
                   opacity="0.75"
                 />
-                <text x={WIDTH - PAD.right} y={y(value) - 4} textAnchor="end" className="chart-rule" fill={color}>
+                <text x={width - PAD.right} y={y(value) - 4} textAnchor="end" className="chart-rule" fill={color}>
                   {name === "caution" ? "주의" : name === "warning" ? "경고" : "위험"} {value}
                 </text>
               </g>
@@ -220,10 +241,10 @@ export default function TrendChart({ trend, metrics, rule, height = 190 }: Props
 
         <line
           x1={PAD.left}
-          x2={WIDTH - PAD.right}
+          x2={width - PAD.right}
           y1={PAD.top + plotH}
           y2={PAD.top + plotH}
-          stroke="#c7cddb"
+          stroke="var(--line)"
           strokeWidth="1"
         />
       </svg>

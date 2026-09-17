@@ -62,12 +62,12 @@ export default function DeviceTable({
         </span>
       </div>
 
-      <div style={{ overflowX: "auto" }}>
+      <div className="table-wrap">
         <table>
           <thead>
             <tr>
               <th style={{ width: 34 }}>No</th>
-              <th>설비명</th>
+              <th style={{ minWidth: 96 }}>설비명</th>
               <th>위치</th>
               <th>용량</th>
               <th>상태</th>
@@ -110,7 +110,7 @@ export default function DeviceTable({
                     <td className="num" style={{ color: "var(--faint)" }}>
                       {idx + 1}
                     </td>
-                    <td>
+                    <td style={{ whiteSpace: "nowrap" }}>
                       <b>{u.name}</b>
                       {u.bridge_id && <span className="cell-sub">{u.bridge_id}</span>}
                     </td>
