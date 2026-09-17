@@ -38,7 +38,15 @@ export const NAV: NavGroup[] = [
   },
 ];
 
-const LABELS = new Map(NAV.flatMap((g) => g.items).map((i) => [i.href, i.label]));
+// 메뉴에 직접 나오지 않는 하위 화면의 탭 이름입니다.
+const SUB_LABELS: Record<string, string> = {
+  "/settings/notify": "알림 발송",
+};
+
+const LABELS = new Map<string, string>([
+  ...NAV.flatMap((g) => g.items).map((i) => [i.href, i.label] as [string, string]),
+  ...Object.entries(SUB_LABELS),
+]);
 
 export function labelFor(pathname: string): string {
   return LABELS.get(pathname) ?? "페이지";

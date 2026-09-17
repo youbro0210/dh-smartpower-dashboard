@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useDashboard } from "@/lib/configStore";
 import { ThresholdConfig } from "@/lib/types";
 import PageHeader from "./PageHeader";
+import SettingsTabs from "./SettingsTabs";
 
 export default function SettingsClient() {
   const { thresholds, bridges, devices, configVersion, saveThresholds, addDevice, removeDevice } =
@@ -85,6 +86,8 @@ export default function SettingsClient() {
         breadcrumb="홈 › 설정"
         subtitle={`센서 임계치 · 복합 판정 규칙 · 설비 등록 · 설정 버전 ${configVersion}`}
       />
+
+      <SettingsTabs active="threshold" />
 
       <div className="card">
         <div className="form-section">

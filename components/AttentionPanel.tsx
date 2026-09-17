@@ -181,7 +181,7 @@ export default function AttentionPanel({
                       if (s.key === "oil_level") {
                         const low = d.oil_level === "낮음";
                         return (
-                          <div className={`gauge ${low ? "caution" : "normal"}`} key={s.key}>
+                          <div className={`gauge ${low ? "danger" : "normal"}`} key={s.key}>
                             <div className="gauge-lbl">{s.label}</div>
                             <div className="gauge-val" style={{ color: low ? "var(--danger)" : undefined }}>
                               {d.oil_level}
