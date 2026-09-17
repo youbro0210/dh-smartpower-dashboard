@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useDashboard } from "@/lib/configStore";
 import PageHeader from "@/components/PageHeader";
 import DeviceTable from "@/components/DeviceTable";
+import AttentionPanel from "@/components/AttentionPanel";
 import { DeviceStatus, STATUS_LABEL } from "@/lib/types";
 
 const LEVEL_COLOR: Record<string, string> = {
@@ -123,6 +124,88 @@ export default function DashboardPage() {
         </div>
       )}
 
+      {/* ① 전체 변압기 상태 — 한눈에 보는 요약. 누르면 아래 목록이 그 상태로 걸러집니다. */}
+      <div className="status-summary">
+        <div className="st-tiles">
+          <button
+            type="button"
+            className={`st-tile total${statusFilter === "all" ? " on" : ""}`}
+            onClick={() => setStatusFilter("all")}
+          >
+            <span className="st-lbl">전체 변압기</span>
+            <span className="st-num">
+              {devices.length}
+              <small>대</small>
+            </span>
+          </button>
+          {(["normal", "caution", "warning", "danger", "offline"] as DeviceStatus[]).map((s) => (
+            <button
+              type="button"
+              key={s}
+              className={`st-tile ${s}${statusFilter === s ? " on" : ""}`}
+              onClick={() => setStatusFilter(statusFilter === s ? "all" : s)}
+            >
+              <span className="st-lbl">{STATUS_LABEL[s]}</span>
+              <span className="st-num">
+                {count(s)}
+                <small>대</small>
+              </span>
+            </button>
+          ))}
+        </div>
+        <div className="st-bar" role="img" aria-label="상태별 비율">
+          {(["normal", "caution", "warning", "danger", "offline"] as DeviceStatus[]).map((s) =>
+            count(s) ? (
+              <span
+                key={s}
+                className={s}
+                style={{ width: `${(count(s) / Math.max(1, devices.length)) * 100}%` }}
+                title={`${STATUS_LABEL[s]} ${count(s)}대`}
+              />
+            ) : null
+          )}
+        </div>
+      </div>
+
+      <div className="kpi-strip">
+        <div className="kpi">
+          <div className="kpi-label">24시간 알람</div>
+          <div className="kpi-value">
+            {alarms24h}
+            <small>건</small>
+          </div>
+          <div className="kpi-note">최근 하루 누적</div>
+        </div>
+        <div className="kpi">
+          <div className="kpi-label">평균 절연유 온도</div>
+          <div className="kpi-value">
+            {avgTemp.toFixed(1)}
+            <small>℃</small>
+          </div>
+          <div className="kpi-note">최고 {maxTemp.toFixed(1)}℃</div>
+        </div>
+        <div className="kpi">
+          <div className="kpi-label">가스 기준 초과</div>
+          <div className="kpi-value warning">
+            {gasExceed}
+            <small>대</small>
+          </div>
+          <div className="kpi-note">수소·메탄 경고 임계치 이상</div>
+        </div>
+        <div className="kpi">
+          <div className="kpi-label">브릿지 온라인</div>
+          <div className="kpi-value">
+            {bridgesOnline}
+            <small>/{bridges.length}</small>
+          </div>
+          <div className="kpi-note">수집 장치 연결 상태</div>
+        </div>
+      </div>
+
+      {/* ② 주의 이상 변압기의 자세한 상태 · 측정값 · 24시간 추세 */}
+      <AttentionPanel devices={devices} alarms={alarms} thresholds={thresholds} />
+
+      {/* ③ 전체 변압기 목록 */}
       <div className="filterbar">
         <span className="filter-label">상태</span>
         <select
@@ -170,63 +253,9 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      <div className="kpi-strip">
-        <div className="kpi">
-          <div className="kpi-label">전체 설비</div>
-          <div className="kpi-value">
-            {devices.length}
-            <small>대</small>
-          </div>
-        </div>
-        <div className="kpi">
-          <div className="kpi-label">정상</div>
-          <div className="kpi-value normal">{count("normal")}</div>
-        </div>
-        <div className="kpi">
-          <div className="kpi-label">주의</div>
-          <div className="kpi-value caution">{count("caution")}</div>
-        </div>
-        <div className="kpi">
-          <div className="kpi-label">경고</div>
-          <div className="kpi-value warning">{count("warning")}</div>
-        </div>
-        <div className="kpi">
-          <div className="kpi-label">위험</div>
-          <div className="kpi-value danger">{count("danger")}</div>
-        </div>
-        <div className="kpi">
-          <div className="kpi-label">통신단절</div>
-          <div className="kpi-value offline">{count("offline")}</div>
-        </div>
-        <div className="kpi">
-          <div className="kpi-label">24시간 알람</div>
-          <div className="kpi-value">
-            {alarms24h}
-            <small>건</small>
-          </div>
-        </div>
-        <div className="kpi">
-          <div className="kpi-label">평균 온도</div>
-          <div className="kpi-value">
-            {avgTemp.toFixed(1)}
-            <small>℃</small>
-          </div>
-          <div className="kpi-note">최고 {maxTemp.toFixed(1)}℃</div>
-        </div>
-        <div className="kpi">
-          <div className="kpi-label">가스 기준 초과</div>
-          <div className="kpi-value warning">{gasExceed}</div>
-          <div className="kpi-note">경고 임계치 이상</div>
-        </div>
-        <div className="kpi">
-          <div className="kpi-label">브릿지 온라인</div>
-          <div className="kpi-value">
-            {bridgesOnline}
-            <small>/{bridges.length}</small>
-          </div>
-        </div>
-      </div>
+      <DeviceTable devices={filtered} alarms={alarms} total={devices.length} />
 
+      {/* ④ 알람 이력 */}
       <div className="grid-2">
         <div className="card">
           <div className="card-head">
@@ -279,8 +308,6 @@ export default function DashboardPage() {
           )}
         </div>
       </div>
-
-      <DeviceTable devices={filtered} alarms={alarms} total={devices.length} />
 
       <div className="note">
         임계치와 복합 판정 규칙은 설정 화면에서 변경하며, 변경 즉시 모든 사용자 화면에 동일하게

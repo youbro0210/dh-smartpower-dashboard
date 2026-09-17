@@ -37,10 +37,16 @@ export interface DeviceReading {
   updated_at: string;
 }
 
-/** 최근 24시간 추세. telemetry 테이블을 집계한 실측값입니다. */
+/**
+ * 최근 24시간 추세. telemetry 테이블을 1시간 단위로 집계한 실측값입니다.
+ * 네 배열의 길이는 항상 같으며, 그 시간대에 값이 없으면 null 이 들어갑니다.
+ */
 export interface DeviceTrend {
-  temperature: number[];
-  h2: number[];
+  /** 시간 버킷 라벨. 예: "14시" */
+  labels: string[];
+  temperature: (number | null)[];
+  h2: (number | null)[];
+  ch4: (number | null)[];
 }
 
 /** 24시간 전 기준값. 증감 표시에 사용합니다. */

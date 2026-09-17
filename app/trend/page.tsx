@@ -4,10 +4,12 @@ import { useState } from "react";
 import { useDashboard } from "@/lib/configStore";
 import PageHeader from "@/components/PageHeader";
 import Sparkline from "@/components/Sparkline";
+import { METRIC_META, MetricKey } from "@/components/TrendChart";
 import { STATUS_LABEL } from "@/lib/types";
 
-function stats(series: number[] | undefined) {
-  if (!series || series.length === 0) return null;
+function stats(raw: (number | null)[] | undefined) {
+  const series = (raw ?? []).filter((v): v is number => v !== null && Number.isFinite(v));
+  if (series.length === 0) return null;
   const min = Math.min(...series);
   const max = Math.max(...series);
   const avg = series.reduce((a, b) => a + b, 0) / series.length;
@@ -16,10 +18,10 @@ function stats(series: number[] | undefined) {
 
 export default function TrendPage() {
   const { devices, refresh, loading } = useDashboard();
-  const [metric, setMetric] = useState<"temperature" | "h2">("temperature");
+  const [metric, setMetric] = useState<MetricKey>("temperature");
 
-  const unit = metric === "temperature" ? "℃" : "ppm";
-  const label = metric === "temperature" ? "절연유 온도" : "수소가스";
+  const unit = METRIC_META[metric].unit;
+  const label = METRIC_META[metric].label;
 
   return (
     <>
@@ -39,13 +41,14 @@ export default function TrendPage() {
         <select
           className="field"
           value={metric}
-          onChange={(e) => setMetric(e.target.value as "temperature" | "h2")}
+          onChange={(e) => setMetric(e.target.value as MetricKey)}
         >
           <option value="temperature">절연유 온도 (℃)</option>
           <option value="h2">수소가스 (ppm)</option>
+          <option value="ch4">메탄가스 (ppm)</option>
         </select>
         <span className="filter-label" style={{ marginLeft: 8 }}>
-          빨강 = 온도, 청록 = 수소가스
+          빨강 = 온도, 파랑 = 수소가스, 초록 = 메탄가스
         </span>
       </div>
 
@@ -83,7 +86,8 @@ export default function TrendPage() {
               )}
               {devices.map((d) => {
                 const s = stats(d.trend?.[metric]);
-                const current = metric === "temperature" ? d.temperature : d.h2;
+                const current =
+                  metric === "temperature" ? d.temperature : metric === "h2" ? d.h2 : d.ch4;
                 const change = s ? Number((s.last - s.first).toFixed(1)) : null;
                 return (
                   <tr key={d.device_id}>

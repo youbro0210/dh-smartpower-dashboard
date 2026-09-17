@@ -1,6 +1,7 @@
 import { DeviceTrend } from "@/lib/types";
 
-function buildPath(points: number[], width: number, height: number): string | null {
+function buildPath(raw: (number | null)[], width: number, height: number): string | null {
+  const points = raw.filter((v): v is number => v !== null && Number.isFinite(v));
   if (points.length < 2) return null;
 
   const max = Math.max(...points);

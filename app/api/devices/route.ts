@@ -11,6 +11,11 @@ interface TrendRow {
   bucket: string;
   temperature: number | null;
   h2: number | null;
+  ch4: number | null;
+}
+
+function round1(value: number | null): number | null {
+  return value === null ? null : Number(Number(value).toFixed(1));
 }
 
 /** 대시보드 최초 로딩에 필요한 데이터를 한 번에 돌려줍니다. */
@@ -35,7 +40,8 @@ export async function GET() {
       SELECT device_id,
              date_trunc('hour', measured_at) AS bucket,
              avg(temperature) AS temperature,
-             avg(h2)          AS h2
+             avg(h2)          AS h2,
+             avg(ch4)         AS ch4
         FROM telemetry
        WHERE measured_at > now() - interval '24 hours'
        GROUP BY device_id, bucket
@@ -47,11 +53,18 @@ export async function GET() {
        ORDER BY device_id, measured_at DESC`),
   ]);
 
-  const trends: Record<string, { temperature: number[]; h2: number[] }> = {};
+  // 세 계열의 길이를 항상 같게 맞춥니다. 값이 없는 시간대는 null 로 남겨
+  // 그래프에서 선을 끊어 그리고, 있지도 않은 값을 이어 붙이지 않습니다.
+  const trends: Record<
+    string,
+    { labels: string[]; temperature: (number | null)[]; h2: (number | null)[]; ch4: (number | null)[] }
+  > = {};
   for (const row of trendRows) {
-    const bucket = (trends[row.device_id] ??= { temperature: [], h2: [] });
-    if (row.temperature !== null) bucket.temperature.push(Number(row.temperature.toFixed(1)));
-    if (row.h2 !== null) bucket.h2.push(Number(row.h2.toFixed(1)));
+    const bucket = (trends[row.device_id] ??= { labels: [], temperature: [], h2: [], ch4: [] });
+    bucket.labels.push(`${new Date(row.bucket).getHours()}시`);
+    bucket.temperature.push(round1(row.temperature));
+    bucket.h2.push(round1(row.h2));
+    bucket.ch4.push(round1(row.ch4));
   }
 
   const alarms24h = await one<{ count: number }>(
