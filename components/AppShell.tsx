@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useSession } from "@/lib/useSession";
 import { NAV, labelFor } from "@/lib/nav";
+import NavIcon from "./NavIcon";
 import Chatbot from "./Chatbot";
 
 const TABS_KEY = "dh-open-tabs";
@@ -71,62 +72,84 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     <>
       <header className="topbar">
         <button
-          className="topbar-menu"
+          type="button"
+          className="topbar-icon-btn"
           onClick={() => setSidebarOpen((v) => !v)}
-          aria-label="메뉴"
+          aria-label="메뉴 열기·닫기"
+          aria-expanded={sidebarOpen}
         >
-          ☰
+          <NavIcon name="menu" />
         </button>
+
         <span className="topbar-brand">DH 스마트파워 · 변압기 통합 모니터링</span>
-        <span className="topbar-spacer" />
+
         <div className="topbar-right">
+          <Link
+            href="/alarms"
+            className="topbar-icon-btn"
+            title="알람 이력"
+            aria-label="알람 이력"
+          >
+            <NavIcon name="bell" />
+          </Link>
+
           {loading ? (
-            <span style={{ color: "#9fb8c6" }}>확인 중...</span>
+            <span className="topbar-quiet">확인 중...</span>
           ) : email ? (
             <>
               <div className="topbar-user">
-                <span className="topbar-avatar">{initial}</span>
+                <span className="topbar-avatar" aria-hidden="true">
+                  {initial}
+                </span>
                 <span className="topbar-user-name">
-                  {email.split("@")[0]}
-                  <small>{isAdmin ? "시스템 관리자" : "뷰어"}</small>
+                  <span className="topbar-user-id">{email.split("@")[0]}</span>
+                  <span className="topbar-user-role">{isAdmin ? "시스템 관리자" : "뷰어"}</span>
                 </span>
               </div>
-              <button className="topbar-link" onClick={logout}>
-                로그아웃
+              <button type="button" className="topbar-link" onClick={logout}>
+                <NavIcon name="logout" size={16} />
+                <span>로그아웃</span>
               </button>
             </>
           ) : (
             <Link href="/login" className="topbar-link">
-              로그인
+              <NavIcon name="logout" size={16} />
+              <span>로그인</span>
             </Link>
           )}
         </div>
       </header>
 
-      <aside className={`sidebar${sidebarOpen ? " open" : ""}`}>
-        {NAV.map((group) => {
-          const items = group.items.filter((i) => !i.adminOnly || isAdmin);
-          if (!items.length) return null;
-          return (
-            <div key={group.label}>
-              <div className="nav-group">{group.label}</div>
-              {items.map((item) => (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={`nav-item${pathname === item.href ? " active" : ""}`}
-                  onClick={() => setSidebarOpen(false)}
-                >
-                  <span className="nav-dot" />
-                  {item.label}
-                </Link>
-              ))}
-            </div>
-          );
-        })}
+      <aside className={`sidebar${sidebarOpen ? " open" : ""}`} aria-label="주 메뉴">
+        <nav>
+          {NAV.map((group) => {
+            const items = group.items.filter((i) => !i.adminOnly || isAdmin);
+            if (!items.length) return null;
+            return (
+              <div className="nav-group-block" key={group.label}>
+                <p className="nav-group">{group.label}</p>
+                {items.map((item) => {
+                  const active = pathname === item.href;
+                  return (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      className={`nav-item${active ? " active" : ""}`}
+                      aria-current={active ? "page" : undefined}
+                      onClick={() => setSidebarOpen(false)}
+                    >
+                      <NavIcon name={item.icon} />
+                      <span className="nav-label">{item.label}</span>
+                    </Link>
+                  );
+                })}
+              </div>
+            );
+          })}
+        </nav>
       </aside>
 
-      <nav className="tabbar">
+      <nav className="tabbar" aria-label="열린 화면">
         {tabs.map((tab) => (
           <Link
             key={tab.href}
@@ -136,11 +159,12 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
             {tab.label}
             {tab.href !== "/" && (
               <button
+                type="button"
                 className="tab-close"
                 onClick={(e) => closeTab(tab.href, e)}
                 aria-label={`${tab.label} 탭 닫기`}
               >
-                ×
+                <NavIcon name="close" size={13} />
               </button>
             )}
           </Link>

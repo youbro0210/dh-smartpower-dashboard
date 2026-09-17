@@ -7,28 +7,31 @@
 
 :root {
   /* ── 브랜드 색 ────────────────────────────────────────────────────────────
-     이 6개 값만 바꾸면 시스템 전체 색이 한 번에 바뀝니다.
-     상태색(정상·주의·경고·위험)과 겹치지 않도록 파랑 계열을 씁니다.        */
-  --topbar: #1b2a4a;   /* 상단바 — 딥 인디고 */
-  --brand: #2e5aac;    /* 강조 · 활성 · 링크 — 로열블루 */
-  --brand-soft: #e8edf9;
-  --ink: #1a1f2b;      /* 본문 */
-  --muted: #5a6478;    /* 보조 텍스트 */
-  --faint: #9aa3b5;    /* 더 연한 보조 */
-  --canvas: #f0f2f7;   /* 페이지 배경 · hover */
-  --line: #d8dce6;     /* 테두리 */
-  --surface: #ffffff;  /* 카드 */
+     해림 생산공정관리(haerim.ai.kr)와 같은 토큰 구조이며, 색상 계열만
+     파랑에서 초록으로 바꿨습니다. 이 값들만 고치면 화면 전체 색이 바뀝니다. */
+  --topbar: #10352a;        /* 상단바 — 딥 파인그린 (haerim 의 shell) */
+  --topbar-hover: #1b4a3b;  /* 상단바 버튼 hover */
+  --brand: #12704a;         /* 강조 · 활성 메뉴 · 링크 */
+  --brand-strong: #0d5638;  /* 눌림 상태 */
+  --brand-soft: #e5f2ea;    /* 활성 메뉴 배경 */
+  --ink: #16241e;           /* 본문 */
+  --muted: #566b60;         /* 보조 텍스트 */
+  --faint: #93a79b;         /* 더 연한 보조 */
+  --canvas: #eef3f0;        /* 페이지 배경 · hover */
+  --line: #d4ded8;          /* 테두리 */
+  --line-strong: #a3b5ab;   /* 진한 테두리 */
+  --surface: #ffffff;       /* 카드 */
 
   /* ── 상태 색 ──────────────────────────────────────────────────────────────
-     판정 등급 전용. 현장에서 혼동이 없어야 하므로 브랜드색과 분리합니다.   */
-  --normal: #1c7c54;
+     판정 등급 전용. 브랜드 초록과 구분되도록 '정상'은 더 밝은 초록을 씁니다. */
+  --normal: #1f9d62;
   --caution: #b7791f;
   --warning: #d97706;
   --danger: #c0392b;
-  --offline: #7b8b99;
+  --offline: #7d8f88;
 
-  /* 치수 */
-  --topbar-h: 50px;
+  /* 치수 — haerim 과 동일 */
+  --topbar-h: 48px;
   --tabbar-h: 38px;
   --sidebar-w: 224px;
   --radius: 6px;
@@ -87,41 +90,50 @@ textarea {
   color: #fff;
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 0 14px;
+  gap: 8px;
+  padding: 0 12px;
   z-index: 50;
 }
 
-.topbar-menu {
+/* 상단바의 아이콘 버튼 (메뉴 · 알람) */
+.topbar-icon-btn {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  flex: none;
   background: none;
   border: 0;
-  color: #fff;
-  font-size: 17px;
-  line-height: 1;
-  padding: 6px 8px;
+  border-radius: var(--radius);
+  color: rgba(255, 255, 255, 0.85);
   cursor: pointer;
-  border-radius: 4px;
+  padding: 0;
 }
 
-.topbar-menu:hover {
-  background: rgba(255, 255, 255, 0.12);
+.topbar-icon-btn:hover {
+  background: var(--topbar-hover);
+  color: #fff;
 }
 
 .topbar-brand {
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 600;
   letter-spacing: -0.2px;
-}
-
-.topbar-spacer {
-  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .topbar-right {
+  margin-left: auto;
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 12px;
+}
+
+.topbar-quiet {
   font-size: 13.5px;
+  color: rgba(255, 255, 255, 0.6);
 }
 
 .topbar-user {
@@ -131,39 +143,55 @@ textarea {
 }
 
 .topbar-avatar {
-  width: 26px;
-  height: 26px;
+  width: 32px;
+  height: 32px;
+  flex: none;
   border-radius: 50%;
-  background: var(--brand);
+  background: rgba(255, 255, 255, 0.15);
   display: grid;
   place-items: center;
-  font-size: 12px;
-  font-weight: 700;
+  font-size: 14px;
+  font-weight: 600;
 }
 
 .topbar-user-name {
-  line-height: 1.15;
+  display: block;
+  line-height: 1.25;
 }
 
-.topbar-user-name small {
+.topbar-user-id {
   display: block;
-  font-size: 11.5px;
-  color: #9fa9c4;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.topbar-user-role {
+  display: block;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.6);
 }
 
 .topbar-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   background: none;
   border: 0;
-  color: #cdd6ea;
+  border-radius: var(--radius);
+  color: rgba(255, 255, 255, 0.85);
   cursor: pointer;
-  font-size: 13.5px;
-  padding: 4px 6px;
-  border-radius: 4px;
+  font-size: 14px;
+  padding: 6px 10px;
 }
 
 .topbar-link:hover {
-  background: rgba(255, 255, 255, 0.12);
+  background: var(--topbar-hover);
   color: #fff;
+}
+
+@media (max-width: 640px) {
+  .topbar-user-name { display: none; }
+  .topbar-link span { display: none; }
 }
 
 /* ---------------------------------------------------------------------------
@@ -179,27 +207,44 @@ textarea {
   background: var(--surface);
   border-right: 1px solid var(--line);
   overflow-y: auto;
-  padding: 10px 0 20px;
   z-index: 40;
 }
 
+.sidebar nav {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px 0 24px;
+}
+
+.nav-group-block {
+  padding-bottom: 8px;
+}
+
 .nav-group {
-  padding: 14px 14px 5px;
+  margin: 0;
+  padding: 8px 20px 4px;
   font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
   color: var(--muted);
-  letter-spacing: 0.2px;
 }
 
 .nav-item {
   margin: 0 8px;
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
   border-radius: var(--radius);
   padding: 10px 12px;
-  font-size: 14.5px;
+  font-size: 16px;
   color: var(--ink);
   cursor: pointer;
+}
+
+.nav-item svg {
+  flex: none;
+  color: var(--muted);
 }
 
 .nav-item:hover {
@@ -212,14 +257,18 @@ textarea {
   font-weight: 600;
 }
 
-.nav-dot {
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
-  background: currentColor;
-  opacity: 0.55;
-  flex: none;
+.nav-item.active svg {
+  color: var(--brand);
 }
+
+.nav-label {
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 
 /* ---------------------------------------------------------------------------
    탭바 · 본문
@@ -263,10 +312,11 @@ textarea {
   background: none;
   color: var(--faint);
   cursor: pointer;
-  font-size: 15px;
-  line-height: 1;
-  padding: 2px;
+  line-height: 0;
+  padding: 3px;
   border-radius: 3px;
+  display: inline-grid;
+  place-items: center;
 }
 
 .tab-close:hover {
@@ -551,20 +601,20 @@ table {
 
 /* 표는 엑셀처럼 모든 칸에 가로·세로 선을 넣어 눈으로 칸을 따라가기 쉽게 합니다. */
 thead th {
-  background: #eef1f8;
+  background: #e9f1ec;
   border: 1px solid var(--line);
   border-top: 0;
   padding: 10px 12px;
   text-align: left;
   font-weight: 700;
-  color: #44506b;
+  color: #3f564b;
   font-size: 12.5px;
   white-space: nowrap;
 }
 
 /* 머리글 아래는 한 단계 진하게 그어 본문과 구분합니다. */
 thead th {
-  border-bottom: 2px solid #c3cbdd;
+  border-bottom: 2px solid #bccdc4;
 }
 
 tbody td {
@@ -583,10 +633,10 @@ tbody td:last-child { border-right: 0; }
 tbody tr:last-child td { border-bottom: 0; }
 
 /* 짝수 행에 아주 옅은 음영을 넣어 가로줄을 따라가기 쉽게 합니다. */
-tbody tr:nth-child(2n) td { background: #fafbfd; }
+tbody tr:nth-child(2n) td { background: #f9fcfa; }
 
 tbody tr:nth-child(n):hover td {
-  background: #eef3fc;
+  background: #e9f4ee;
 }
 
 tbody tr.clickable {
@@ -605,7 +655,7 @@ tbody tr.expanded:nth-child(n) td {
 }
 
 tbody tr.expand-row:nth-child(n) > td {
-  background: #f7f9fd;
+  background: #f5faf7;
   padding: 14px 16px;
 }
 
@@ -629,11 +679,11 @@ tbody tr.expand-row:nth-child(n) > td {
   white-space: nowrap;
 }
 
-.badge.normal { background: #e6f4ee; color: var(--normal); }
+.badge.normal { background: #e4f5ec; color: var(--normal); }
 .badge.caution { background: #fdf3e0; color: var(--caution); }
 .badge.warning { background: #fdeede; color: var(--warning); }
 .badge.danger { background: #fbeae8; color: var(--danger); }
-.badge.offline { background: #eef1f4; color: var(--offline); }
+.badge.offline { background: #eaefec; color: var(--offline); }
 
 .chip {
   display: inline-block;
@@ -713,7 +763,7 @@ tbody tr.expand-row:nth-child(n) > td {
   align-items: flex-start;
   gap: 11px;
   padding: 11px 2px;
-  border-bottom: 1px solid #e9ecf3;
+  border-bottom: 1px solid #e5ece8;
 }
 
 .todo-item:last-child {
@@ -741,7 +791,7 @@ tbody tr.expand-row:nth-child(n) > td {
   gap: 12px;
   align-items: center;
   padding: 10px 2px;
-  border-bottom: 1px solid #e9ecf3;
+  border-bottom: 1px solid #e5ece8;
   font-size: 13.5px;
 }
 
@@ -836,7 +886,7 @@ tbody tr.expand-row:nth-child(n) > td {
 .form-section {
   padding-bottom: 16px;
   margin-bottom: 16px;
-  border-bottom: 1px solid #e9ecf3;
+  border-bottom: 1px solid #e5ece8;
 }
 
 .form-section:last-child {
@@ -917,7 +967,7 @@ tbody tr.expand-row:nth-child(n) > td {
   gap: 10px;
   align-items: center;
   padding: 10px 2px;
-  border-bottom: 1px solid #e9ecf3;
+  border-bottom: 1px solid #e5ece8;
   font-size: 14px;
 }
 
@@ -1048,7 +1098,7 @@ tbody tr.expand-row:nth-child(n) > td {
   display: inline-flex;
   align-items: center;
   gap: 7px;
-  box-shadow: 0 3px 14px rgba(27, 42, 74, 0.3);
+  box-shadow: 0 3px 14px rgba(16, 53, 42, 0.3);
   z-index: 60;
 }
 
@@ -1065,7 +1115,7 @@ tbody tr.expand-row:nth-child(n) > td {
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: 8px;
-  box-shadow: 0 10px 34px rgba(27, 42, 74, 0.22);
+  box-shadow: 0 10px 34px rgba(16, 53, 42, 0.22);
   display: flex;
   flex-direction: column;
   z-index: 60;
@@ -1169,7 +1219,7 @@ tbody tr.expand-row:nth-child(n) > td {
 }
 
 .chat-msg.tool .chat-bubble {
-  background: #f7f9fd;
+  background: #f5faf7;
   border: 1px dashed var(--line);
   color: var(--muted);
   font-size: 12.5px;
@@ -1263,7 +1313,7 @@ tbody tr.expand-row:nth-child(n) > td {
 }
 
 .st-tile:last-child { border-right: 0; }
-.st-tile:hover { background: #fafbfe; }
+.st-tile:hover { background: #f8fbf9; }
 
 /* 선택된 상태는 위쪽 굵은 선으로 표시합니다. */
 .st-tile::before {
@@ -1352,7 +1402,7 @@ tbody tr.expand-row:nth-child(n) > td {
   width: 100%;
   appearance: none;
   border: 0;
-  background: #f7f9fd;
+  background: #f5faf7;
   font: inherit;
   cursor: pointer;
   display: flex;
@@ -1435,7 +1485,7 @@ tbody tr.expand-row:nth-child(n) > td {
   height: 30px;
   flex: none;
   border-radius: 50%;
-  background: #e6f4ee;
+  background: #e4f5ec;
   color: var(--normal);
   display: grid;
   place-items: center;
@@ -1458,7 +1508,7 @@ tbody tr.expand-row:nth-child(n) > td {
   border: 1px solid var(--line);
   border-radius: var(--radius);
   padding: 11px 13px;
-  background: #fbfcfe;
+  background: #fbfdfc;
 }
 
 .gauge.caution { background: #fffaf0; border-color: #f0dfbe; }
@@ -1481,7 +1531,7 @@ tbody tr.expand-row:nth-child(n) > td {
   font-weight: 700;
 }
 
-.mini-badge.normal { background: #e6f4ee; color: var(--normal); }
+.mini-badge.normal { background: #e4f5ec; color: var(--normal); }
 .mini-badge.caution { background: #fdf3e0; color: var(--caution); }
 .mini-badge.warning { background: #fdeede; color: var(--warning); }
 .mini-badge.danger { background: #fbeae8; color: var(--danger); }
@@ -1505,7 +1555,7 @@ tbody tr.expand-row:nth-child(n) > td {
   position: relative;
   height: 7px;
   border-radius: 4px;
-  background: #e5e9f2;
+  background: #e3ebe6;
   margin: 8px 0 6px;
   overflow: visible;
 }
@@ -1577,7 +1627,7 @@ tbody tr.expand-row:nth-child(n) > td {
   gap: 5px;
 }
 
-.chart-tab:hover { background: #f7f9fd; }
+.chart-tab:hover { background: #f5faf7; }
 
 .chart-tab.active {
   border-color: var(--brand);
@@ -1619,7 +1669,7 @@ tbody tr.expand-row:nth-child(n) > td {
   text-align: center;
   font-size: 13px;
   color: var(--muted);
-  background: #fbfcfe;
+  background: #fbfdfc;
 }
 
 /* 숫자 칸은 줄바꿈 없이 오른쪽 정렬로 자릿수를 맞춥니다. */
@@ -1628,4 +1678,38 @@ td.num {
   text-align: right;
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
+}
+
+/* ---------------------------------------------------------------------------
+   샘플 대시보드
+   --------------------------------------------------------------------------- */
+
+.sample-notice {
+  border: 1px solid #cfe3d6;
+  border-left: 4px solid var(--brand);
+  background: var(--brand-soft);
+  color: var(--ink);
+  border-radius: var(--radius);
+  padding: 11px 14px;
+  font-size: 14px;
+  line-height: 1.6;
+  margin-bottom: 14px;
+}
+
+.sample-notice b {
+  margin-right: 6px;
+  color: var(--brand);
+}
+
+/* 샘플 화면에서 각 구역이 무엇인지 알려주는 작은 머리글 */
+.section-label {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--muted);
+  letter-spacing: 0.2px;
+  margin: 18px 0 8px;
+}
+
+.section-label:first-of-type {
+  margin-top: 4px;
 }
