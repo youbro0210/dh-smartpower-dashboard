@@ -549,33 +549,51 @@ table {
   font-size: 14px;
 }
 
+/* 표는 엑셀처럼 모든 칸에 가로·세로 선을 넣어 눈으로 칸을 따라가기 쉽게 합니다. */
 thead th {
-  background: #f6f8fc;
-  border-top: 1px solid var(--line);
-  border-bottom: 1px solid var(--line);
-  padding: 11px 12px;
+  background: #eef1f8;
+  border: 1px solid var(--line);
+  border-top: 0;
+  padding: 10px 12px;
   text-align: left;
-  font-weight: 600;
-  color: var(--muted);
+  font-weight: 700;
+  color: #44506b;
   font-size: 12.5px;
   white-space: nowrap;
 }
 
+/* 머리글 아래는 한 단계 진하게 그어 본문과 구분합니다. */
+thead th {
+  border-bottom: 2px solid #c3cbdd;
+}
+
 tbody td {
-  padding: 12px 12px;
-  border-bottom: 1px solid #e9ecf3;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
   vertical-align: middle;
 }
 
-tbody tr:hover {
-  background: #fafbfe;
+/* 표 바깥쪽 좌우 선은 카드 테두리와 겹치므로 지웁니다. */
+thead th:first-child,
+tbody td:first-child { border-left: 0; }
+
+thead th:last-child,
+tbody td:last-child { border-right: 0; }
+
+tbody tr:last-child td { border-bottom: 0; }
+
+/* 짝수 행에 아주 옅은 음영을 넣어 가로줄을 따라가기 쉽게 합니다. */
+tbody tr:nth-child(2n) td { background: #fafbfd; }
+
+tbody tr:nth-child(n):hover td {
+  background: #eef3fc;
 }
 
 tbody tr.clickable {
   cursor: pointer;
 }
 
-tbody tr.expanded {
+tbody tr.expanded:nth-child(n) td {
   background: var(--brand-soft);
 }
 
@@ -586,7 +604,7 @@ tbody tr.expanded {
   margin-top: 1px;
 }
 
-.expand-row > td {
+tbody tr.expand-row:nth-child(n) > td {
   background: #f7f9fd;
   padding: 14px 16px;
 }
@@ -1602,4 +1620,12 @@ tbody tr.expanded {
   font-size: 13px;
   color: var(--muted);
   background: #fbfcfe;
+}
+
+/* 숫자 칸은 줄바꿈 없이 오른쪽 정렬로 자릿수를 맞춥니다. */
+th.num,
+td.num {
+  text-align: right;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
 }

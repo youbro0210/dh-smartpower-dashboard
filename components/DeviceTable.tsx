@@ -4,6 +4,15 @@ import { Fragment, useState } from "react";
 import { DeviceEvaluated, STATUS_LABEL, AlarmEvent } from "@/lib/types";
 import Sparkline from "./Sparkline";
 
+/** 표에서는 자리를 아끼기 위해 월-일 시:분 까지만 적습니다. */
+function shortTime(iso: string): string {
+  if (!iso || iso === "-") return "-";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "-";
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
 function delta(current: number, baseline: number | undefined) {
   if (baseline === undefined || baseline === null || !Number.isFinite(baseline)) {
     return <span className="flat">비교 기준 없음</span>;
@@ -65,10 +74,10 @@ export default function DeviceTable({
               <th className="num">온도(℃)</th>
               <th className="num">수소(ppm)</th>
               <th className="num">메탄(ppm)</th>
-              <th>유면</th>
-              <th style={{ width: 90 }}>추세</th>
+              <th style={{ width: 62 }}>유면</th>
+              <th style={{ width: 92 }}>추세</th>
               <th>주요 이상</th>
-              <th>측정 시각</th>
+              <th style={{ width: 108 }}>측정 시각</th>
             </tr>
           </thead>
           <tbody>
@@ -105,25 +114,23 @@ export default function DeviceTable({
                       <b>{u.name}</b>
                       {u.bridge_id && <span className="cell-sub">{u.bridge_id}</span>}
                     </td>
-                    <td>{u.building}</td>
-                    <td style={{ color: "var(--muted)" }}>{u.capacity}</td>
+                    <td style={{ whiteSpace: "nowrap" }}>{u.building}</td>
+                    <td style={{ color: "var(--muted)", whiteSpace: "nowrap" }}>{u.capacity}</td>
                     <td>
                       <span className={`badge ${u.status}`}>{STATUS_LABEL[u.status]}</span>
                     </td>
                     <td className="num">{u.temperature.toFixed(1)}</td>
                     <td className="num">{u.h2.toFixed(1)}</td>
                     <td className="num">{u.ch4.toFixed(1)}</td>
-                    <td>{u.oil_level}</td>
+                    <td style={{ whiteSpace: "nowrap" }}>{u.oil_level}</td>
                     <td>
                       <Sparkline trend={u.trend} compact />
                     </td>
                     <td style={{ color: u.causes.length ? "var(--danger)" : "var(--faint)" }}>
                       {u.causes.join(", ") || "-"}
                     </td>
-                    <td style={{ color: "var(--faint)", fontSize: 11 }}>
-                      {u.since === "-"
-                        ? "-"
-                        : new Date(u.since).toLocaleString("ko-KR", { hour12: false })}
+                    <td style={{ color: "var(--faint)", whiteSpace: "nowrap" }}>
+                      {shortTime(u.since)}
                     </td>
                   </tr>
 
