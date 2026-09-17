@@ -9,6 +9,7 @@ import {
   useState,
   ReactNode,
 } from "react";
+import { usePathname } from "next/navigation";
 import {
   AlarmEvent,
   Bridge,
@@ -91,6 +92,13 @@ export function ConfigProvider({ children }: { children: ReactNode }) {
   // 센서별 직전 등급. 히스테리시스 판정의 입력이며 렌더 중에는 건드리지 않습니다.
   const prevLevels = useRef<Record<string, SensorLevels>>({});
 
+  // 이 프로바이더는 루트 레이아웃에 있어 로그인/회원가입 화면에서도 마운트됩니다.
+  // 그 상태에서 데이터를 조회하면 401 이 나고, 로그인 후 클라이언트 라우팅으로
+  // 이동하면 레이아웃이 재마운트되지 않아 그 오류가 화면에 그대로 남습니다.
+  // 인증 화면에서는 아예 조회하지 않습니다.
+  const pathname = usePathname();
+  const isAuthPage = pathname === "/login" || pathname === "/signup";
+
   const refresh = useCallback(async () => {
     try {
       const res = await fetch("/api/devices", { cache: "no-store" });
@@ -138,12 +146,24 @@ export function ConfigProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  // refresh 를 최신 상태로 유지하되, SSE 이펙트가 재실행되지 않도록 ref 로 참조합니다.
+  const refreshRef = useRef(refresh);
   useEffect(() => {
-    void refresh();
+    refreshRef.current = refresh;
   }, [refresh]);
+
+  useEffect(() => {
+    if (isAuthPage) {
+      setLoading(false);
+      return;
+    }
+    void refresh();
+  }, [refresh, isAuthPage]);
 
   // ---- 실시간 구독 (SSE) ----
   useEffect(() => {
+    if (isAuthPage) return;
+
     let source: EventSource | null = null;
     let retry: ReturnType<typeof setTimeout> | null = null;
     let closedByUs = false;
@@ -151,7 +171,12 @@ export function ConfigProvider({ children }: { children: ReactNode }) {
     const connect = () => {
       source = new EventSource("/api/stream");
 
-      source.addEventListener("ready", () => setConnected(true));
+      // 스트림이 열렸다는 것은 인증이 유효하다는 뜻입니다.
+      // 최초 조회가 실패했더라도 이 시점에 다시 시도해 스스로 복구합니다.
+      source.addEventListener("ready", () => {
+        setConnected(true);
+        void refreshRef.current();
+      });
 
       source.addEventListener("device_reading", (event) => {
         try {
@@ -199,7 +224,7 @@ export function ConfigProvider({ children }: { children: ReactNode }) {
       if (retry) clearTimeout(retry);
       source?.close();
     };
-  }, []);
+  }, [isAuthPage]);
 
   // 통신단절은 시간이 지나야 판정되므로 주기적으로 재평가합니다.
   useEffect(() => {

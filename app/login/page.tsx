@@ -1,7 +1,7 @@
 "use client";
 
 import { Suspense, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 
 const inputStyle: React.CSSProperties = {
@@ -13,7 +13,6 @@ const inputStyle: React.CSSProperties = {
 };
 
 function LoginForm() {
-  const router = useRouter();
   const params = useSearchParams();
   const next = params.get("next") || "/";
 
@@ -42,9 +41,10 @@ function LoginForm() {
         return;
       }
 
-      // 서버 컴포넌트가 새 세션을 읽도록 강제 새로고침합니다.
-      router.replace(next.startsWith("/") ? next : "/");
-      router.refresh();
+      // 클라이언트 라우팅(router.replace)으로 넘어가면 레이아웃이 다시 마운트되지
+      // 않아, 로그인 화면에서 비로그인 상태로 실패했던 최초 데이터 조회가 그대로
+      // 남습니다. 전체 페이지 로드로 이동해 모든 상태를 새로 시작합니다.
+      window.location.assign(next.startsWith("/") ? next : "/");
     } catch {
       setError("서버에 연결할 수 없습니다. 네트워크 상태를 확인해 주세요.");
       setLoading(false);
