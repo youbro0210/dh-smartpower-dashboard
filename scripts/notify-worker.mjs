@@ -16,6 +16,9 @@
 
 import pg from "pg";
 import crypto from "node:crypto";
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import nodemailer from "nodemailer";
 
 const { Client, Pool, types } = pg;
@@ -23,8 +26,41 @@ const { Client, Pool, types } = pg;
 types.setTypeParser(20, (v) => parseInt(v, 10));
 types.setTypeParser(1700, (v) => parseFloat(v));
 
+/**
+ * .env.local 을 읽어 넣습니다.
+ * 웹은 Next.js 가 알아서 읽어 주지만 이 워커는 따로 도는 프로세스라
+ * pm2 가 넘겨준 환경변수만 갖고 시작합니다. 웹과 같은 파일을 쓰도록 여기서 읽습니다.
+ * 이미 들어와 있는 값은 덮어쓰지 않습니다.
+ */
+function loadEnvLocal() {
+  const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+  for (const name of [".env.local", ".env"]) {
+    const file = path.join(root, name);
+    if (!fs.existsSync(file)) continue;
+    for (const raw of fs.readFileSync(file, "utf8").split(/\r?\n/)) {
+      const line = raw.trim();
+      if (!line || line.startsWith("#")) continue;
+      const eq = line.indexOf("=");
+      if (eq < 1) continue;
+      const key = line.slice(0, eq).trim();
+      if (process.env[key] !== undefined) continue;
+      let value = line.slice(eq + 1).trim();
+      // 따옴표로 감싼 값은 벗겨 냅니다.
+      if (
+        (value.startsWith('"') && value.endsWith('"')) ||
+        (value.startsWith("'") && value.endsWith("'"))
+      ) {
+        value = value.slice(1, -1);
+      }
+      process.env[key] = value;
+    }
+  }
+}
+
+loadEnvLocal();
+
 if (!process.env.DATABASE_URL) {
-  console.error("DATABASE_URL 이 없습니다.");
+  console.error("DATABASE_URL 이 없습니다. .env.local 을 확인하세요.");
   process.exit(1);
 }
 
