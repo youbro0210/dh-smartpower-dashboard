@@ -19,11 +19,41 @@ RUN_USER="${SUDO_USER:-ubuntu}"
 
 log() { echo -e "\n\033[1m==> $*\033[0m"; }
 
+# 실패 시 어느 줄에서 멈췄는지 로그에 남깁니다.
+trap 'echo "[PROVISION FAILED] line ${LINENO}: ${BASH_COMMAND}" >&2' ERR
+
+export DEBIAN_FRONTEND=noninteractive
+# 우분투 24.04 의 needrestart 가 서비스 재시작 여부를 대화형으로 묻는 것을 막습니다.
+export NEEDRESTART_MODE=a
+export NEEDRESTART_SUSPEND=1
+
+# 우분투는 부팅 직후 unattended-upgrades / apt-daily 가 자동 실행되어
+# dpkg 잠금을 점유합니다. 그 상태에서 apt 를 호출하면 즉시 실패하고,
+# set -e 때문에 프로비저닝 전체가 중단됩니다.
+# DPkg::Lock::Timeout 으로 잠금이 풀릴 때까지 기다리고, 그래도 실패하면 재시도합니다.
+apt_get() {
+  local tries=0
+  until apt-get -o DPkg::Lock::Timeout=600 "$@"; do
+    tries=$((tries + 1))
+    if [ "$tries" -ge 5 ]; then
+      echo "apt-get $* : ${tries}회 재시도 후에도 실패"
+      return 1
+    fi
+    echo "  apt-get $* 실패 - ${tries}회차 재시도 (20초 대기)"
+    sleep 20
+  done
+}
+
 # ---------------------------------------------------------------------------
 log "1/9  시스템 패키지 갱신"
-export DEBIAN_FRONTEND=noninteractive
-apt-get update -qq
-apt-get upgrade -y -qq
+
+# 프로비저닝 중에는 자동 업데이트 타이머를 멈춰 잠금 경합을 없앱니다.
+systemctl stop unattended-upgrades.service apt-daily.service apt-daily-upgrade.service 2>/dev/null || true
+systemctl disable --now apt-daily.timer apt-daily-upgrade.timer 2>/dev/null || true
+
+apt_get update -qq
+# 업그레이드는 시간이 오래 걸리고 실패해도 배포에 지장이 없으므로 중단하지 않습니다.
+apt_get upgrade -y -qq || echo "  일부 패키지 업그레이드 실패 - 계속 진행합니다"
 
 # ---------------------------------------------------------------------------
 log "2/9  스왑 2GB 구성 (빌드 중 메모리 부족 방지)"
@@ -41,8 +71,9 @@ free -h | sed 's/^/  /'
 
 # ---------------------------------------------------------------------------
 log "3/9  Node.js 20 · PostgreSQL 16 · nginx 설치"
-curl -fsSL https://deb.nodesource.com/setup_20.x | bash - >/dev/null
-apt-get install -y -qq nodejs postgresql postgresql-contrib nginx git ufw
+curl -fsSL --retry 5 --retry-delay 5 https://deb.nodesource.com/setup_20.x -o /tmp/nodesource.sh
+bash /tmp/nodesource.sh >/dev/null
+apt_get install -y -qq nodejs postgresql postgresql-contrib nginx git ufw
 npm install -g pm2 >/dev/null
 node -v | sed 's/^/  node /'
 psql --version | sed 's/^/  /'
@@ -65,9 +96,9 @@ mkdir -p /var/www /var/log/dh-dashboard
 chown -R "${RUN_USER}:${RUN_USER}" /var/www /var/log/dh-dashboard
 
 if [ -d "${APP_DIR}/.git" ]; then
-  sudo -u "${RUN_USER}" git -C "${APP_DIR}" pull --ff-only origin main
+  sudo -u "${RUN_USER}" -H git -C "${APP_DIR}" pull --ff-only origin main
 else
-  sudo -u "${RUN_USER}" git clone --quiet "${REPO}" "${APP_DIR}"
+  sudo -u "${RUN_USER}" -H git clone --quiet "${REPO}" "${APP_DIR}"
 fi
 
 # ---------------------------------------------------------------------------
@@ -92,11 +123,11 @@ log "7/9  스키마 반영 및 빌드"
 cd "${APP_DIR}"
 set -a; . ./.env.local; set +a
 
-sudo -u "${RUN_USER}" psql "${DATABASE_URL}" -v ON_ERROR_STOP=1 -q -f db/schema.sql
+sudo -u "${RUN_USER}" -H psql "${DATABASE_URL}" -v ON_ERROR_STOP=1 -q -f db/schema.sql
 echo "  스키마 반영 완료"
 
-sudo -u "${RUN_USER}" npm ci --no-audit --no-fund
-sudo -u "${RUN_USER}" env NEXT_TELEMETRY_DISABLED=1 npm run build
+sudo -u "${RUN_USER}" -H npm ci --no-audit --no-fund
+sudo -u "${RUN_USER}" -H env NEXT_TELEMETRY_DISABLED=1 npm run build
 echo "  빌드 완료"
 
 # ---------------------------------------------------------------------------
@@ -107,9 +138,9 @@ rm -f /etc/nginx/sites-enabled/default
 nginx -t && systemctl reload nginx
 echo "  nginx 설정 완료"
 
-sudo -u "${RUN_USER}" pm2 delete dh-dashboard >/dev/null 2>&1 || true
-sudo -u "${RUN_USER}" pm2 start deploy/ecosystem.config.js
-sudo -u "${RUN_USER}" pm2 save
+sudo -u "${RUN_USER}" -H pm2 delete dh-dashboard >/dev/null 2>&1 || true
+sudo -u "${RUN_USER}" -H pm2 start deploy/ecosystem.config.js
+sudo -u "${RUN_USER}" -H pm2 save
 env PATH="$PATH:/usr/bin" pm2 startup systemd -u "${RUN_USER}" --hp "/home/${RUN_USER}" >/dev/null
 systemctl enable "pm2-${RUN_USER}" >/dev/null 2>&1 || true
 echo "  PM2 등록 완료 (재부팅 시 자동 기동)"
@@ -146,3 +177,5 @@ cat <<EOF
   접속 주소: http://${SERVER_NAME}
 ============================================================
 EOF
+
+echo "PROVISION_DONE $(date -Is)"
