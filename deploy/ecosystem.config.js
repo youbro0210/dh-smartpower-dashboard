@@ -35,5 +35,20 @@ module.exports = {
       out_file: "/var/log/dh-dashboard/notify-out.log",
       time: true,
     },
+    {
+      // MQTT 수집 서버.
+      // 장비가 올려 보낸 계측값을 받아 DB 에 적재하고 임계치 판정을 합니다.
+      // 브로커 구독이 중복되면 같은 값을 두 번 처리하므로 1벌만 띄웁니다.
+      name: "dh-collector",
+      script: "collector/collector.py",
+      interpreter: "python3",
+      cwd: "/var/www/dh-smartpower-dashboard",
+      instances: 1,
+      autorestart: true,
+      max_memory_restart: "300M",
+      error_file: "/var/log/dh-dashboard/collector-error.log",
+      out_file: "/var/log/dh-dashboard/collector-out.log",
+      time: true,
+    },
   ],
 };
