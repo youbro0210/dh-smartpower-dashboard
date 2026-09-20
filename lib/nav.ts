@@ -40,6 +40,9 @@ export const NAV: NavGroup[] = [
 
 // 메뉴에 직접 나오지 않는 하위 화면의 탭 이름입니다.
 const SUB_LABELS: Record<string, string> = {
+  "/settings/mqtt": "데이터 연결",
+  "/settings/ingest": "수집 내역",
+  "/settings/commands": "장비 제어",
   "/settings/notify": "알림 발송",
 };
 

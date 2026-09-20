@@ -2105,3 +2105,65 @@ td.num {
 .channel-body > div:last-child {
   grid-column: 1 / -1;
 }
+
+/* ---------------------------------------------------------------------------
+   수집 연동 화면
+   --------------------------------------------------------------------------- */
+
+/* 토픽·페이로드 규격을 그대로 보여주는 코드 상자 */
+.codeblock {
+  margin: 0;
+  padding: 12px 14px;
+  background: #f1f7f4;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+  font-size: 13px;
+  line-height: 1.65;
+  color: var(--ink);
+  overflow-x: auto;
+  white-space: pre;
+  -webkit-overflow-scrolling: touch;
+}
+
+code {
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+  font-size: 0.92em;
+  background: #f1f7f4;
+  border: 1px solid var(--line-soft);
+  border-radius: 3px;
+  padding: 1px 5px;
+}
+
+.spec-list {
+  margin: 12px 0 0;
+  padding-left: 20px;
+  font-size: 14px;
+  line-height: 1.75;
+  color: var(--muted);
+}
+
+.spec-list b {
+  color: var(--ink);
+}
+
+.banner.warn-soft {
+  background: #fbeacd;
+  border-color: #e0c391;
+  color: #8a5714;
+}
+
+/* 상태 타일을 값 표시 전용으로 쓸 때(버튼이 아닌 경우) */
+div.st-tile {
+  cursor: default;
+}
+
+div.st-tile:hover {
+  background: none;
+}
+
+@media (max-width: 1100px) {
+  .st-tiles[style] {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+}
