@@ -14,11 +14,9 @@ export default function PageHeader({
   return (
     <div className="page-head">
       <div>
-        <div className="page-title">
-          {title}
-          {breadcrumb && <span className="breadcrumb">{breadcrumb}</span>}
-        </div>
-        {subtitle && <div className="page-sub">{subtitle}</div>}
+        <h1 className="page-title">{title}</h1>
+        {breadcrumb && <span className="breadcrumb">{breadcrumb}</span>}
+        {subtitle && <span className="page-sub">{subtitle}</span>}
       </div>
       {actions && <div className="page-actions">{actions}</div>}
     </div>

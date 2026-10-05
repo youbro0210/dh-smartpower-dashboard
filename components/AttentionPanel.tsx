@@ -102,16 +102,7 @@ export default function AttentionPanel({
             주의 이상 변압기 상세
           </div>
         </div>
-        <div className="all-clear">
-          <span className="all-clear-mark">✓</span>
-          <div>
-            <b>전체 {devices.length}대 모두 정상 범위입니다.</b>
-            <div className="hint" style={{ marginTop: 4 }}>
-              주의·경고·위험으로 판정된 변압기가 나타나면 이 자리에 측정값과 24시간 추세가 함께
-              표시됩니다.
-            </div>
-          </div>
-        </div>
+        <div className="all-clear">전체 {devices.length}대 정상</div>
       </div>
     );
   }
@@ -124,7 +115,7 @@ export default function AttentionPanel({
           주의 이상 변압기 상세
         </div>
         <span className="card-note">
-          {ranked.length}대 · 심각도 순 · 제목을 누르면 접거나 펼칩니다
+          {ranked.length}대 · 심각도 순
         </span>
       </div>
 
@@ -163,7 +154,7 @@ export default function AttentionPanel({
                     ? "판정 시각 없음"
                     : `${new Date(d.since).toLocaleString("ko-KR", { hour12: false })} 판정`}
                 </span>
-                <span className="attn-toggle">{open ? "접기 ▲" : "펼치기 ▼"}</span>
+                <span className="attn-toggle">{open ? "접기" : "펼치기"}</span>
               </button>
 
               <div className={`attn-reason ${d.status}`}>
@@ -251,24 +242,40 @@ export default function AttentionPanel({
                     </div>
                     <div>
                       <div className="spark-title">이 변압기의 최근 알람</div>
-                      {related.length === 0 ? (
-                        <div className="empty" style={{ padding: "18px 0" }}>
-                          기록된 알람이 없습니다.
-                        </div>
-                      ) : (
-                        related.slice(0, 6).map((a, i) => (
-                          <div className="alarm-item" key={a.id ?? i}>
-                            <span className="time">{a.time}</span>
-                            <span>
-                              {a.item}
-                              {a.detail && <span className="chip">{a.detail}</span>}
-                            </span>
-                            <span className="lvl" style={{ color: LEVEL_COLOR[a.level] }}>
-                              {STATUS_LABEL[a.level]}
-                            </span>
-                          </div>
-                        ))
-                      )}
+                      <table className="grid">
+                        <thead>
+                          <tr>
+                            <th style={{ width: 120 }}>발생 시각</th>
+                            <th>항목</th>
+                            <th style={{ width: 60 }}>등급</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {related.length === 0 ? (
+                            <tr>
+                              <td className="empty" colSpan={3}>
+                                조회된 데이터가 없습니다.
+                              </td>
+                            </tr>
+                          ) : (
+                            related.slice(0, 6).map((a, i) => (
+                              <tr key={a.id ?? i}>
+                                <td className="center">{a.time}</td>
+                                <td>
+                                  {a.item}
+                                  {a.detail && <span className="chip">{a.detail}</span>}
+                                </td>
+                                <td
+                                  className="center"
+                                  style={{ color: LEVEL_COLOR[a.level], fontWeight: 600 }}
+                                >
+                                  {STATUS_LABEL[a.level]}
+                                </td>
+                              </tr>
+                            ))
+                          )}
+                        </tbody>
+                      </table>
                     </div>
                   </div>
                 </div>

@@ -68,7 +68,7 @@ export default function LoginHistoryClient() {
       <PageHeader
         title="로그인 이력"
         breadcrumb="홈 › 로그인 이력"
-        subtitle={`총 ${total.toLocaleString()}건 · 성공과 실패를 모두 기록합니다`}
+        subtitle={`총 ${total.toLocaleString()}건`}
       />
 
       <div className="filterbar">
@@ -103,13 +103,13 @@ export default function LoginHistoryClient() {
           </span>
         </div>
 
-        {error && <div className="empty" style={{ color: "var(--danger)" }}>{error}</div>}
+        {error && <div className="banner error">{error}</div>}
 
         <div className="table-wrap">
           <table>
             <thead>
               <tr>
-                <th style={{ width: 34 }}>No</th>
+                <th style={{ width: 52 }}>No</th>
                 <th>시각</th>
                 <th>이메일</th>
                 <th>결과</th>
@@ -119,21 +119,19 @@ export default function LoginHistoryClient() {
             <tbody>
               {!loading && rows.length === 0 && !error && (
                 <tr>
-                  <td colSpan={5}>
-                    <div className="empty">조회 조건에 해당하는 기록이 없습니다.</div>
+                  <td className="empty" colSpan={5}>
+                    조회된 데이터가 없습니다.
                   </td>
                 </tr>
               )}
               {rows.map((r, i) => (
                 <tr key={r.id}>
-                  <td className="num" style={{ color: "var(--faint)" }}>
-                    {(page - 1) * PAGE_SIZE + i + 1}
-                  </td>
-                  <td style={{ fontVariantNumeric: "tabular-nums" }}>
+                  <td className="center">{(page - 1) * PAGE_SIZE + i + 1}</td>
+                  <td className="center">
                     {new Date(r.created_at).toLocaleString("ko-KR", { hour12: false })}
                   </td>
                   <td>{r.email ?? "-"}</td>
-                  <td>
+                  <td className="center">
                     <span className={`badge ${r.success ? "normal" : "danger"}`}>
                       {r.success ? "성공" : "실패"}
                     </span>
@@ -145,7 +143,7 @@ export default function LoginHistoryClient() {
           </table>
         </div>
 
-        <div className="save-bar" style={{ padding: "12px 16px", marginTop: 0 }}>
+        <div className="save-bar" style={{ justifyContent: "center" }}>
           <button className="btn" disabled={page <= 1 || loading} onClick={() => void load(page - 1)}>
             이전
           </button>

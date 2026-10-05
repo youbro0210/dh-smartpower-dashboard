@@ -61,7 +61,6 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   }
 
   const isAdmin = tier === "admin";
-  const initial = (email ?? "?").charAt(0).toUpperCase();
 
   // 로그인·회원가입 화면은 셸 없이 그대로 보여줍니다.
   if (isAuthPage) {
@@ -78,7 +77,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           aria-label="메뉴 열기·닫기"
           aria-expanded={sidebarOpen}
         >
-          <NavIcon name="menu" />
+          <NavIcon name="menu" size={18} />
         </button>
 
         <span className="topbar-brand">DH 스마트파워 · 변압기 통합 모니터링</span>
@@ -90,7 +89,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
             title="알람 이력"
             aria-label="알람 이력"
           >
-            <NavIcon name="bell" />
+            <NavIcon name="bell" size={18} />
           </Link>
 
           {loading ? (
@@ -98,23 +97,18 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           ) : email ? (
             <>
               <div className="topbar-user">
-                <span className="topbar-avatar" aria-hidden="true">
-                  {initial}
-                </span>
                 <span className="topbar-user-name">
                   <span className="topbar-user-id">{email.split("@")[0]}</span>
-                  <span className="topbar-user-role">{isAdmin ? "시스템 관리자" : "뷰어"}</span>
+                  <span className="topbar-user-role">({isAdmin ? "시스템 관리자" : "뷰어"})</span>
                 </span>
               </div>
               <button type="button" className="topbar-link" onClick={logout}>
-                <NavIcon name="logout" size={16} />
-                <span>로그아웃</span>
+                로그아웃
               </button>
             </>
           ) : (
             <Link href="/login" className="topbar-link">
-              <NavIcon name="logout" size={16} />
-              <span>로그인</span>
+              로그인
             </Link>
           )}
         </div>
@@ -148,7 +142,6 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                       aria-current={active ? "page" : undefined}
                       onClick={() => setSidebarOpen(false)}
                     >
-                      <NavIcon name={item.icon} />
                       <span className="nav-label">{item.label}</span>
                     </Link>
                   );

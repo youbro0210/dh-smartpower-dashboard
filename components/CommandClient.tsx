@@ -148,7 +148,6 @@ export default function CommandClient() {
       <PageHeader
         title="장비 제어"
         breadcrumb="홈 › 설정 › 장비 제어"
-        subtitle="서버에서 현장 장비로 명령을 보내고 응답을 확인합니다"
         actions={
           <button className="btn" onClick={() => void load()}>
             새로고침
@@ -160,10 +159,7 @@ export default function CommandClient() {
 
       {message && <div className={`banner ${message.kind}`}>{message.text}</div>}
 
-      <div className="banner warn-soft">
-        아래 명령 집합은 <b>장비 업체와 확정 전</b>입니다. 장치가 같은 규격으로 구현해야 실제로
-        동작하며, 그 전까지는 발행 후 응답 없음으로 끝납니다.
-      </div>
+      <div className="banner warn-soft">명령 규격 확정 전 (장비 업체 협의 중)</div>
 
       {/* ── 명령 발행 ───────────────────────────────────────── */}
       <div className="card">
@@ -172,7 +168,10 @@ export default function CommandClient() {
             <span className="accent-bar" />
             명령 보내기
           </div>
-          <span className="card-note">관리자만 보낼 수 있습니다</span>
+          <button className={`btn ${spec?.risky ? "danger-outline" : "primary"}`}
+            onClick={() => void send()} disabled={busy || !targetId}>
+            {busy ? "보내는 중..." : "명령 보내기"}
+          </button>
         </div>
 
         <div className="form-grid">
@@ -243,13 +242,6 @@ export default function CommandClient() {
             </label>
           ))}
         </div>
-
-        <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
-          <button className={`btn ${spec?.risky ? "danger-outline" : "primary"}`}
-            onClick={() => void send()} disabled={busy || !targetId}>
-            {busy ? "보내는 중..." : "명령 보내기"}
-          </button>
-        </div>
       </div>
 
       {/* ── 발행 이력 ───────────────────────────────────────── */}
@@ -259,7 +251,7 @@ export default function CommandClient() {
             <span className="accent-bar" />
             명령 이력
           </div>
-          <span className="card-note">{commands.length}건 · 행을 누르면 응답 원문을 봅니다</span>
+          <span className="card-note">{commands.length}건</span>
         </div>
 
         <div className="table-wrap">
@@ -279,18 +271,16 @@ export default function CommandClient() {
             <tbody>
               {commands.length === 0 && (
                 <tr>
-                  <td colSpan={8}>
-                    <div className="empty">보낸 명령이 없습니다.</div>
+                  <td className="empty" colSpan={8}>
+                    조회된 데이터가 없습니다.
                   </td>
                 </tr>
               )}
               {commands.map((row) => (
-                <tr key={row.id} className="clickable"
+                <tr key={row.id} className={`clickable${openId === row.id ? " selected" : ""}`}
                   onClick={() => setOpenId(openId === row.id ? null : row.id)}>
-                  <td className="num" style={{ color: "var(--faint)" }}>{row.id}</td>
-                  <td style={{ whiteSpace: "nowrap", color: "var(--muted)" }}>
-                    {timeText(row.requested_at)}
-                  </td>
+                  <td className="num">{row.id}</td>
+                  <td className="center">{timeText(row.requested_at)}</td>
                   <td style={{ whiteSpace: "nowrap" }}>
                     <b>{row.target_id}</b>
                     <span className="cell-sub">
@@ -304,20 +294,18 @@ export default function CommandClient() {
                       <span className="cell-sub">{JSON.stringify(row.params)}</span>
                     )}
                   </td>
-                  <td>
+                  <td className="center">
                     <span className={`badge ${STATUS_BADGE[row.status] ?? "offline"}`}>
                       {COMMAND_STATUS_LABEL[row.status] ?? row.status}
                     </span>
                   </td>
-                  <td style={{ whiteSpace: "nowrap", color: "var(--muted)" }}>
-                    {timeText(row.acked_at)}
-                  </td>
+                  <td className="center">{timeText(row.acked_at)}</td>
                   <td style={{ color: row.error ? "var(--danger)" : "var(--faint)" }}>
                     {row.error ?? (row.requested_by ? `요청 ${row.requested_by.split("@")[0]}` : "-")}
                   </td>
-                  <td>
+                  <td className="center">
                     {row.status === "pending" && (
-                      <button className="btn danger-outline"
+                      <button className="btn danger-outline" style={{ height: 24, padding: "0 8px" }}
                         onClick={(e) => { e.stopPropagation(); void cancel(row); }}>
                         취소
                       </button>
@@ -330,7 +318,7 @@ export default function CommandClient() {
         </div>
 
         {openId !== null && (
-          <div style={{ padding: "0 14px 14px" }}>
+          <div style={{ paddingTop: 12 }}>
             <div className="spark-title">장치 응답 원문</div>
             <pre className="codeblock">
               {JSON.stringify(commands.find((c) => c.id === openId)?.ack ?? { 응답: "아직 없음" }, null, 2)}
@@ -340,9 +328,8 @@ export default function CommandClient() {
       </div>
 
       <div className="note">
-        명령은 <code>{"{접두사}/{현장}/{대상종류}/{대상id}/cmd"}</code> 토픽으로 나가며, 장치는
-        같은 <code>cmdId</code> 를 담아 <code>cmd/ack</code> 로 답해야 응답 완료로 표시됩니다.
-        60초 안에 응답이 없으면 응답 없음으로 정리합니다.
+        토픽 <code>{"{접두사}/{현장}/{대상종류}/{대상id}/cmd"}</code> · 응답{" "}
+        <code>cmd/ack</code> (<code>cmdId</code>) · 응답 대기 60초
       </div>
     </>
   );

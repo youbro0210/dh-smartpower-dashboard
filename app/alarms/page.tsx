@@ -114,27 +114,26 @@ export default function AlarmsPage() {
         </div>
       </div>
 
-      <div className="kpi-strip">
-        <div className="kpi">
-          <div className="kpi-label">전체</div>
-          <div className="kpi-value">
-            {total}
-            <small>건</small>
-          </div>
-        </div>
-        <div className="kpi">
-          <div className="kpi-label">위험</div>
-          <div className="kpi-value danger">{byLevel.danger ?? 0}</div>
-        </div>
-        <div className="kpi">
-          <div className="kpi-label">경고</div>
-          <div className="kpi-value warning">{byLevel.warning ?? 0}</div>
-        </div>
-        <div className="kpi">
-          <div className="kpi-label">주의</div>
-          <div className="kpi-value caution">{byLevel.caution ?? 0}</div>
-        </div>
-      </div>
+      <table className="grid" style={{ marginBottom: 16 }}>
+        <thead>
+          <tr>
+            <th>전체</th>
+            <th>위험</th>
+            <th>경고</th>
+            <th>주의</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td className="num">{total.toLocaleString()}건</td>
+            <td className="num t-danger">{(byLevel.danger ?? 0).toLocaleString()}</td>
+            <td className="num t-warning">{(byLevel.warning ?? 0).toLocaleString()}</td>
+            <td className="num" style={{ color: "var(--caution)" }}>
+              {(byLevel.caution ?? 0).toLocaleString()}
+            </td>
+          </tr>
+        </tbody>
+      </table>
 
       <div className="card flush">
         <div className="card-head">
@@ -147,13 +146,13 @@ export default function AlarmsPage() {
           </span>
         </div>
 
-        {error && <div className="empty" style={{ color: "var(--danger)" }}>{error}</div>}
+        {error && <div className="banner error">{error}</div>}
 
         <div className="table-wrap">
           <table>
             <thead>
               <tr>
-                <th style={{ width: 34 }}>No</th>
+                <th style={{ width: 52 }}>No</th>
                 <th>발생 시각</th>
                 <th>설비</th>
                 <th>항목</th>
@@ -164,24 +163,22 @@ export default function AlarmsPage() {
             <tbody>
               {!loading && rows.length === 0 && !error && (
                 <tr>
-                  <td colSpan={6}>
-                    <div className="empty">조회 조건에 해당하는 알람이 없습니다.</div>
+                  <td className="empty" colSpan={6}>
+                    조회된 데이터가 없습니다.
                   </td>
                 </tr>
               )}
               {rows.map((r, i) => (
                 <tr key={r.id}>
-                  <td className="num" style={{ color: "var(--faint)" }}>
-                    {(page - 1) * PAGE_SIZE + i + 1}
-                  </td>
-                  <td style={{ fontVariantNumeric: "tabular-nums" }}>
+                  <td className="center">{(page - 1) * PAGE_SIZE + i + 1}</td>
+                  <td className="center">
                     {new Date(r.created_at).toLocaleString("ko-KR", { hour12: false })}
                   </td>
                   <td>
                     <b>{r.unit}</b>
                   </td>
                   <td>{r.item}</td>
-                  <td>
+                  <td className="center">
                     <span className={`badge ${r.level}`}>{STATUS_LABEL[r.level]}</span>
                   </td>
                   <td style={{ color: "var(--muted)" }}>{r.detail ?? "-"}</td>
@@ -191,7 +188,7 @@ export default function AlarmsPage() {
           </table>
         </div>
 
-        <div className="save-bar" style={{ padding: "12px 16px", marginTop: 0 }}>
+        <div className="save-bar" style={{ justifyContent: "center" }}>
           <button className="btn" disabled={page <= 1 || loading} onClick={() => void load(page - 1)}>
             이전
           </button>

@@ -9,9 +9,9 @@ export const METRIC_META: Record<
   MetricKey,
   { label: string; short: string; unit: string; color: string }
 > = {
-  temperature: { label: "절연유 온도", short: "온도", unit: "℃", color: "#c0392b" },
-  h2: { label: "수소가스 (H₂)", short: "수소", unit: "ppm", color: "#2e5aac" },
-  ch4: { label: "메탄가스 (CH₄)", short: "메탄", unit: "ppm", color: "#1c7c54" },
+  temperature: { label: "절연유 온도", short: "온도", unit: "℃", color: "#1f3a5f" },
+  h2: { label: "수소가스 (H₂)", short: "수소", unit: "ppm", color: "#4a74a8" },
+  ch4: { label: "메탄가스 (CH₄)", short: "메탄", unit: "ppm", color: "#8aa4c8" },
 };
 
 interface Props {
@@ -96,7 +96,7 @@ export default function TrendChart({ trend, metrics, rule, height = 190 }: Props
   }, []);
 
   if (!trend || available.length === 0) {
-    return <div className="chart-empty">최근 24시간 누적된 계측 이력이 없습니다.</div>;
+    return <div className="chart-empty">조회된 데이터가 없습니다.</div>;
   }
 
   const series = trend[metric];
@@ -165,10 +165,6 @@ export default function TrendChart({ trend, metrics, rule, height = 190 }: Props
           <clipPath id={`clip-${clipId}`}>
             <rect x={PAD.left} y={PAD.top} width={plotW} height={plotH} />
           </clipPath>
-          <linearGradient id={`fill-${clipId}`} x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor={meta.color} stopOpacity="0.16" />
-            <stop offset="100%" stopColor={meta.color} stopOpacity="0" />
-          </linearGradient>
         </defs>
 
         {ticks.map((t) => (
@@ -205,7 +201,7 @@ export default function TrendChart({ trend, metrics, rule, height = 190 }: Props
                   stroke={color}
                   strokeWidth="1"
                   strokeDasharray="5 4"
-                  opacity="0.75"
+                  opacity="0.8"
                 />
                 <text x={width - PAD.right} y={y(value) - 4} textAnchor="end" className="chart-rule" fill={color}>
                   {name === "caution" ? "주의" : name === "warning" ? "경고" : "위험"} {value}
@@ -224,7 +220,7 @@ export default function TrendChart({ trend, metrics, rule, height = 190 }: Props
 
         <g clipPath={`url(#clip-${clipId})`}>
           {paths.map((p, i) => (
-            <path key={`fill-${i}`} d={p.fill} fill={`url(#fill-${clipId})`} stroke="none" />
+            <path key={`fill-${i}`} d={p.fill} fill={meta.color} fillOpacity="0.06" stroke="none" />
           ))}
           {paths.map((p, i) => (
             <path
@@ -232,7 +228,7 @@ export default function TrendChart({ trend, metrics, rule, height = 190 }: Props
               d={p.line}
               fill="none"
               stroke={meta.color}
-              strokeWidth="2"
+              strokeWidth="1.5"
               strokeLinejoin="round"
               strokeLinecap="round"
             />
@@ -244,7 +240,7 @@ export default function TrendChart({ trend, metrics, rule, height = 190 }: Props
           x2={width - PAD.right}
           y1={PAD.top + plotH}
           y2={PAD.top + plotH}
-          stroke="var(--line)"
+          stroke="var(--line-strong)"
           strokeWidth="1"
         />
       </svg>

@@ -28,7 +28,7 @@ export default function TrendPage() {
       <PageHeader
         title="추세 분석"
         breadcrumb="홈 › 추세 분석"
-        subtitle="최근 24시간 계측 이력을 시간 단위로 집계한 실측값입니다"
+        subtitle="최근 24시간 · 1시간 단위"
         actions={
           <button className="btn primary" onClick={() => void refresh()} disabled={loading}>
             새로고침
@@ -47,9 +47,6 @@ export default function TrendPage() {
           <option value="h2">수소가스 (ppm)</option>
           <option value="ch4">메탄가스 (ppm)</option>
         </select>
-        <span className="filter-label" style={{ marginLeft: 8 }}>
-          빨강 = 온도, 파랑 = 수소가스, 초록 = 메탄가스
-        </span>
       </div>
 
       <div className="card flush">
@@ -58,7 +55,17 @@ export default function TrendPage() {
             <span className="accent-bar" />
             설비별 {label} 추세
           </div>
-          <span className="card-note">{devices.length}대</span>
+          <span className="chart-legend">
+            <span>
+              <i className="legend-swatch" style={{ background: "#1f3a5f" }} />
+              온도
+            </span>
+            <span>
+              <i className="legend-swatch" style={{ background: "#8aa4c8" }} />
+              수소가스
+            </span>
+            <span className="card-note">{devices.length}대</span>
+          </span>
         </div>
 
         <div className="table-wrap">
@@ -95,7 +102,7 @@ export default function TrendPage() {
                       <b>{d.name}</b>
                     </td>
                     <td>{d.building}</td>
-                    <td>
+                    <td className="center">
                       <span className={`badge ${d.status}`}>{STATUS_LABEL[d.status]}</span>
                     </td>
                     <td>
@@ -103,7 +110,7 @@ export default function TrendPage() {
                     </td>
                     <td className="num">
                       {current.toFixed(1)}
-                      <span style={{ color: "var(--faint)", fontSize: 10.5 }}> {unit}</span>
+                      <span style={{ color: "var(--faint)", fontSize: 12 }}> {unit}</span>
                     </td>
                     <td className="num">{s ? s.min.toFixed(1) : "-"}</td>
                     <td className="num">{s ? s.avg.toFixed(1) : "-"}</td>
@@ -127,10 +134,6 @@ export default function TrendPage() {
         </div>
       </div>
 
-      <div className="note">
-        계측 이력이 쌓이기 전에는 추세가 표시되지 않습니다. 수집 서버가 telemetry 테이블에
-        데이터를 적재하면 자동으로 채워집니다.
-      </div>
     </>
   );
 }

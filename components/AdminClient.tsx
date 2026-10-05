@@ -107,94 +107,120 @@ export default function AdminClient() {
       />
 
       <div className="card">
-        <div className="card-head"><div className="card-title"><span className="accent-bar" />전체 회원 ({userTotal})</div></div>
-
-        <div className="form-row" style={{ marginBottom: 14 }}>
-          <label>가입일 범위</label>
-          <input type="date" value={userFrom} onChange={(e) => setUserFrom(e.target.value)} />
-          <span style={{ color: "var(--muted)", fontSize: 12 }}>~</span>
-          <input type="date" value={userTo} onChange={(e) => setUserTo(e.target.value)} />
-          <button className="btn primary" onClick={() => loadUsers(1)}>조회</button>
-          {(userFrom || userTo) && (
-            <button className="btn ghost" onClick={() => { setUserFrom(""); setUserTo(""); loadUsers(1); }}>초기화</button>
-          )}
+        <div className="card-head">
+          <div className="card-title">
+            <span className="accent-bar" />
+            전체 회원
+          </div>
+          <span className="card-note">총 {userTotal.toLocaleString()}명</span>
         </div>
 
-        {userError && <p style={{ color: "var(--danger)", fontSize: 12.5, marginBottom: 10 }}>{userError}</p>}
+        <div className="filterbar">
+          <span className="filter-label">가입일</span>
+          <input className="field" type="date" value={userFrom} onChange={(e) => setUserFrom(e.target.value)} />
+          <span>~</span>
+          <input className="field" type="date" value={userTo} onChange={(e) => setUserTo(e.target.value)} />
+          <div className="filterbar-right">
+            {(userFrom || userTo) && (
+              <button className="btn" onClick={() => { setUserFrom(""); setUserTo(""); loadUsers(1); }}>초기화</button>
+            )}
+            <button className="btn primary" onClick={() => loadUsers(1)}>조회</button>
+          </div>
+        </div>
 
-        {userLoading ? (
-          <p style={{ fontSize: 12.5, color: "var(--muted)" }}>불러오는 중...</p>
-        ) : users.length === 0 && !userError ? (
-          <p style={{ fontSize: 12.5, color: "var(--muted)" }}>조건에 맞는 회원이 없습니다.</p>
-        ) : (
-          <table>
+        {userError && <div className="banner error">{userError}</div>}
+
+        <div className="table-wrap">
+          <table className="grid">
             <thead>
-              <tr><th>이메일</th><th>이름</th><th>가입일</th><th>최근 로그인</th><th>등급</th></tr>
+              <tr><th>이메일</th><th>이름</th><th style={{ width: 110 }}>가입일</th><th style={{ width: 170 }}>최근 로그인</th><th style={{ width: 110 }}>등급</th></tr>
             </thead>
             <tbody>
-              {users.map((u) => (
-                <tr key={u.id}>
-                  <td>{u.email}</td>
-                  <td>{u.full_name ?? "-"}</td>
-                  <td className="num" style={{ fontSize: 11.5 }}>{new Date(u.created_at).toLocaleDateString("ko-KR")}</td>
-                  <td className="num" style={{ fontSize: 11.5 }}>{u.last_login_at ? new Date(u.last_login_at).toLocaleString("ko-KR") : "-"}</td>
-                  <td>
-                    <select value={u.tier} disabled={savingId === u.id} onChange={(e) => changeTier(u.id, e.target.value)}>
-                      <option value="viewer">뷰어</option>
-                      <option value="admin">관리자</option>
-                    </select>
-                  </td>
-                </tr>
-              ))}
+              {userLoading ? (
+                <tr><td className="empty" colSpan={5}>불러오는 중...</td></tr>
+              ) : users.length === 0 && !userError ? (
+                <tr><td className="empty" colSpan={5}>조회된 데이터가 없습니다.</td></tr>
+              ) : (
+                users.map((u) => (
+                  <tr key={u.id}>
+                    <td>{u.email}</td>
+                    <td>{u.full_name ?? "-"}</td>
+                    <td className="center">{new Date(u.created_at).toLocaleDateString("ko-KR")}</td>
+                    <td className="center">{u.last_login_at ? new Date(u.last_login_at).toLocaleString("ko-KR") : "-"}</td>
+                    <td className="center">
+                      <select value={u.tier} disabled={savingId === u.id} onChange={(e) => changeTier(u.id, e.target.value)}>
+                        <option value="viewer">뷰어</option>
+                        <option value="admin">관리자</option>
+                      </select>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
-        )}
+        </div>
 
         {userTotal > 0 && (
-          <div className="save-bar">
-            <button className="btn ghost" disabled={userPage <= 1} onClick={() => loadUsers(userPage - 1)}>이전</button>
-            <span style={{ fontSize: 12, color: "var(--muted)" }}>{userPage} / {userPages} 페이지</span>
-            <button className="btn ghost" disabled={userPage >= userPages} onClick={() => loadUsers(userPage + 1)}>다음</button>
+          <div className="save-bar" style={{ justifyContent: "center" }}>
+            <button className="btn" disabled={userPage <= 1} onClick={() => loadUsers(userPage - 1)}>이전</button>
+            <span className="card-note">{userPage} / {userPages}</span>
+            <button className="btn" disabled={userPage >= userPages} onClick={() => loadUsers(userPage + 1)}>다음</button>
           </div>
         )}
       </div>
 
       <div className="card">
-        <div className="card-head"><div className="card-title"><span className="accent-bar" />최근 로그인 이력 ({loginTotal})</div></div>
-
-        <div className="form-row" style={{ marginBottom: 14 }}>
-          <label>로그인 일자 범위</label>
-          <input type="date" value={loginFrom} onChange={(e) => setLoginFrom(e.target.value)} />
-          <span style={{ color: "var(--muted)", fontSize: 12 }}>~</span>
-          <input type="date" value={loginTo} onChange={(e) => setLoginTo(e.target.value)} />
-          <button className="btn primary" onClick={() => loadLogins(1)}>조회</button>
-          {(loginFrom || loginTo) && (
-            <button className="btn ghost" onClick={() => { setLoginFrom(""); setLoginTo(""); loadLogins(1); }}>초기화</button>
-          )}
+        <div className="card-head">
+          <div className="card-title">
+            <span className="accent-bar" />
+            최근 로그인 이력
+          </div>
+          <span className="card-note">총 {loginTotal.toLocaleString()}건</span>
         </div>
 
-        {loginError && <p style={{ color: "var(--danger)", fontSize: 12.5, marginBottom: 10 }}>{loginError}</p>}
-
-        {loginLoading ? (
-          <p style={{ fontSize: 12.5, color: "var(--muted)" }}>불러오는 중...</p>
-        ) : logins.length === 0 && !loginError ? (
-          <p style={{ fontSize: 12.5, color: "var(--muted)" }}>조건에 맞는 로그인 기록이 없습니다.</p>
-        ) : (
-          <div>
-            {logins.map((l) => (
-              <div className="alarm-item" key={l.id}>
-                <span className="time">{new Date(l.created_at).toLocaleString("ko-KR")}</span>
-                <span className="desc">{l.email ?? l.user_id ?? "알 수 없음"}</span>
-              </div>
-            ))}
+        <div className="filterbar">
+          <span className="filter-label">로그인 일자</span>
+          <input className="field" type="date" value={loginFrom} onChange={(e) => setLoginFrom(e.target.value)} />
+          <span>~</span>
+          <input className="field" type="date" value={loginTo} onChange={(e) => setLoginTo(e.target.value)} />
+          <div className="filterbar-right">
+            {(loginFrom || loginTo) && (
+              <button className="btn" onClick={() => { setLoginFrom(""); setLoginTo(""); loadLogins(1); }}>초기화</button>
+            )}
+            <button className="btn primary" onClick={() => loadLogins(1)}>조회</button>
           </div>
-        )}
+        </div>
+
+        {loginError && <div className="banner error">{loginError}</div>}
+
+        <div className="table-wrap">
+          <table className="grid">
+            <thead>
+              <tr><th style={{ width: 52 }}>No</th><th style={{ width: 190 }}>시각</th><th>계정</th></tr>
+            </thead>
+            <tbody>
+              {loginLoading ? (
+                <tr><td className="empty" colSpan={3}>불러오는 중...</td></tr>
+              ) : logins.length === 0 && !loginError ? (
+                <tr><td className="empty" colSpan={3}>조회된 데이터가 없습니다.</td></tr>
+              ) : (
+                logins.map((l, i) => (
+                  <tr key={l.id}>
+                    <td className="center">{(loginPage - 1) * PAGE_SIZE + i + 1}</td>
+                    <td className="center">{new Date(l.created_at).toLocaleString("ko-KR")}</td>
+                    <td>{l.email ?? l.user_id ?? "알 수 없음"}</td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
 
         {loginTotal > 0 && (
-          <div className="save-bar">
-            <button className="btn ghost" disabled={loginPage <= 1} onClick={() => loadLogins(loginPage - 1)}>이전</button>
-            <span style={{ fontSize: 12, color: "var(--muted)" }}>{loginPage} / {loginPages} 페이지</span>
-            <button className="btn ghost" disabled={loginPage >= loginPages} onClick={() => loadLogins(loginPage + 1)}>다음</button>
+          <div className="save-bar" style={{ justifyContent: "center" }}>
+            <button className="btn" disabled={loginPage <= 1} onClick={() => loadLogins(loginPage - 1)}>이전</button>
+            <span className="card-note">{loginPage} / {loginPages}</span>
+            <button className="btn" disabled={loginPage >= loginPages} onClick={() => loadLogins(loginPage + 1)}>다음</button>
           </div>
         )}
       </div>

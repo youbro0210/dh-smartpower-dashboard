@@ -22,7 +22,7 @@ function buildPath(raw: (number | null)[], width: number, height: number): strin
 
 /**
  * 최근 24시간 추세. telemetry 테이블을 시간 단위로 집계한 실측값이며,
- * 데이터가 없으면 선을 그리지 않고 안내 문구를 표시합니다.
+ * 데이터가 없으면 선을 그리지 않습니다.
  */
 export default function Sparkline({
   trend,
@@ -41,8 +41,8 @@ export default function Sparkline({
     return compact ? (
       <span style={{ fontSize: 11, color: "var(--muted)" }}>-</span>
     ) : (
-      <div style={{ fontSize: 12, color: "var(--muted)", padding: "22px 0", textAlign: "center" }}>
-        최근 24시간 누적된 계측 이력이 없습니다.
+      <div style={{ fontSize: 13, color: "var(--text-muted)", padding: "22px 0", textAlign: "center" }}>
+        조회된 데이터가 없습니다.
       </div>
     );
   }
@@ -58,13 +58,13 @@ export default function Sparkline({
       aria-label="최근 24시간 온도 및 수소가스 추세"
     >
       {temperaturePath && (
-        <path d={temperaturePath} fill="none" stroke="#d93a3a" strokeWidth={compact ? 1.5 : 2} />
+        <path d={temperaturePath} fill="none" stroke="#1f3a5f" strokeWidth={compact ? 1.5 : 2} />
       )}
       {h2Path && (
         <path
           d={h2Path}
           fill="none"
-          stroke="#0e8f9c"
+          stroke="#8aa4c8"
           strokeWidth={compact ? 1.5 : 2}
           opacity="0.9"
         />

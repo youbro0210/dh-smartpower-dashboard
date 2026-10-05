@@ -76,7 +76,7 @@ export default function Chatbot() {
   if (!open) {
     return (
       <button className="chat-fab" onClick={() => setOpen(true)}>
-        <span aria-hidden>💬</span> 챗봇
+        챗봇
       </button>
     );
   }
@@ -87,14 +87,13 @@ export default function Chatbot() {
         <h2>챗봇</h2>
         <button onClick={() => setLarge((v) => !v)}>{large ? "작게" : "크게"}</button>
         <button onClick={() => setOpen(false)} aria-label="닫기">
-          ×
+          닫기
         </button>
       </div>
 
       <div className="chat-body" ref={bodyRef}>
         {messages.length === 0 && (
           <>
-            <div className="chat-hint">어떻게 물어보세요</div>
             {SUGGESTIONS.map((s) => (
               <button key={s} className="chat-suggest" onClick={() => send(s)}>
                 {s}
@@ -126,7 +125,6 @@ export default function Chatbot() {
         <input
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          placeholder="예: 지금 위험 상태인 설비 알려줘"
           disabled={busy}
         />
         <button className="btn primary" type="submit" disabled={busy || !input.trim()}>

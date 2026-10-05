@@ -50,9 +50,7 @@ export default function SamplePage() {
     return (
       <>
         <PageHeader title="샘플 대시보드" breadcrumb="홈 › 샘플 대시보드" />
-        <div className="card">
-          <div className="empty">샘플 자료를 준비하는 중입니다.</div>
-        </div>
+        <div className="empty">불러오는 중...</div>
       </>
     );
   }
@@ -62,14 +60,9 @@ export default function SamplePage() {
       <PageHeader
         title="샘플 대시보드"
         breadcrumb="홈 › 샘플 대시보드"
-        subtitle="계측기 연결 전, 모니터링 화면에 어떤 내용이 어떻게 표시되는지 보여주는 예시입니다"
       />
 
-      <div className="sample-notice">
-        <b>예시 자료입니다.</b>
-        실제 계측값이 아니라 화면 확인용으로 고정해 둔 값이며, 현장 데이터가 들어오면 홈 화면에
-        같은 형식으로 표시됩니다.
-      </div>
+      <div className="sample-notice">예시 자료 (실제 계측값 아님)</div>
 
       {/* ① 전체 변압기 상태 요약 */}
       <div className="section-label">① 전체 변압기 상태</div>
@@ -115,40 +108,28 @@ export default function SamplePage() {
         </div>
       </div>
 
-      <div className="kpi-strip">
-        <div className="kpi">
-          <div className="kpi-label">24시간 알람</div>
-          <div className="kpi-value">
-            {alarms.length}
-            <small>건</small>
-          </div>
-          <div className="kpi-note">최근 하루 누적</div>
-        </div>
-        <div className="kpi">
-          <div className="kpi-label">평균 절연유 온도</div>
-          <div className="kpi-value">
-            {avgTemp.toFixed(1)}
-            <small>℃</small>
-          </div>
-          <div className="kpi-note">최고 {maxTemp.toFixed(1)}℃</div>
-        </div>
-        <div className="kpi">
-          <div className="kpi-label">가스 기준 초과</div>
-          <div className="kpi-value warning">
-            {gasExceed}
-            <small>대</small>
-          </div>
-          <div className="kpi-note">수소·메탄 경고 임계치 이상</div>
-        </div>
-        <div className="kpi">
-          <div className="kpi-label">브릿지 온라인</div>
-          <div className="kpi-value">
-            {bridgesOnline}
-            <small>/{SAMPLE_BRIDGES.length}</small>
-          </div>
-          <div className="kpi-note">수집 장치 연결 상태</div>
-        </div>
-      </div>
+      <table className="grid" style={{ marginBottom: 16 }}>
+        <thead>
+          <tr>
+            <th>24시간 알람</th>
+            <th>평균 절연유 온도</th>
+            <th>최고 절연유 온도</th>
+            <th>가스 기준 초과</th>
+            <th>브릿지 온라인</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td className="num">{alarms.length.toLocaleString()}건</td>
+            <td className="num">{avgTemp.toFixed(1)}℃</td>
+            <td className="num">{maxTemp.toFixed(1)}℃</td>
+            <td className={`num${gasExceed ? " t-warning" : ""}`}>{gasExceed}대</td>
+            <td className="num">
+              {bridgesOnline} / {SAMPLE_BRIDGES.length}
+            </td>
+          </tr>
+        </tbody>
+      </table>
 
       {/* ②③④ 주의·위험 변압기의 상세 상태 · 측정값 · 24시간 추세 */}
       <div className="section-label">② 주의·위험 변압기 상세 — 측정값과 24시간 추세</div>
@@ -182,13 +163,13 @@ export default function SamplePage() {
             <tbody>
               {alarms.map((a) => (
                 <tr key={a.id}>
-                  <td style={{ whiteSpace: "nowrap", color: "var(--muted)" }}>{a.time}</td>
+                  <td className="center">{a.time}</td>
                   <td style={{ whiteSpace: "nowrap" }}>
                     <b>{a.unit}</b>
                   </td>
                   <td>{a.item}</td>
                   <td style={{ color: "var(--muted)", whiteSpace: "nowrap" }}>{a.detail}</td>
-                  <td>
+                  <td className="center">
                     <span className={`badge ${a.level}`} style={{ color: LEVEL_COLOR[a.level] }}>
                       {STATUS_LABEL[a.level]}
                     </span>
@@ -200,10 +181,6 @@ export default function SamplePage() {
         </div>
       </div>
 
-      <div className="note">
-        판정 규칙은 홈 화면과 같습니다. 센서별 임계치(주의·경고·위험)로 등급을 매기고, 두 개
-        이상의 센서가 동시에 이상이면 한 단계 올립니다. 임계치는 설정 화면에서 바꿉니다.
-      </div>
     </>
   );
 }

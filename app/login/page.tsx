@@ -64,7 +64,6 @@ function LoginForm() {
                 autoComplete="username"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="you@example.com"
                 required
               />
             </div>
@@ -77,7 +76,6 @@ function LoginForm() {
                 autoComplete="current-password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
                 required
               />
             </div>
@@ -92,7 +90,7 @@ function LoginForm() {
               className="btn primary lg"
               type="submit"
               disabled={loading}
-              style={{ width: "100%", marginTop: 14, justifyContent: "center" }}
+              style={{ width: "100%", marginTop: 12 }}
             >
               {loading ? "로그인 중..." : "로그인"}
             </button>

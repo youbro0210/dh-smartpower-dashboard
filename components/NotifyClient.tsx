@@ -11,7 +11,6 @@ import {
   NotifyChannel,
   Recipient,
   Severity,
-  TARGET_HINT,
 } from "@/lib/notify/types";
 
 interface ChannelState {
@@ -193,7 +192,6 @@ export default function NotifyClient() {
       <PageHeader
         title="알림 발송"
         breadcrumb="홈 › 설정 › 알림 발송"
-        subtitle="알람이 발생하면 등록된 사람에게 각자 지정한 경로로 즉시 보냅니다"
         actions={
           <button className="btn" onClick={() => void load()} disabled={loading}>
             새로고침
@@ -214,7 +212,22 @@ export default function NotifyClient() {
             <span className="accent-bar" />
             {editingId ? "수신자 수정" : "수신자 추가"}
           </div>
-          <span className="card-note">여러 명을 등록할 수 있습니다</span>
+          <div className="toolbar">
+            {editingId && (
+              <button
+                className="btn"
+                onClick={() => {
+                  setEditingId(null);
+                  setForm(EMPTY_FORM);
+                }}
+              >
+                취소
+              </button>
+            )}
+            <button className="btn primary" onClick={() => void submitRecipient()} disabled={busy === "recipient"}>
+              {editingId ? "수정 저장" : "수신자 추가"}
+            </button>
+          </div>
         </div>
 
         <div className="form-grid">
@@ -224,7 +237,6 @@ export default function NotifyClient() {
               className="field"
               value={form.name}
               onChange={(e) => setForm({ ...form, name: e.target.value })}
-              placeholder="홍길동 · 당직실"
             />
           </label>
 
@@ -250,11 +262,7 @@ export default function NotifyClient() {
               className="field"
               value={form.target}
               onChange={(e) => setForm({ ...form, target: e.target.value })}
-              placeholder={TARGET_HINT[form.channel]}
             />
-            <small className="hint" style={{ margin: 0 }}>
-              {TARGET_HINT[form.channel]}
-            </small>
           </label>
 
           <label className="field-row">
@@ -280,27 +288,23 @@ export default function NotifyClient() {
                 type="number"
                 min={0}
                 max={23}
-                style={{ width: 70 }}
+                style={{ width: 70, textAlign: "right" }}
                 value={form.quiet_from}
                 onChange={(e) => setForm({ ...form, quiet_from: e.target.value })}
-                placeholder="22"
               />
-              <span style={{ color: "var(--muted)" }}>시 ~</span>
+              <span>시 ~</span>
               <input
                 className="field"
                 type="number"
                 min={0}
                 max={23}
-                style={{ width: 70 }}
+                style={{ width: 70, textAlign: "right" }}
                 value={form.quiet_to}
                 onChange={(e) => setForm({ ...form, quiet_to: e.target.value })}
-                placeholder="7"
               />
-              <span style={{ color: "var(--muted)" }}>시</span>
+              <span>시</span>
+              <span className="t-muted">(위험 등급 제외)</span>
             </span>
-            <small className="hint" style={{ margin: 0 }}>
-              비워 두면 항상 보냅니다. 위험 등급은 이 구간에도 보냅니다.
-            </small>
           </label>
 
           <label className="field-row wide">
@@ -309,26 +313,8 @@ export default function NotifyClient() {
               className="field"
               value={form.memo}
               onChange={(e) => setForm({ ...form, memo: e.target.value })}
-              placeholder="선택 — 담당 구역, 근무조 등"
             />
           </label>
-        </div>
-
-        <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
-          <button className="btn primary" onClick={() => void submitRecipient()} disabled={busy === "recipient"}>
-            {editingId ? "수정 저장" : "수신자 추가"}
-          </button>
-          {editingId && (
-            <button
-              className="btn"
-              onClick={() => {
-                setEditingId(null);
-                setForm(EMPTY_FORM);
-              }}
-            >
-              취소
-            </button>
-          )}
         </div>
       </div>
 
@@ -356,10 +342,8 @@ export default function NotifyClient() {
             <tbody>
               {recipients.length === 0 && (
                 <tr>
-                  <td colSpan={7}>
-                    <div className="empty">
-                      등록된 수신자가 없습니다. 위에서 추가하면 알람 발생 시 바로 발송됩니다.
-                    </div>
+                  <td className="empty" colSpan={7}>
+                    조회된 데이터가 없습니다.
                   </td>
                 </tr>
               )}
@@ -372,16 +356,16 @@ export default function NotifyClient() {
                   <td style={{ whiteSpace: "nowrap" }}>{CHANNEL_LABEL[r.channel]}</td>
                   <td style={{ whiteSpace: "nowrap" }}>{r.target}</td>
                   <td style={{ whiteSpace: "nowrap" }}>{LEVEL_LABEL[r.min_level]}</td>
-                  <td style={{ whiteSpace: "nowrap", color: "var(--muted)" }}>
+                  <td className="center">
                     {r.quiet_from === null ? "없음" : `${r.quiet_from}시 ~ ${r.quiet_to}시`}
                   </td>
-                  <td>
+                  <td className="center">
                     <span className={`badge ${r.enabled ? "normal" : "offline"}`}>
                       {r.enabled ? "사용" : "중지"}
                     </span>
                   </td>
                   <td>
-                    <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                    <div style={{ display: "flex", gap: 4, padding: "3px 0" }}>
                       <button
                         className="btn"
                         onClick={() => void testSend(r)}
@@ -415,7 +399,7 @@ export default function NotifyClient() {
             발송 경로 연동
           </div>
           <span className="card-note">
-            {enabledChannels.length}개 사용 중 · 비밀값은 저장 후 가려집니다
+            {enabledChannels.length}개 사용 중
           </span>
         </div>
 
@@ -428,14 +412,14 @@ export default function NotifyClient() {
                 className="channel-head"
                 onClick={() => setOpenChannel(open ? null : c.channel)}
               >
+                <b>{CHANNEL_LABEL[c.channel]}</b>
                 <span className={`badge ${c.enabled ? "normal" : "offline"}`}>
                   {c.enabled ? "사용" : "미사용"}
                 </span>
-                <b>{CHANNEL_LABEL[c.channel]}</b>
                 <span className="channel-count">
                   수신자 {recipients.filter((r) => r.channel === c.channel).length}명
                 </span>
-                <span className="channel-toggle">{open ? "접기 ▲" : "설정 ▼"}</span>
+                <span className="channel-toggle">{open ? "접기" : "설정"}</span>
               </button>
 
               {open && (
@@ -454,15 +438,10 @@ export default function NotifyClient() {
                         placeholder={f.placeholder}
                         onChange={(e) => setChannelField(c.channel, f.key, e.target.value)}
                       />
-                      {f.hint && (
-                        <small className="hint" style={{ margin: 0 }}>
-                          {f.hint}
-                        </small>
-                      )}
                     </label>
                   ))}
 
-                  <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
+                  <div style={{ display: "flex", gap: 4, justifyContent: "flex-end" }}>
                     <button
                       className="btn primary"
                       onClick={() => void saveChannel(c.channel, true)}
@@ -509,20 +488,20 @@ export default function NotifyClient() {
             <tbody>
               {log.length === 0 && (
                 <tr>
-                  <td colSpan={6}>
-                    <div className="empty">아직 발송 이력이 없습니다.</div>
+                  <td className="empty" colSpan={6}>
+                    조회된 데이터가 없습니다.
                   </td>
                 </tr>
               )}
               {log.map((row) => (
                 <tr key={row.id}>
-                  <td style={{ whiteSpace: "nowrap", color: "var(--muted)" }}>
+                  <td className="center">
                     {new Date(row.created_at).toLocaleString("ko-KR", { hour12: false })}
                   </td>
                   <td style={{ whiteSpace: "nowrap" }}>{row.recipient ?? "-"}</td>
                   <td style={{ whiteSpace: "nowrap" }}>{CHANNEL_LABEL[row.channel]}</td>
                   <td style={{ whiteSpace: "nowrap" }}>{row.target}</td>
-                  <td>
+                  <td className="center">
                     <span
                       className={`badge ${
                         row.status === "sent" ? "normal" : row.status === "failed" ? "danger" : "offline"
@@ -539,12 +518,6 @@ export default function NotifyClient() {
         </div>
       </div>
 
-      <div className="note">
-        알람이 생기면 발송 워커가 이 설정을 보고 즉시 보냅니다. 카카오 알림톡과 WhatsApp 은
-        사업자가 먼저 보내는 메시지에 사전 승인된 템플릿을 요구하므로, 각 서비스에서 템플릿
-        승인을 받은 뒤 그 ID 를 위에 넣어야 실제로 발송됩니다. 문자메시지는 발신번호 사전등록이
-        필요합니다.
-      </div>
     </>
   );
 }

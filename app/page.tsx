@@ -66,7 +66,7 @@ export default function DashboardPage() {
       items.push({
         count: offline.length,
         title: "통신이 끊긴 설비",
-        desc: offline.map((d) => d.name).join(", ") + " · 브릿지 연결 상태를 확인하세요",
+        desc: offline.map((d) => d.name).join(", "),
       });
     }
     const caution = devices.filter((d) => d.status === "caution");
@@ -114,13 +114,8 @@ export default function DashboardPage() {
       />
 
       {error && (
-        <div className="card" style={{ borderColor: "var(--danger)" }}>
-          <div className="card-title" style={{ color: "var(--danger)" }}>
-            데이터를 불러오지 못했습니다
-          </div>
-          <p className="hint" style={{ margin: "6px 0 0" }}>
-            {error}
-          </p>
+        <div className="banner error">
+          <b>데이터를 불러오지 못했습니다</b> — {error}
         </div>
       )}
 
@@ -167,40 +162,28 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      <div className="kpi-strip">
-        <div className="kpi">
-          <div className="kpi-label">24시간 알람</div>
-          <div className="kpi-value">
-            {alarms24h}
-            <small>건</small>
-          </div>
-          <div className="kpi-note">최근 하루 누적</div>
-        </div>
-        <div className="kpi">
-          <div className="kpi-label">평균 절연유 온도</div>
-          <div className="kpi-value">
-            {avgTemp.toFixed(1)}
-            <small>℃</small>
-          </div>
-          <div className="kpi-note">최고 {maxTemp.toFixed(1)}℃</div>
-        </div>
-        <div className="kpi">
-          <div className="kpi-label">가스 기준 초과</div>
-          <div className="kpi-value warning">
-            {gasExceed}
-            <small>대</small>
-          </div>
-          <div className="kpi-note">수소·메탄 경고 임계치 이상</div>
-        </div>
-        <div className="kpi">
-          <div className="kpi-label">브릿지 온라인</div>
-          <div className="kpi-value">
-            {bridgesOnline}
-            <small>/{bridges.length}</small>
-          </div>
-          <div className="kpi-note">수집 장치 연결 상태</div>
-        </div>
-      </div>
+      <table className="grid" style={{ marginBottom: 16 }}>
+        <thead>
+          <tr>
+            <th>24시간 알람</th>
+            <th>평균 절연유 온도</th>
+            <th>최고 절연유 온도</th>
+            <th>가스 기준 초과</th>
+            <th>브릿지 온라인</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td className="num">{alarms24h.toLocaleString()}건</td>
+            <td className="num">{avgTemp.toFixed(1)}℃</td>
+            <td className="num">{maxTemp.toFixed(1)}℃</td>
+            <td className={`num${gasExceed ? " t-warning" : ""}`}>{gasExceed}대</td>
+            <td className="num">
+              {bridgesOnline} / {bridges.length}
+            </td>
+          </tr>
+        </tbody>
+      </table>
 
       {/* ② 주의 이상 변압기의 자세한 상태 · 측정값 · 24시간 추세 */}
       <AttentionPanel devices={devices} alarms={alarms} thresholds={thresholds} />
@@ -265,19 +248,37 @@ export default function DashboardPage() {
             </div>
             <span className="card-note">{todos.length}건</span>
           </div>
-          {todos.length === 0 ? (
-            <div className="empty">확인이 필요한 항목이 없습니다.</div>
-          ) : (
-            todos.map((t) => (
-              <div className="todo-item" key={t.title}>
-                <span className={`count-badge${t.alert ? " alert" : ""}`}>{t.count}</span>
-                <div className="todo-body">
-                  <div className="todo-title">{t.title}</div>
-                  <div className="todo-desc">{t.desc}</div>
-                </div>
-              </div>
-            ))
-          )}
+          <table className="grid">
+            <colgroup>
+              <col style={{ width: 170 }} />
+              <col style={{ width: 60 }} />
+              <col />
+            </colgroup>
+            <thead>
+              <tr>
+                <th>구분</th>
+                <th>건수</th>
+                <th>대상</th>
+              </tr>
+            </thead>
+            <tbody>
+              {todos.length === 0 ? (
+                <tr>
+                  <td className="empty" colSpan={3}>
+                    조회된 데이터가 없습니다.
+                  </td>
+                </tr>
+              ) : (
+                todos.map((t) => (
+                  <tr key={t.title}>
+                    <td className={t.alert ? "t-danger" : undefined}>{t.title}</td>
+                    <td className={`num${t.alert ? " t-danger" : ""}`}>{t.count}</td>
+                    <td style={{ whiteSpace: "normal" }}>{t.desc}</td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
         </div>
 
         <div className="card">
@@ -286,32 +287,47 @@ export default function DashboardPage() {
               <span className="accent-bar" />
               최근 알람 이력
             </div>
-            <Link href="/alarms" className="card-note" style={{ color: "var(--brand)" }}>
+            <Link href="/alarms" className="btn">
               전체 보기
             </Link>
           </div>
-          {alarms.length === 0 ? (
-            <div className="empty">최근 7일간 발생한 알람이 없습니다.</div>
-          ) : (
-            alarms.slice(0, 8).map((a, i) => (
-              <div className="alarm-item" key={a.id ?? i}>
-                <span className="time">{a.time}</span>
-                <span>
-                  {a.unit} · {a.item}
-                  {a.detail && <span className="chip">{a.detail}</span>}
-                </span>
-                <span className="lvl" style={{ color: LEVEL_COLOR[a.level] }}>
-                  {STATUS_LABEL[a.level]}
-                </span>
-              </div>
-            ))
-          )}
+          <table className="grid">
+            <colgroup>
+              <col style={{ width: 120 }} />
+              <col />
+              <col style={{ width: 60 }} />
+            </colgroup>
+            <thead>
+              <tr>
+                <th>발생 시각</th>
+                <th>설비 · 항목</th>
+                <th>등급</th>
+              </tr>
+            </thead>
+            <tbody>
+              {alarms.length === 0 ? (
+                <tr>
+                  <td className="empty" colSpan={3}>
+                    조회된 데이터가 없습니다.
+                  </td>
+                </tr>
+              ) : (
+                alarms.slice(0, 8).map((a, i) => (
+                  <tr key={a.id ?? i}>
+                    <td className="center">{a.time}</td>
+                    <td>
+                      {a.unit} · {a.item}
+                      {a.detail && <span className="chip">{a.detail}</span>}
+                    </td>
+                    <td className="center" style={{ color: LEVEL_COLOR[a.level], fontWeight: 600 }}>
+                      {STATUS_LABEL[a.level]}
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
         </div>
-      </div>
-
-      <div className="note">
-        임계치와 복합 판정 규칙은 설정 화면에서 변경하며, 변경 즉시 모든 사용자 화면에 동일하게
-        반영됩니다.
       </div>
     </>
   );

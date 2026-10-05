@@ -12,10 +12,12 @@ export default async function AdminPage() {
 
   if (user.tier !== "admin") {
     return (
-      <div className="card" style={{ maxWidth: 420 }}>
-        <div className="card-title">관리자 등급만 접근할 수 있습니다</div>
-        <p className="hint" style={{ marginTop: 8 }}>
-          현재 계정 등급: 뷰어. 이 화면은 관리자만 사용할 수 있습니다.
+      <div className="card">
+        <div className="page-head">
+          <h1 className="page-title">관리자 등급만 접근할 수 있습니다</h1>
+        </div>
+        <p className="hint">
+          현재 계정 등급: 뷰어
         </p>
         <Link href="/" className="btn primary">
           대시보드로 돌아가기

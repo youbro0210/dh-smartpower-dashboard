@@ -57,8 +57,7 @@ export default function DeviceTable({
         <span className="card-note">
           {total !== undefined && total !== devices.length
             ? `${devices.length}건 / 전체 ${total}건`
-            : `${devices.length}건`}{" "}
-          · 행 클릭 시 상세
+            : `${devices.length}건`}
         </span>
       </div>
 
@@ -66,7 +65,7 @@ export default function DeviceTable({
         <table>
           <thead>
             <tr>
-              <th style={{ width: 34 }}>No</th>
+              <th style={{ width: 44 }}>No</th>
               <th style={{ minWidth: 96 }}>설비명</th>
               <th>위치</th>
               <th>용량</th>
@@ -83,11 +82,8 @@ export default function DeviceTable({
           <tbody>
             {devices.length === 0 && (
               <tr>
-                <td colSpan={12}>
-                  <div className="empty">
-                    조회 조건에 맞는 설비가 없습니다. 설정 화면에서 설비를 등록하거나 조건을
-                    변경해 주세요.
-                  </div>
+                <td className="empty" colSpan={12}>
+                  조회된 데이터가 없습니다.
                 </td>
               </tr>
             )}
@@ -107,31 +103,27 @@ export default function DeviceTable({
                     className={`clickable${open ? " expanded" : ""}`}
                     onClick={() => setExpandedId(open ? null : u.device_id)}
                   >
-                    <td className="num" style={{ color: "var(--faint)" }}>
-                      {idx + 1}
-                    </td>
+                    <td className="center">{idx + 1}</td>
                     <td style={{ whiteSpace: "nowrap" }}>
                       <b>{u.name}</b>
                       {u.bridge_id && <span className="cell-sub">{u.bridge_id}</span>}
                     </td>
                     <td style={{ whiteSpace: "nowrap" }}>{u.building}</td>
                     <td style={{ color: "var(--muted)", whiteSpace: "nowrap" }}>{u.capacity}</td>
-                    <td>
+                    <td className="center">
                       <span className={`badge ${u.status}`}>{STATUS_LABEL[u.status]}</span>
                     </td>
                     <td className="num">{u.temperature.toFixed(1)}</td>
                     <td className="num">{u.h2.toFixed(1)}</td>
                     <td className="num">{u.ch4.toFixed(1)}</td>
-                    <td style={{ whiteSpace: "nowrap" }}>{u.oil_level}</td>
+                    <td className="center">{u.oil_level}</td>
                     <td>
                       <Sparkline trend={u.trend} compact />
                     </td>
                     <td style={{ color: u.causes.length ? "var(--danger)" : "var(--faint)" }}>
                       {u.causes.join(", ") || "-"}
                     </td>
-                    <td style={{ color: "var(--faint)", whiteSpace: "nowrap" }}>
-                      {shortTime(u.since)}
-                    </td>
+                    <td className="center">{shortTime(u.since)}</td>
                   </tr>
 
                   {open && (
@@ -142,7 +134,7 @@ export default function DeviceTable({
                             <div className="s-lbl">수소가스 (H₂)</div>
                             <div className="s-val">
                               {u.h2.toFixed(1)}
-                              <span style={{ fontSize: 11, color: "var(--muted)" }}> ppm</span>
+                              <span style={{ fontSize: 12, fontWeight: 400, color: "var(--muted)" }}> ppm</span>
                             </div>
                             <div className="s-delta">{delta(u.h2, u.baseline?.h2)}</div>
                           </div>
@@ -150,7 +142,7 @@ export default function DeviceTable({
                             <div className="s-lbl">메탄가스 (CH₄)</div>
                             <div className="s-val">
                               {u.ch4.toFixed(1)}
-                              <span style={{ fontSize: 11, color: "var(--muted)" }}> ppm</span>
+                              <span style={{ fontSize: 12, fontWeight: 400, color: "var(--muted)" }}> ppm</span>
                             </div>
                             <div className="s-delta">{delta(u.ch4, u.baseline?.ch4)}</div>
                           </div>
@@ -158,7 +150,7 @@ export default function DeviceTable({
                             <div className="s-lbl">절연유 온도</div>
                             <div className="s-val">
                               {u.temperature.toFixed(1)}
-                              <span style={{ fontSize: 11, color: "var(--muted)" }}> ℃</span>
+                              <span style={{ fontSize: 12, fontWeight: 400, color: "var(--muted)" }}> ℃</span>
                             </div>
                             <div className="s-delta">
                               {delta(u.temperature, u.baseline?.temperature)}
@@ -194,18 +186,32 @@ export default function DeviceTable({
                         {related.length > 0 && (
                           <div style={{ marginTop: 12 }}>
                             <div className="spark-title">이 설비의 최근 알람</div>
-                            {related.slice(0, 5).map((a, i) => (
-                              <div className="alarm-item" key={a.id ?? i}>
-                                <span className="time">{a.time}</span>
-                                <span>
-                                  {a.item}
-                                  {a.detail && <span className="chip">{a.detail}</span>}
-                                </span>
-                                <span className="lvl" style={{ color: LEVEL_COLOR[a.level] }}>
-                                  {STATUS_LABEL[a.level]}
-                                </span>
-                              </div>
-                            ))}
+                            <table className="grid">
+                              <thead>
+                                <tr>
+                                  <th style={{ width: 120 }}>발생 시각</th>
+                                  <th>항목</th>
+                                  <th style={{ width: 60 }}>등급</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {related.slice(0, 5).map((a, i) => (
+                                  <tr key={a.id ?? i}>
+                                    <td className="center">{a.time}</td>
+                                    <td>
+                                      {a.item}
+                                      {a.detail && <span className="chip">{a.detail}</span>}
+                                    </td>
+                                    <td
+                                      className="center"
+                                      style={{ color: LEVEL_COLOR[a.level], fontWeight: 600 }}
+                                    >
+                                      {STATUS_LABEL[a.level]}
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
                           </div>
                         )}
                       </td>

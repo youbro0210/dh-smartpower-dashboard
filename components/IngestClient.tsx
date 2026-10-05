@@ -100,7 +100,7 @@ export default function IngestClient() {
       <PageHeader
         title="수집 내역"
         breadcrumb="홈 › 설정 › 수집 내역"
-        subtitle="장비가 실제로 보낸 메시지를 원문 그대로 보여줍니다"
+        subtitle="수신 메시지 원문"
         actions={
           <button className="btn" onClick={() => void load()} disabled={loading}>
             새로고침
@@ -110,29 +110,26 @@ export default function IngestClient() {
 
       <SettingsTabs active="ingest" />
 
-      <div className="kpi-strip">
-        <div className="kpi">
-          <div className="kpi-label">24시간 수신</div>
-          <div className="kpi-value">
-            {summary?.total ?? 0}
-            <small>건</small>
-          </div>
-        </div>
-        <div className="kpi">
-          <div className="kpi-label">정상</div>
-          <div className="kpi-value normal">{summary?.ok ?? 0}</div>
-        </div>
-        <div className="kpi">
-          <div className="kpi-label">주의</div>
-          <div className="kpi-value caution">{summary?.warn ?? 0}</div>
-          <div className="kpi-note">규격은 맞으나 확인이 필요한 건</div>
-        </div>
-        <div className="kpi">
-          <div className="kpi-label">오류</div>
-          <div className="kpi-value danger">{summary?.error ?? 0}</div>
-          <div className="kpi-note">읽지 못해 버린 건</div>
-        </div>
-      </div>
+      <table className="grid" style={{ marginBottom: 16 }}>
+        <thead>
+          <tr>
+            <th>24시간 수신</th>
+            <th>정상</th>
+            <th>주의</th>
+            <th>오류</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td className="num">{(summary?.total ?? 0).toLocaleString()}건</td>
+            <td className="num">{(summary?.ok ?? 0).toLocaleString()}</td>
+            <td className="num" style={{ color: "var(--caution)" }}>
+              {(summary?.warn ?? 0).toLocaleString()}
+            </td>
+            <td className="num t-danger">{(summary?.error ?? 0).toLocaleString()}</td>
+          </tr>
+        </tbody>
+      </table>
 
       <div className="filterbar">
         <span className="filter-label">상태</span>
@@ -167,7 +164,7 @@ export default function IngestClient() {
         </select>
 
         <div className="filterbar-right">
-          <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 14 }}>
+          <label style={{ display: "flex", alignItems: "center", gap: 6 }}>
             <input type="checkbox" checked={auto} onChange={(e) => setAuto(e.target.checked)} />
             5초마다 갱신
           </label>
@@ -180,7 +177,7 @@ export default function IngestClient() {
             <span className="accent-bar" />
             수신 내역
           </div>
-          <span className="card-note">{rows.length}건 · 행을 누르면 원문을 봅니다</span>
+          <span className="card-note">{rows.length}건</span>
         </div>
 
         <div className="table-wrap">
@@ -200,11 +197,8 @@ export default function IngestClient() {
             <tbody>
               {rows.length === 0 && (
                 <tr>
-                  <td colSpan={8}>
-                    <div className="empty">
-                      아직 받은 메시지가 없습니다. 장비가 아직 붙지 않았거나, 브로커 설정을
-                      확인해야 합니다.
-                    </div>
+                  <td className="empty" colSpan={8}>
+                    조회된 데이터가 없습니다.
                   </td>
                 </tr>
               )}
@@ -212,10 +206,8 @@ export default function IngestClient() {
                 const open = openId === row.id;
                 const devices = row.device_ids ?? [];
                 return (
-                  <tr key={row.id} className="clickable" onClick={() => setOpenId(open ? null : row.id)}>
-                    <td style={{ whiteSpace: "nowrap", color: "var(--muted)" }}>
-                      {timeText(row.received_at)}
-                    </td>
+                  <tr key={row.id} className={`clickable${open ? " selected" : ""}`} onClick={() => setOpenId(open ? null : row.id)}>
+                    <td className="center">{timeText(row.received_at)}</td>
                     <td style={{ whiteSpace: "nowrap" }}>
                       {KIND_LABEL[row.kind ?? ""] ?? row.kind ?? "-"}
                       {row.replay && <span className="chip">재전송</span>}
@@ -230,7 +222,7 @@ export default function IngestClient() {
                     </td>
                     <td className="num">{row.item_count}</td>
                     <td className="num">{row.stored_count}</td>
-                    <td>
+                    <td className="center">
                       <span className={`badge ${STATUS_BADGE[row.status]}`}>
                         {STATUS_LABEL[row.status]}
                       </span>
@@ -246,18 +238,13 @@ export default function IngestClient() {
         </div>
 
         {openId !== null && (
-          <div style={{ padding: "0 14px 14px" }}>
+          <div style={{ paddingTop: 12 }}>
             <div className="spark-title">받은 원문</div>
             <pre className="codeblock">
               {JSON.stringify(rows.find((r) => r.id === openId)?.payload ?? {}, null, 2)}
             </pre>
           </div>
         )}
-      </div>
-
-      <div className="note">
-        적재 건수가 수신 건수보다 적은 것은 대개 정상입니다. 같은 시각의 값이 다시 들어오면
-        서버가 중복으로 보고 한 번만 저장합니다. 보관 기간은 데이터 연결 화면에서 바꿉니다.
       </div>
     </>
   );
