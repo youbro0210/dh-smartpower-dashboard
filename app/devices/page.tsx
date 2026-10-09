@@ -97,7 +97,7 @@ export default function DevicesPage() {
         </div>
       </div>
 
-      <table className="grid" style={{ marginBottom: 16 }}>
+      <table className="grid compact summary-strip" style={{ marginBottom: 16 }}>
         <thead>
           <tr>
             <th>조회 설비</th>
@@ -110,12 +110,12 @@ export default function DevicesPage() {
         </thead>
         <tbody>
           <tr>
-            <td className="num">{filtered.length}대</td>
-            <td className="num">{avg(temps).toFixed(1)}℃</td>
-            <td className="num">{avg(online.map((d) => d.h2)).toFixed(1)} ppm</td>
-            <td className="num">{avg(online.map((d) => d.ch4)).toFixed(1)} ppm</td>
-            <td className={`num${gasExceed ? " t-warning" : ""}`}>{gasExceed}대</td>
-            <td className="num">{online.filter((d) => d.oil_level === "낮음").length}대</td>
+            <td className="num" data-label="조회 설비">{filtered.length}대</td>
+            <td className="num" data-label="평균 온도">{avg(temps).toFixed(1)}℃</td>
+            <td className="num" data-label="평균 수소">{avg(online.map((d) => d.h2)).toFixed(1)} ppm</td>
+            <td className="num" data-label="평균 메탄">{avg(online.map((d) => d.ch4)).toFixed(1)} ppm</td>
+            <td className={`num${gasExceed ? " t-warning" : ""}`} data-label="가스 기준 초과">{gasExceed}대</td>
+            <td className="num" data-label="유면 낮음">{online.filter((d) => d.oil_level === "낮음").length}대</td>
           </tr>
         </tbody>
       </table>

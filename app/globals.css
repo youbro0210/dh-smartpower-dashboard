@@ -47,20 +47,20 @@
   --surface: #ffffff;
   --border: var(--line);
 
-  /* 크기 */
-  --fs-xs: 12px;
-  --fs-sm: 13px;
-  --fs-base: 14px;
-  --fs-title: 16px;
-  --h-row: 32px;
-  --h-head: 34px;
-  --h-input: 30px;
-  --h-btn: 30px;
+  /* 크기 — 현장 모니터에 띄워 놓고 멀리서도 읽을 수 있는 크기를 기준으로 잡았습니다. */
+  --fs-xs: 13px;      /* 보조 설명, 단위 */
+  --fs-sm: 14px;      /* 표 본문, 메뉴 */
+  --fs-base: 15px;    /* 기본 본문 */
+  --fs-title: 18px;   /* 영역 제목 */
+  --h-row: 36px;
+  --h-head: 38px;
+  --h-input: 34px;
+  --h-btn: 34px;
   --radius: 2px;
 
-  --topbar-h: 48px;
-  --tabbar-h: 34px;
-  --sidebar-w: 200px;
+  --topbar-h: 52px;
+  --tabbar-h: 38px;
+  --sidebar-w: 220px;
 
   color-scheme: light;
 }
@@ -249,19 +249,26 @@ textarea {
   padding-bottom: 4px;
 }
 
+/* 메뉴 묶음 제목 — 옅으면 구분이 사라지므로 선을 함께 둡니다. */
 .nav-group {
-  margin: 0;
-  padding: 12px 16px 4px;
-  font-size: var(--fs-xs);
-  font-weight: 600;
-  color: var(--text-muted);
+  margin: 0 12px;
+  padding: 16px 4px 6px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--text-sub);
+  border-bottom: 1px solid var(--line-soft);
+}
+
+.nav-group-block + .nav-group-block .nav-group {
+  margin-top: 4px;
 }
 
 .nav-item {
   display: flex;
   align-items: center;
-  gap: 8px;
-  height: 32px;
+  gap: 9px;
+  height: 38px;
   padding: 0 16px 0 13px;
   border-left: 3px solid transparent;
   font-size: var(--fs-sm);
@@ -271,8 +278,8 @@ textarea {
 
 .nav-item svg {
   flex: none;
-  width: 16px;
-  height: 16px;
+  width: 17px;
+  height: 17px;
   color: var(--text-sub);
 }
 
@@ -698,15 +705,40 @@ tfoot td {
   vertical-align: middle;
 }
 
+/* 머리글은 본문보다 한 단계 진하게 두고, 아래를 굵은 선으로 끊어
+   어디까지가 제목이고 어디부터가 값인지 한눈에 갈리게 합니다. */
 thead th {
   height: var(--h-head);
   background: var(--bg-head);
-  font-weight: 600;
+  color: var(--text);
+  font-weight: 700;
   text-align: center;
   white-space: nowrap;
+  border-bottom: 2px solid var(--line-strong);
   position: sticky;
   top: 0;
   z-index: 1;
+}
+
+tbody td {
+  color: var(--text);
+}
+
+/* 보조 지표 띠 — 위의 상태 요약보다 한 단계 조용해야 합니다.
+   같은 굵기로 두면 중요한 것이 무엇인지 알 수 없습니다. */
+.grid.compact thead th {
+  height: 30px;
+  font-size: var(--fs-xs);
+  font-weight: 500;
+  color: var(--text-sub);
+  background: var(--bg-sum);
+  border-bottom: 1px solid var(--line);
+}
+
+.grid.compact tbody td {
+  height: 34px;
+  font-size: var(--fs-sm);
+  font-weight: 600;
 }
 
 tbody tr:hover td { background: var(--bg-hover); }
@@ -1085,100 +1117,246 @@ table input[type="number"] {
    로그인 · 회원가입
    --------------------------------------------------------------------------- */
 
+/* 로그인 · 회원가입
+   왼쪽은 어떤 시스템인지 알리는 자리, 오른쪽은 입력만 하는 자리로 나눕니다.
+   좁은 화면에서는 위아래로 접힙니다. */
+
 .auth-page {
   min-height: 100vh;
   display: grid;
-  place-items: center;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   background: var(--bg);
-  padding: 16px;
+}
+
+/* ---- 왼쪽: 브랜드 패널 ---- */
+
+.auth-aside {
+  background: var(--primary-hover);
+  color: #fff;
+  padding: 56px 56px 48px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+}
+
+/* 아주 옅은 격자 — 계측 화면이라는 인상만 남기고 글자를 방해하지 않습니다. */
+.auth-aside::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+  background-size: 44px 44px;
+  pointer-events: none;
+}
+
+.auth-aside > * {
+  position: relative;
+}
+
+.auth-aside .brand-mark {
+  width: 46px;
+  height: 46px;
+  background: #fff;
+  color: var(--primary-hover);
+  font-size: 17px;
+}
+
+.auth-aside h1 {
+  margin: 22px 0 0;
+  font-size: 30px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.3;
+}
+
+.auth-aside .auth-tagline {
+  margin: 10px 0 0;
+  font-size: 16px;
+  line-height: 1.65;
+  color: rgba(255, 255, 255, 0.78);
+  max-width: 30em;
+}
+
+.auth-aside hr {
+  width: 48px;
+  height: 2px;
+  margin: 30px 0;
+  border: 0;
+  background: rgba(255, 255, 255, 0.4);
+}
+
+.auth-points {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px 28px;
+  max-width: 460px;
+}
+
+.auth-points li {
+  font-size: 15px;
+  color: rgba(255, 255, 255, 0.92);
+}
+
+.auth-points span {
+  display: block;
+  margin-top: 3px;
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.auth-aside .auth-org {
+  margin-top: auto;
+  padding-top: 40px;
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.55);
+}
+
+/* ---- 오른쪽: 입력 ---- */
+
+.auth-main {
+  display: grid;
+  place-items: center;
+  padding: 48px 24px;
 }
 
 .auth-card {
   width: 100%;
-  max-width: 360px;
+  max-width: 400px;
 }
 
-.auth-card > .card {
-  border: 1px solid var(--line);
-  padding: 16px;
-  margin-bottom: 0;
-}
-
+/* 좁은 화면에서만 보이는 머리글 */
 .auth-brand {
-  display: flex;
+  display: none;
   align-items: center;
-  gap: 8px;
-  padding-bottom: 8px;
-  margin-bottom: 12px;
-  border-bottom: 2px solid var(--primary);
+  gap: 10px;
+  margin-bottom: 24px;
+}
+
+.auth-card h2 {
+  margin: 0 0 4px;
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.auth-card .auth-lead {
+  margin: 0 0 28px;
+  font-size: 15px;
+  color: var(--text-sub);
 }
 
 .brand-mark {
-  width: 32px;
-  height: 32px;
+  width: 36px;
+  height: 36px;
   border-radius: var(--radius);
   background: var(--primary);
   color: #fff;
   display: grid;
   place-items: center;
   font-weight: 700;
-  font-size: var(--fs-sm);
+  font-size: 14px;
+  letter-spacing: 0.02em;
+  flex: none;
 }
 
 .brand-text .t1 {
-  font-size: var(--fs-sm);
+  font-size: 15px;
   font-weight: 700;
   color: var(--primary);
 }
 
 .brand-text .t2 {
-  font-size: var(--fs-sm);
+  font-size: 13px;
   color: var(--text-sub);
 }
 
 .auth-field {
-  margin-bottom: 8px;
+  margin-bottom: 18px;
 }
 
 .auth-field label {
   display: block;
-  margin-bottom: 4px;
-  font-size: var(--fs-sm);
-  font-weight: 500;
+  margin-bottom: 7px;
+  font-size: 14px;
+  font-weight: 600;
   color: var(--text);
 }
 
 .auth-field input {
   width: 100%;
-  height: 34px;
-  padding: 0 8px;
-  border: 1px solid var(--line);
+  height: 46px;
+  padding: 0 13px;
+  border: 1px solid var(--line-strong);
   border-radius: var(--radius);
-  font-size: var(--fs-base);
+  font-size: 15px;
+  color: var(--text);
   background: #fff;
+}
+
+.auth-field input::placeholder {
+  color: var(--text-muted);
 }
 
 .auth-field input:focus {
   outline: none;
   border-color: var(--primary);
+  box-shadow: 0 0 0 3px var(--primary-soft);
+}
+
+.auth-submit {
+  width: 100%;
+  height: 48px;
+  margin-top: 6px;
+  font-size: 16px;
+  font-weight: 600;
 }
 
 .auth-error {
   color: var(--danger);
-  font-size: var(--fs-xs);
-  margin: 4px 0 0;
+  font-size: 14px;
+  margin: 0 0 14px;
+  padding: 10px 12px;
+  background: #fef3f2;
+  border-left: 3px solid var(--danger);
 }
 
 .auth-foot {
-  font-size: var(--fs-sm);
+  font-size: 14px;
   color: var(--text-sub);
   text-align: center;
-  margin-top: 12px;
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 1px solid var(--line-soft);
 }
 
 .auth-foot a {
   color: var(--primary);
   font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+@media (max-width: 920px) {
+  .auth-page {
+    grid-template-columns: 1fr;
+  }
+  .auth-aside {
+    display: none;
+  }
+  .auth-brand {
+    display: flex;
+  }
+  .auth-main {
+    padding: 32px 20px 48px;
+    align-items: start;
+  }
 }
 
 /* ---------------------------------------------------------------------------
@@ -1401,13 +1579,16 @@ table input[type="number"] {
   text-overflow: ellipsis;
 }
 
+/* 이 숫자가 화면에서 가장 먼저 읽혀야 합니다.
+   표 본문과 같은 크기로 두면 요약이 요약으로 보이지 않습니다. */
 .st-num {
   display: block;
-  height: var(--h-row);
-  line-height: var(--h-row);
-  padding: 0 8px;
-  font-size: var(--fs-base);
-  font-weight: 600;
+  height: 54px;
+  line-height: 54px;
+  padding: 0 12px;
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
   text-align: right;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
@@ -1416,10 +1597,10 @@ table input[type="number"] {
 }
 
 .st-num small {
-  font-size: var(--fs-xs);
-  font-weight: 400;
+  font-size: 14px;
+  font-weight: 500;
   color: var(--text-sub);
-  margin-left: 2px;
+  margin-left: 3px;
 }
 
 /* 선택된 상태 = 선택 행과 같은 배경 + 주색상 선 */
@@ -1799,6 +1980,93 @@ td.center {
 @media (max-width: 900px) {
   .table-wrap table {
     min-width: 760px;
+  }
+}
+
+/* 입력 표는 좁은 화면에서 라벨 위 · 입력칸 아래로 한 줄씩 쌓습니다.
+   네 칸짜리 폼을 옆으로 밀게 두면 입력 자체가 어렵습니다. */
+@media (max-width: 720px) {
+  table.form-grid,
+  table.form-grid tbody,
+  table.form-grid tr,
+  table.form-grid th,
+  table.form-grid td {
+    display: block;
+    width: auto;
+  }
+
+  table.form-grid tr {
+    border-bottom: 1px solid var(--line);
+  }
+
+  table.form-grid th {
+    width: auto;
+    text-align: left;
+    border: 0;
+    padding: 8px 10px 4px;
+  }
+
+  table.form-grid td {
+    border: 0;
+    padding: 0 10px 10px;
+  }
+
+  table.form-grid th:empty,
+  table.form-grid td:empty {
+    display: none;
+  }
+
+  table.form-grid .input,
+  table.form-grid .field,
+  table.form-grid .select,
+  table.form-grid input[type="text"] {
+    width: 100% !important;
+  }
+}
+
+/* 보조 지표 띠는 좁은 화면에서 가로로 밀지 않고, 머리글과 값을 짝지어 접습니다.
+   다섯 칸짜리 요약을 옆으로 스크롤하게 두면 아무도 보지 않습니다. */
+@media (max-width: 720px) {
+  .summary-strip,
+  .summary-strip thead,
+  .summary-strip tbody,
+  .summary-strip tr {
+    display: block;
+  }
+
+  .summary-strip thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+
+  .summary-strip tbody tr {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    border-top: 1px solid var(--line);
+    border-left: 1px solid var(--line);
+  }
+
+  .summary-strip tbody td {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    border: 0;
+    border-right: 1px solid var(--line);
+    border-bottom: 1px solid var(--line);
+    text-align: right;
+  }
+
+  /* 머리글 글자를 값 왼쪽에 다시 붙여 줍니다. */
+  .summary-strip tbody td::before {
+    content: attr(data-label);
+    font-size: var(--fs-xs);
+    font-weight: 500;
+    color: var(--text-sub);
   }
 }
 

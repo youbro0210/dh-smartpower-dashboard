@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import AuthAside from "@/components/AuthAside";
 
 export default function SignupPage() {
   const [fullName, setFullName] = useState("");
@@ -40,16 +41,15 @@ export default function SignupPage() {
   if (tier) {
     return (
       <div className="auth-page">
-        <div className="auth-card">
-          <div className="card">
-            <div className="card-head">
-              <div className="card-title">가입이 완료되었습니다</div>
-            </div>
-            <p className="hint" style={{ fontSize: 13 }}>
-              등급: {tier === "admin" ? "관리자" : "뷰어"}
+        <AuthAside />
+        <div className="auth-main">
+          <div className="auth-card">
+            <h2>가입이 완료되었습니다</h2>
+            <p className="auth-lead">
+              부여된 등급은 {tier === "admin" ? "관리자" : "뷰어"} 입니다.
             </p>
-            <Link href="/login" className="btn primary lg" style={{ width: "100%" }}>
-              로그인
+            <Link href="/login" className="btn primary auth-submit">
+              로그인하러 가기
             </Link>
           </div>
         </div>
@@ -59,16 +59,20 @@ export default function SignupPage() {
 
   return (
     <div className="auth-page">
-      <div className="auth-card">
-        <div className="auth-brand">
-          <div className="brand-mark">DH</div>
-          <div className="brand-text">
-            <div className="t1">DH SMART POWER</div>
-            <div className="t2">회원가입</div>
+      <AuthAside />
+      <div className="auth-main">
+        <div className="auth-card">
+          <div className="auth-brand">
+            <div className="brand-mark">DH</div>
+            <div className="brand-text">
+              <div className="t1">DH SMART POWER</div>
+              <div className="t2">변압기 통합 모니터링</div>
+            </div>
           </div>
-        </div>
 
-        <div className="card">
+          <h2>회원가입</h2>
+          <p className="auth-lead">가입 후 관리자가 등급을 올려주면 설정을 바꿀 수 있습니다.</p>
+
           <form onSubmit={handleSubmit}>
             <div className="auth-field">
               <label htmlFor="name">이름</label>
@@ -85,15 +89,15 @@ export default function SignupPage() {
 
             {error && <p role="alert" className="auth-error">{error}</p>}
 
-            <button className="btn primary lg" type="submit" disabled={loading} style={{ width: "100%", marginTop: 12 }}>
-              {loading ? "가입 처리 중..." : "회원가입"}
-            </button>
-          </form>
-        </div>
+          <button className="btn primary auth-submit" type="submit" disabled={loading}>
+            {loading ? "가입 처리 중..." : "회원가입"}
+          </button>
+        </form>
 
         <p className="auth-foot">
           이미 계정이 있으신가요? <Link href="/login">로그인</Link>
         </p>
+        </div>
       </div>
     </div>
   );

@@ -1,7 +1,7 @@
 "use client";
 
 import { Fragment, useState } from "react";
-import { DeviceEvaluated, STATUS_LABEL, AlarmEvent } from "@/lib/types";
+import { DeviceEvaluated, LINK_TYPE_LABEL, STATUS_LABEL, AlarmEvent } from "@/lib/types";
 import Sparkline from "./Sparkline";
 
 /** 표에서는 자리를 아끼기 위해 월-일 시:분 까지만 적습니다. */
@@ -106,7 +106,11 @@ export default function DeviceTable({
                     <td className="center">{idx + 1}</td>
                     <td style={{ whiteSpace: "nowrap" }}>
                       <b>{u.name}</b>
-                      {u.bridge_id && <span className="cell-sub">{u.bridge_id}</span>}
+                      {/* 값이 서버까지 오는 길. 헤디 구성 1·2·3안을 여기서 구분합니다. */}
+                      <span className="cell-sub">
+                        {LINK_TYPE_LABEL[u.link_type ?? (u.bridge_id ? "bridge" : "direct")]}
+                        {u.bridge_id ? ` · ${u.bridge_id}` : ""}
+                      </span>
                     </td>
                     <td style={{ whiteSpace: "nowrap" }}>{u.building}</td>
                     <td style={{ color: "var(--muted)", whiteSpace: "nowrap" }}>{u.capacity}</td>
@@ -120,7 +124,13 @@ export default function DeviceTable({
                     <td>
                       <Sparkline trend={u.trend} compact />
                     </td>
-                    <td style={{ color: u.causes.length ? "var(--danger)" : "var(--faint)" }}>
+                    {/* 등급과 무관하게 전부 빨갛게 쓰면 정작 위험한 설비가 묻힙니다. */}
+                    <td
+                      style={{
+                        color: u.causes.length ? `var(--${u.status})` : "var(--faint)",
+                        fontWeight: u.status === "danger" ? 600 : 400,
+                      }}
+                    >
                       {u.causes.join(", ") || "-"}
                     </td>
                     <td className="center">{shortTime(u.since)}</td>

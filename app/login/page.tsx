@@ -3,6 +3,7 @@
 import { Suspense, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
+import AuthAside from "@/components/AuthAside";
 
 function LoginForm() {
   const params = useSearchParams();
@@ -45,16 +46,21 @@ function LoginForm() {
 
   return (
     <div className="auth-page">
-      <div className="auth-card">
-        <div className="auth-brand">
-          <div className="brand-mark">DH</div>
-          <div className="brand-text">
-            <div className="t1">DH SMART POWER</div>
-            <div className="t2">변압기 통합 모니터링</div>
-          </div>
-        </div>
+      <AuthAside />
 
-        <div className="card">
+      <div className="auth-main">
+        <div className="auth-card">
+          <div className="auth-brand">
+            <div className="brand-mark">DH</div>
+            <div className="brand-text">
+              <div className="t1">DH SMART POWER</div>
+              <div className="t2">변압기 통합 모니터링</div>
+            </div>
+          </div>
+
+          <h2>로그인</h2>
+          <p className="auth-lead">등록된 계정으로 들어가면 현재 상태를 바로 볼 수 있습니다.</p>
+
           <form onSubmit={handleSubmit}>
             <div className="auth-field">
               <label htmlFor="email">이메일</label>
@@ -62,6 +68,7 @@ function LoginForm() {
                 id="email"
                 type="email"
                 autoComplete="username"
+                placeholder="name@company.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
@@ -86,20 +93,15 @@ function LoginForm() {
               </p>
             )}
 
-            <button
-              className="btn primary lg"
-              type="submit"
-              disabled={loading}
-              style={{ width: "100%", marginTop: 12 }}
-            >
+            <button className="btn primary auth-submit" type="submit" disabled={loading}>
               {loading ? "로그인 중..." : "로그인"}
             </button>
           </form>
-        </div>
 
-        <p className="auth-foot">
-          계정이 없으신가요? <Link href="/signup">회원가입</Link>
-        </p>
+          <p className="auth-foot">
+            계정이 없으신가요? <Link href="/signup">회원가입</Link>
+          </p>
+        </div>
       </div>
     </div>
   );

@@ -106,7 +106,8 @@ export default function SettingsClient() {
             {saving ? "저장 중..." : "저장"}
           </button>
         </div>
-        <table className="grid threshold-table" style={{ marginBottom: 12 }}>
+        <div className="table-wrap" style={{ marginBottom: 12 }}>
+        <table className="grid threshold-table">
           <colgroup>
             <col style={{ width: 180 }} />
             <col />
@@ -144,6 +145,7 @@ export default function SettingsClient() {
             ))}
           </tbody>
         </table>
+        </div>
 
         <table className="form-grid">
           <tbody>

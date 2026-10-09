@@ -162,7 +162,8 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      <table className="grid" style={{ marginBottom: 16 }}>
+      {/* 보조 지표 — 좁은 화면에서는 두 칸씩 접힙니다. */}
+      <table className="grid compact summary-strip" style={{ marginBottom: 20 }}>
         <thead>
           <tr>
             <th>24시간 알람</th>
@@ -174,11 +175,13 @@ export default function DashboardPage() {
         </thead>
         <tbody>
           <tr>
-            <td className="num">{alarms24h.toLocaleString()}건</td>
-            <td className="num">{avgTemp.toFixed(1)}℃</td>
-            <td className="num">{maxTemp.toFixed(1)}℃</td>
-            <td className={`num${gasExceed ? " t-warning" : ""}`}>{gasExceed}대</td>
-            <td className="num">
+            <td className="num" data-label="24시간 알람">{alarms24h.toLocaleString()}건</td>
+            <td className="num" data-label="평균 절연유 온도">{avgTemp.toFixed(1)}℃</td>
+            <td className="num" data-label="최고 절연유 온도">{maxTemp.toFixed(1)}℃</td>
+            <td className={`num${gasExceed ? " t-warning" : ""}`} data-label="가스 기준 초과">
+              {gasExceed}대
+            </td>
+            <td className="num" data-label="브릿지 온라인">
               {bridgesOnline} / {bridges.length}
             </td>
           </tr>
