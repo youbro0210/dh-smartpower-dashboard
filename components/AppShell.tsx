@@ -21,6 +21,16 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const { email, tier, loading, logout } = useSession();
   const [tabs, setTabs] = useState<Tab[]>([{ href: "/", label: "홈" }]);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [menuQuery, setMenuQuery] = useState("");
+  const [collapsed, setCollapsed] = useState<string[]>([]);
+
+  const query = menuQuery.trim().toLowerCase();
+
+  function toggleGroup(label: string) {
+    setCollapsed((list) =>
+      list.includes(label) ? list.filter((l) => l !== label) : [...list, label]
+    );
+  }
 
   const isAuthPage = pathname === "/login" || pathname === "/signup";
 
@@ -92,21 +102,8 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
             <NavIcon name="bell" size={18} />
           </Link>
 
-          {loading ? (
-            <span className="topbar-quiet">확인 중...</span>
-          ) : email ? (
-            <>
-              <div className="topbar-user">
-                <span className="topbar-user-name">
-                  <span className="topbar-user-id">{email.split("@")[0]}</span>
-                  <span className="topbar-user-role">({isAdmin ? "시스템 관리자" : "뷰어"})</span>
-                </span>
-              </div>
-              <button type="button" className="topbar-link" onClick={logout}>
-                로그아웃
-              </button>
-            </>
-          ) : (
+          {/* 사용자 정보와 로그아웃은 메뉴 아래쪽으로 옮겼습니다. */}
+          {!loading && !email && (
             <Link href="/login" className="topbar-link">
               로그인
             </Link>
@@ -125,31 +122,84 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       )}
 
       <aside className={`sidebar${sidebarOpen ? " open" : ""}`} aria-label="주 메뉴">
+        <div className="side-search">
+          <NavIcon name="search" size={16} />
+          <input
+            type="search"
+            value={menuQuery}
+            onChange={(e) => setMenuQuery(e.target.value)}
+            placeholder="메뉴 검색"
+            aria-label="메뉴 검색"
+          />
+        </div>
+
         <nav>
           {NAV.map((group) => {
-            const items = group.items.filter((i) => !i.adminOnly || isAdmin);
+            // 관리자 전용 항목은 등급에 따라 감춥니다.
+            // 검색어가 있으면 이름이 맞는 항목만 남깁니다.
+            const items = group.items
+              .filter((i) => !i.adminOnly || isAdmin)
+              .filter((i) => !query || i.label.toLowerCase().includes(query));
             if (!items.length) return null;
+
+            const folded = collapsed.includes(group.label) && !query;
+
             return (
               <div className="nav-group-block" key={group.label}>
-                <p className="nav-group">{group.label}</p>
-                {items.map((item) => {
-                  const active = pathname === item.href;
-                  return (
-                    <Link
-                      key={item.href}
-                      href={item.href}
-                      className={`nav-item${active ? " active" : ""}`}
-                      aria-current={active ? "page" : undefined}
-                      onClick={() => setSidebarOpen(false)}
-                    >
-                      <span className="nav-label">{item.label}</span>
-                    </Link>
-                  );
-                })}
+                <button
+                  type="button"
+                  className={`nav-group${folded ? " folded" : ""}`}
+                  onClick={() => toggleGroup(group.label)}
+                  aria-expanded={!folded}
+                >
+                  <span>{group.label}</span>
+                  <NavIcon name="caret" size={14} />
+                </button>
+
+                {!folded &&
+                  items.map((item) => {
+                    const active = pathname === item.href;
+                    return (
+                      <Link
+                        key={item.href}
+                        href={item.href}
+                        className={`nav-item${active ? " active" : ""}`}
+                        aria-current={active ? "page" : undefined}
+                        onClick={() => setSidebarOpen(false)}
+                      >
+                        <NavIcon name={item.icon} size={17} />
+                        <span className="nav-label">{item.label}</span>
+                      </Link>
+                    );
+                  })}
               </div>
             );
           })}
+
+          {query && !NAV.some((g) =>
+            g.items.some(
+              (i) => (!i.adminOnly || isAdmin) && i.label.toLowerCase().includes(query)
+            )
+          ) && <p className="side-empty">찾는 메뉴가 없습니다.</p>}
         </nav>
+
+        <div className="side-foot">
+          <p className="side-user">
+            {loading ? "확인 중..." : email ? (
+              <>
+                <b>DH 스마트파워</b> · {email.split("@")[0]} ·{" "}
+                {isAdmin ? "ADMIN" : "VIEWER"}
+              </>
+            ) : (
+              "로그인하지 않음"
+            )}
+          </p>
+          {email && (
+            <button type="button" className="side-btn" onClick={logout}>
+              로그아웃
+            </button>
+          )}
+        </div>
       </aside>
 
       <nav className="tabbar" aria-label="열린 화면">

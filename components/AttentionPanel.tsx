@@ -99,10 +99,10 @@ export default function AttentionPanel({
         <div className="card-head">
           <div className="card-title">
             <span className="accent-bar" />
-            주의 이상 변압기 상세
+            확인할 설비
           </div>
         </div>
-        <div className="all-clear">전체 {devices.length}대 정상</div>
+        <div className="all-clear">기준을 넘은 설비가 없습니다. 전체 {devices.length}대 정상.</div>
       </div>
     );
   }
@@ -112,7 +112,7 @@ export default function AttentionPanel({
       <div className="card-head">
         <div className="card-title">
           <span className="accent-bar" />
-          주의 이상 변압기 상세
+          확인할 설비
         </div>
         <span className="card-note">
           {ranked.length}대 · 심각도 순
@@ -241,41 +241,23 @@ export default function AttentionPanel({
                       />
                     </div>
                     <div>
-                      <div className="spark-title">이 변압기의 최근 알람</div>
-                      <table className="grid">
-                        <thead>
-                          <tr>
-                            <th style={{ width: 120 }}>발생 시각</th>
-                            <th>항목</th>
-                            <th style={{ width: 60 }}>등급</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {related.length === 0 ? (
-                            <tr>
-                              <td className="empty" colSpan={3}>
-                                조회된 데이터가 없습니다.
-                              </td>
-                            </tr>
-                          ) : (
-                            related.slice(0, 6).map((a, i) => (
-                              <tr key={a.id ?? i}>
-                                <td className="center">{a.time}</td>
-                                <td>
-                                  {a.item}
-                                  {a.detail && <span className="chip">{a.detail}</span>}
-                                </td>
-                                <td
-                                  className="center"
-                                  style={{ color: LEVEL_COLOR[a.level], fontWeight: 600 }}
-                                >
-                                  {STATUS_LABEL[a.level]}
-                                </td>
-                              </tr>
-                            ))
-                          )}
-                        </tbody>
-                      </table>
+                      <div className="spark-title">이 설비의 최근 알람</div>
+                      {related.length === 0 ? (
+                        <p className="feed-empty">이 설비에 기록된 알람이 없습니다.</p>
+                      ) : (
+                        <ul className="feed">
+                          {related.slice(0, 6).map((a, i) => (
+                            <li key={a.id ?? i} className={a.level}>
+                              <span className="feed-time">{a.time}</span>
+                              <span className="feed-body">
+                                <span className="feed-item">{a.item}</span>
+                                {a.detail && <span className="feed-detail">{a.detail}</span>}
+                              </span>
+                              <span className={`badge ${a.level}`}>{STATUS_LABEL[a.level]}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
                     </div>
                   </div>
                 </div>

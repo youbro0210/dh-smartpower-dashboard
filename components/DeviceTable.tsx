@@ -48,7 +48,7 @@ export default function DeviceTable({
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
   return (
-    <div className="card flush">
+    <div className="card flush device-table">
       <div className="card-head">
         <div className="card-title">
           <span className="accent-bar" />
@@ -103,8 +103,8 @@ export default function DeviceTable({
                     className={`clickable${open ? " expanded" : ""}`}
                     onClick={() => setExpandedId(open ? null : u.device_id)}
                   >
-                    <td className="center">{idx + 1}</td>
-                    <td style={{ whiteSpace: "nowrap" }}>
+                    <td className="center c-no">{idx + 1}</td>
+                    <td className="c-name" style={{ whiteSpace: "nowrap" }}>
                       <b>{u.name}</b>
                       {/* 값이 서버까지 오는 길. 헤디 구성 1·2·3안을 여기서 구분합니다. */}
                       <span className="cell-sub">
@@ -112,16 +112,16 @@ export default function DeviceTable({
                         {u.bridge_id ? ` · ${u.bridge_id}` : ""}
                       </span>
                     </td>
-                    <td style={{ whiteSpace: "nowrap" }}>{u.building}</td>
-                    <td style={{ color: "var(--muted)", whiteSpace: "nowrap" }}>{u.capacity}</td>
-                    <td className="center">
+                    <td className="c-where" data-label="위치" style={{ whiteSpace: "nowrap" }}>{u.building}</td>
+                    <td className="c-cap" data-label="용량" style={{ color: "var(--muted)", whiteSpace: "nowrap" }}>{u.capacity}</td>
+                    <td className="center c-status">
                       <span className={`badge ${u.status}`}>{STATUS_LABEL[u.status]}</span>
                     </td>
-                    <td className="num">{u.temperature.toFixed(1)}</td>
-                    <td className="num">{u.h2.toFixed(1)}</td>
-                    <td className="num">{u.ch4.toFixed(1)}</td>
-                    <td className="center">{u.oil_level}</td>
-                    <td>
+                    <td className="num" data-label="온도(℃)">{u.temperature.toFixed(1)}</td>
+                    <td className="num" data-label="수소(ppm)">{u.h2.toFixed(1)}</td>
+                    <td className="num" data-label="메탄(ppm)">{u.ch4.toFixed(1)}</td>
+                    <td className="center" data-label="유면">{u.oil_level}</td>
+                    <td className="c-spark">
                       <Sparkline trend={u.trend} compact />
                     </td>
                     {/* 등급과 무관하게 전부 빨갛게 쓰면 정작 위험한 설비가 묻힙니다. */}
@@ -130,10 +130,13 @@ export default function DeviceTable({
                         color: u.causes.length ? `var(--${u.status})` : "var(--faint)",
                         fontWeight: u.status === "danger" ? 600 : 400,
                       }}
+                      className="c-cause"
+                      data-label="주요 이상"
+                      data-empty={u.causes.length ? undefined : "true"}
                     >
                       {u.causes.join(", ") || "-"}
                     </td>
-                    <td className="center">{shortTime(u.since)}</td>
+                    <td className="center c-time" data-label="측정 시각">{shortTime(u.since)}</td>
                   </tr>
 
                   {open && (

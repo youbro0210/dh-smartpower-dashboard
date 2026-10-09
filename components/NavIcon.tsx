@@ -15,7 +15,9 @@ export type IconName =
   | "sample"
   | "menu"
   | "logout"
-  | "close";
+  | "close"
+  | "search"
+  | "caret";
 
 const PATHS: Record<IconName, JSX.Element> = {
   // 집
@@ -91,6 +93,15 @@ const PATHS: Record<IconName, JSX.Element> = {
   ),
   // 탭 닫기
   close: <path d="M6 6l12 12M18 6 6 18" />,
+  // 메뉴 검색
+  search: (
+    <>
+      <circle cx="11" cy="11" r="7" />
+      <path d="m20 20-3.6-3.6" />
+    </>
+  ),
+  // 묶음 접기·펴기
+  caret: <path d="m6 9 6 6 6-6" />,
 };
 
 export default function NavIcon({

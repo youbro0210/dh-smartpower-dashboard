@@ -60,7 +60,17 @@
 
   --topbar-h: 52px;
   --tabbar-h: 38px;
-  --sidebar-w: 220px;
+  --sidebar-w: 236px;
+
+  /* 메뉴(짙은 남색 바탕) 전용 색 */
+  --side-bg: #1a2742;
+  --side-bg-deep: #16223a;
+  --side-bg-soft: #22334f;
+  --side-bg-active: #27395c;
+  --side-line: #2c3e5e;
+  --side-text: #dfe6f0;
+  --side-muted: #8fa0ba;
+  --side-accent: #5ea0ea;
 
   color-scheme: light;
 }
@@ -120,9 +130,9 @@ textarea {
   position: fixed;
   inset: 0 0 auto 0;
   height: var(--topbar-h);
-  background: var(--bg);
-  color: var(--text);
-  border-bottom: 1px solid var(--line);
+  background: var(--side-bg-deep);
+  color: #fff;
+  border-bottom: 1px solid var(--side-line);
   display: flex;
   align-items: center;
   gap: 8px;
@@ -138,21 +148,22 @@ textarea {
   flex: none;
   background: none;
   border: 0;
-  border-radius: var(--radius);
-  color: var(--text-sub);
+  border-radius: 5px;
+  color: var(--side-muted);
   cursor: pointer;
   padding: 0;
 }
 
 .topbar-icon-btn:hover {
-  background: var(--bg-head);
-  color: var(--text);
+  background: var(--side-bg-soft);
+  color: #fff;
 }
 
 .topbar-brand {
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 600;
-  color: var(--primary);
+  letter-spacing: -0.01em;
+  color: #fff;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -164,7 +175,7 @@ textarea {
   align-items: center;
   gap: 12px;
   font-size: var(--fs-sm);
-  color: var(--text-sub);
+  color: var(--side-muted);
 }
 
 .topbar-quiet {
@@ -202,10 +213,10 @@ textarea {
   padding: 0 12px;
   font-size: var(--fs-sm);
   font-weight: 500;
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  background: #fff;
-  color: var(--text);
+  border: 1px solid var(--side-line);
+  border-radius: 5px;
+  background: var(--side-bg-soft);
+  color: var(--side-text);
   cursor: pointer;
   white-space: nowrap;
 }
@@ -215,7 +226,8 @@ textarea {
 }
 
 .topbar-link:hover {
-  background: var(--bg-head);
+  background: var(--side-bg-active);
+  color: #fff;
 }
 
 @media (max-width: 640px) {
@@ -226,76 +238,154 @@ textarea {
    좌측 메뉴 (200px)
    --------------------------------------------------------------------------- */
 
+/* 메뉴는 짙은 남색 바탕에 흰 글씨입니다.
+   본문(흰 바탕)과 색으로 갈라 두면 화면이 어디서 시작하는지 바로 보입니다. */
+
 .sidebar {
   position: fixed;
   top: var(--topbar-h);
   bottom: 0;
   left: 0;
   width: var(--sidebar-w);
-  background: var(--bg);
-  border-right: 1px solid var(--line);
+  background: var(--side-bg);
+  color: var(--side-text);
+  border-right: 1px solid var(--side-line);
   overflow-y: auto;
   z-index: 40;
-  font-size: var(--fs-sm);
+  font-size: var(--fs-base);
+  display: flex;
+  flex-direction: column;
 }
 
 .sidebar nav {
   display: flex;
   flex-direction: column;
-  padding: 4px 0 16px;
+  padding: 4px 0 20px;
+  flex: 1;
+}
+
+/* ---- 메뉴 검색 ---- */
+
+.side-search {
+  position: relative;
+  padding: 14px 14px 10px;
+}
+
+.side-search svg {
+  position: absolute;
+  left: 25px;
+  top: 50%;
+  transform: translateY(-40%);
+  color: var(--side-muted);
+  pointer-events: none;
+}
+
+.side-search input {
+  width: 100%;
+  height: 38px;
+  padding: 0 12px 0 36px;
+  border: 1px solid var(--side-line);
+  border-radius: 6px;
+  background: var(--side-bg-soft);
+  color: var(--side-text);
+  font: inherit;
+  font-size: var(--fs-sm);
+}
+
+.side-search input::placeholder {
+  color: var(--side-muted);
+}
+
+.side-search input:focus {
+  outline: none;
+  border-color: var(--side-accent);
+}
+
+.side-search input::-webkit-search-cancel-button {
+  filter: invert(1) opacity(0.5);
+}
+
+.side-empty {
+  margin: 8px 18px;
+  font-size: var(--fs-sm);
+  color: var(--side-muted);
 }
 
 .nav-group-block {
   padding-bottom: 4px;
 }
 
-/* 메뉴 묶음 제목 — 옅으면 구분이 사라지므로 선을 함께 둡니다. */
+/* 묶음 제목 — 누르면 접힙니다. */
 .nav-group {
-  margin: 0 12px;
-  padding: 16px 4px 6px;
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  color: var(--text-sub);
-  border-bottom: 1px solid var(--line-soft);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  margin: 0;
+  padding: 18px 18px 8px;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--side-muted);
+  text-align: left;
+  cursor: pointer;
 }
 
-.nav-group-block + .nav-group-block .nav-group {
-  margin-top: 4px;
+.nav-group:hover {
+  color: var(--side-text);
+}
+
+.nav-group svg {
+  flex: none;
+  opacity: 0.7;
+  transition: transform 0.15s;
+}
+
+.nav-group.folded svg {
+  transform: rotate(-90deg);
 }
 
 .nav-item {
   display: flex;
   align-items: center;
-  gap: 9px;
-  height: 38px;
-  padding: 0 16px 0 13px;
+  gap: 11px;
+  height: 42px;
+  padding: 0 16px 0 15px;
   border-left: 3px solid transparent;
-  font-size: var(--fs-sm);
-  color: var(--text);
+  font-size: var(--fs-base);
+  color: var(--side-text);
   cursor: pointer;
 }
 
 .nav-item svg {
   flex: none;
-  width: 17px;
-  height: 17px;
-  color: var(--text-sub);
+  width: 18px;
+  height: 18px;
+  color: var(--side-muted);
 }
 
 .nav-item:hover {
-  background: var(--bg-hover);
+  background: var(--side-bg-soft);
+  color: #fff;
 }
 
+.nav-item:hover svg {
+  color: var(--side-text);
+}
+
+/* 지금 보고 있는 화면 — 왼쪽 띠와 밝은 바탕으로 표시합니다. */
 .nav-item.active {
-  border-left-color: var(--primary);
-  background: var(--primary-soft);
-  color: var(--primary);
+  border-left-color: var(--side-accent);
+  background: var(--side-bg-active);
+  color: #fff;
   font-weight: 600;
 }
 
 .nav-item.active svg {
-  color: var(--primary);
+  color: var(--side-accent);
 }
 
 .nav-label {
@@ -304,6 +394,44 @@ textarea {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+/* ---- 아래쪽 사용자 칸 ---- */
+
+.side-foot {
+  padding: 14px 16px 16px;
+  border-top: 1px solid var(--side-line);
+  background: var(--side-bg-deep);
+}
+
+.side-user {
+  margin: 0 0 10px;
+  font-size: var(--fs-xs);
+  line-height: 1.5;
+  color: var(--side-muted);
+  word-break: keep-all;
+}
+
+.side-user b {
+  color: var(--side-text);
+  font-weight: 600;
+}
+
+.side-btn {
+  height: 32px;
+  padding: 0 14px;
+  border: 1px solid var(--side-line);
+  border-radius: 5px;
+  background: var(--side-bg-soft);
+  color: var(--side-text);
+  font: inherit;
+  font-size: var(--fs-xs);
+  cursor: pointer;
+}
+
+.side-btn:hover {
+  background: var(--side-bg-active);
+  color: #fff;
 }
 
 /* ---------------------------------------------------------------------------
@@ -366,7 +494,7 @@ textarea {
 
 .main {
   margin: calc(var(--topbar-h) + var(--tabbar-h)) 0 0 var(--sidebar-w);
-  padding: 0 16px 24px;
+  padding: 20px 24px 40px;
   min-height: calc(100vh - var(--topbar-h) - var(--tabbar-h));
   background: var(--bg);
 }
@@ -380,23 +508,25 @@ textarea {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  min-height: 44px;
+  min-height: 52px;
   border-bottom: 1px solid var(--line);
-  margin-bottom: 12px;
+  padding-bottom: 14px;
+  margin-bottom: 18px;
 }
 
 .page-head > div:first-child {
   display: flex;
   align-items: baseline;
   flex-wrap: wrap;
-  gap: 4px 12px;
+  gap: 6px 12px;
   min-width: 0;
 }
 
 .page-head h1,
 .page-title {
-  font-size: var(--fs-title);
-  font-weight: 600;
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
   margin: 0;
   display: inline-flex;
   align-items: baseline;
@@ -431,18 +561,20 @@ textarea {
   align-items: stretch;
   flex-wrap: wrap;
   border: 1px solid var(--line);
+  border-radius: 6px;
   background: var(--bg);
-  margin-bottom: 12px;
-  min-height: 40px;
+  margin-bottom: 18px;
+  min-height: 52px;
+  overflow: hidden;
   font-size: var(--fs-sm);
 }
 
 .filter-label {
   display: flex;
   align-items: center;
-  padding: 0 8px;
-  min-width: 72px;
-  background: var(--bg-head);
+  padding: 0 14px;
+  min-width: 78px;
+  background: var(--bg-sum);
   border-right: 1px solid var(--line);
   border-left: 1px solid var(--line);
   font-weight: 500;
@@ -458,7 +590,7 @@ textarea {
 .filterbar > input,
 .filterbar > select {
   align-self: center;
-  margin: 4px 8px;
+  margin: 8px 12px;
 }
 
 .filterbar > span:not(.filter-label) {
@@ -621,9 +753,15 @@ textarea {
    영역 (카드 대신 제목 + 내용)
    --------------------------------------------------------------------------- */
 
+/* 영역은 테두리 있는 상자로 두고, 제목은 옅은 회색 띠에 올립니다.
+   여러 영역이 이어질 때 어디서 끊기는지 바로 보입니다. */
 .card {
   background: var(--bg);
-  margin-bottom: 16px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  margin-bottom: 18px;
+  padding: 0 18px 18px;
+  overflow: hidden;
 }
 
 .card.flush {
@@ -635,24 +773,31 @@ textarea {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  min-height: 32px;
-  padding-bottom: 4px;
+  min-height: 46px;
+  margin: 0 -18px 16px;
+  padding: 0 18px;
+  background: var(--bg-sum);
   border-bottom: 1px solid var(--line);
-  margin-bottom: 8px;
+}
+
+.card.flush .card-head {
+  margin: 0 0 0;
 }
 
 .card-title {
   display: flex;
   align-items: center;
-  gap: 6px;
-  font-size: var(--fs-base);
-  font-weight: 600;
+  gap: 8px;
+  font-size: var(--fs-title);
+  font-weight: 700;
+  letter-spacing: -0.01em;
   color: var(--text);
 }
 
 .accent-bar {
   width: 3px;
-  height: 12px;
+  height: 15px;
+  border-radius: 2px;
   background: var(--primary);
   display: inline-block;
 }
@@ -1649,12 +1794,14 @@ div.st-tile:hover .st-num {
 .attn-list {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 14px;
 }
 
 .attn {
   border: 1px solid var(--line);
-  border-left: 3px solid var(--offline);
+  border-left: 4px solid var(--offline);
+  border-radius: 6px;
+  overflow: hidden;
   background: var(--bg);
 }
 
@@ -1674,17 +1821,18 @@ div.st-tile:hover .st-num {
   cursor: pointer;
   display: flex;
   align-items: center;
-  gap: 10px;
-  min-height: 34px;
-  padding: 0 12px;
+  gap: 12px;
+  min-height: 48px;
+  padding: 8px 16px;
   text-align: left;
 }
 
 .attn-head:hover { background: #e9edf2; }
 
 .attn-name {
-  font-size: var(--fs-base);
-  font-weight: 600;
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
   color: var(--text);
 }
 
@@ -1706,9 +1854,9 @@ div.st-tile:hover .st-num {
 }
 
 .attn-reason {
-  padding: 6px 12px;
-  font-size: var(--fs-sm);
-  line-height: 1.6;
+  padding: 12px 16px;
+  font-size: var(--fs-base);
+  line-height: 1.65;
   background: var(--bg);
   border-bottom: 1px solid var(--line);
 }
@@ -1723,7 +1871,7 @@ div.st-tile:hover .st-num {
 .attn-reason.caution b { color: var(--caution); }
 .attn-reason.offline b { color: var(--offline); }
 
-.attn-body { padding: 12px; }
+.attn-body { padding: 16px; }
 
 .attn-split {
   display: grid;
@@ -1737,8 +1885,10 @@ div.st-tile:hover .st-num {
 }
 
 .all-clear {
-  font-size: var(--fs-sm);
-  padding: 8px 0;
+  font-size: var(--fs-base);
+  color: var(--text-sub);
+  padding: 24px 0;
+  text-align: center;
 }
 
 /* ---- 측정값 칸 ---- */
@@ -2190,10 +2340,6 @@ td.center {
 }
 
 @media (max-width: 520px) {
-  .gauge-grid {
-    grid-template-columns: 1fr;
-  }
-
   .st-tiles {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -2213,32 +2359,41 @@ td.center {
    설정 하위 탭
    --------------------------------------------------------------------------- */
 
+/* 옅은 회색 통 안에 들어간 알약 모양 — 지금 보는 탭만 흰 바탕으로 떠오릅니다. */
 .subtabs {
-  display: flex;
-  border-bottom: 1px solid var(--line);
-  margin-bottom: 12px;
+  display: inline-flex;
+  gap: 2px;
+  padding: 4px;
+  margin-bottom: 18px;
+  max-width: 100%;
+  overflow-x: auto;
+  background: var(--bg-head);
+  border: 1px solid var(--line);
+  border-radius: 8px;
 }
 
 .subtab {
   display: inline-flex;
   align-items: center;
-  height: 32px;
-  padding: 0 14px;
+  height: 36px;
+  padding: 0 18px;
+  border-radius: 6px;
   font-size: var(--fs-sm);
   font-weight: 500;
   color: var(--text-sub);
-  border-bottom: 2px solid transparent;
-  margin-bottom: -1px;
+  white-space: nowrap;
 }
 
 .subtab:hover {
   color: var(--text);
+  background: rgba(255, 255, 255, 0.6);
 }
 
 .subtab.active {
   color: var(--primary);
-  font-weight: 600;
-  border-bottom-color: var(--primary);
+  font-weight: 700;
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.1);
 }
 
 /* ---------------------------------------------------------------------------
@@ -2361,5 +2516,362 @@ code {
 @media (max-width: 1100px) {
   .st-tiles[style] {
     grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+}
+
+/* ===========================================================================
+   홈 화면 — 지금 상태 · 나머지 설비 · 알람 목록
+   대시보드 타일을 늘어놓고 그 밑에 표를 붙이는 구성은 쓰지 않습니다.
+   =========================================================================== */
+
+.now {
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 20px 22px 18px;
+  margin-bottom: 18px;
+}
+
+/* 한 줄 요약 — 이 화면에서 가장 먼저 읽히는 문장입니다. */
+.now-line {
+  margin: 0 0 16px;
+  font-size: 24px;
+  font-weight: 700;
+  line-height: 1.4;
+  letter-spacing: -0.02em;
+  color: var(--text);
+  word-break: keep-all;
+}
+
+.now-line.danger { color: var(--danger); }
+.now-line.warning { color: var(--warning); }
+.now-line.caution { color: var(--caution); }
+.now-line.offline { color: var(--offline); }
+.now-line.normal { color: var(--normal); }
+
+.now-bar {
+  display: flex;
+  height: 10px;
+  border-radius: 5px;
+  overflow: hidden;
+  background: var(--line-soft);
+  margin-bottom: 18px;
+}
+
+.now-bar > span { display: block; }
+.now-bar > span.normal { background: #8fb0d6; }
+.now-bar > span.caution { background: var(--caution); }
+.now-bar > span.warning { background: var(--warning); }
+.now-bar > span.danger { background: var(--danger); }
+.now-bar > span.offline { background: var(--line-strong); }
+
+/* 보조 수치 — 숫자를 크게 키우지 않습니다. 위 문장을 거드는 자리입니다. */
+.now-facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 2px;
+  margin: 0;
+  padding-top: 16px;
+  border-top: 1px solid var(--line-soft);
+}
+
+.now-facts > div {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 7px 16px 7px 0;
+}
+
+.now-facts dt {
+  font-size: var(--fs-sm);
+  color: var(--text-sub);
+  white-space: nowrap;
+}
+
+.now-facts dd {
+  margin: 0;
+  font-size: var(--fs-base);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* ---- 정상 설비 한 줄 ---- */
+
+.rest {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  padding: 14px 18px;
+  margin-bottom: 18px;
+  border: 1px solid var(--line-soft);
+  border-radius: 6px;
+  background: var(--bg-sum);
+  font-size: var(--fs-sm);
+}
+
+.rest-count {
+  font-weight: 700;
+  color: var(--normal);
+  white-space: nowrap;
+}
+
+.rest-names {
+  flex: 1;
+  min-width: 180px;
+  color: var(--text-sub);
+  word-break: keep-all;
+}
+
+.rest-link {
+  color: var(--primary);
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  white-space: nowrap;
+}
+
+/* ---- 알람 목록 (표가 아니라 목록입니다) ---- */
+
+.feed {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.feed li {
+  display: flex;
+  align-items: baseline;
+  gap: 14px;
+  padding: 13px 0 13px 12px;
+  border-bottom: 1px solid var(--line-soft);
+  border-left: 3px solid transparent;
+  font-size: var(--fs-sm);
+}
+
+.feed li:last-child { border-bottom: 0; }
+.feed li.danger { border-left-color: var(--danger); }
+.feed li.warning { border-left-color: var(--warning); }
+.feed li.caution { border-left-color: var(--caution); }
+
+.feed-time {
+  flex: none;
+  width: 132px;
+  color: var(--text-sub);
+  font-variant-numeric: tabular-nums;
+}
+
+.feed-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 10px;
+}
+
+.feed-body b {
+  font-weight: 700;
+}
+
+.feed-item {
+  color: var(--text);
+}
+
+.feed-detail {
+  color: var(--text-sub);
+  font-size: var(--fs-xs);
+}
+
+.feed li > .badge {
+  flex: none;
+  margin-left: auto;
+}
+
+.feed-empty {
+  margin: 0;
+  padding: 28px 0;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: var(--fs-sm);
+}
+
+/* ---- 좁은 화면 ---- */
+
+@media (max-width: 720px) {
+  .now {
+    padding: 16px 14px 14px;
+  }
+
+  .now-line {
+    font-size: 20px;
+  }
+
+  .now-facts {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+
+  .now-facts > div {
+    padding: 9px 0;
+    border-bottom: 1px solid var(--line-soft);
+  }
+
+  .now-facts > div:last-child {
+    border-bottom: 0;
+    padding-bottom: 0;
+  }
+
+  /* 알람은 시각을 위로 올리고 두 줄로 흘립니다. */
+  .feed li {
+    flex-wrap: wrap;
+    gap: 4px 10px;
+    padding: 12px 0 12px 10px;
+  }
+
+  .feed-time {
+    width: auto;
+    font-size: var(--fs-xs);
+  }
+
+  .feed-body {
+    order: 3;
+    flex-basis: 100%;
+  }
+}
+
+/* ===========================================================================
+   설비 목록 — 좁은 화면에서는 표를 접어 설비 한 대가 한 칸이 되게 합니다.
+   12칸짜리 표를 옆으로 밀어 보게 두면 현장에서 못 씁니다.
+   =========================================================================== */
+
+@media (max-width: 720px) {
+  .device-table .table-wrap {
+    overflow: visible;
+  }
+
+  .device-table table,
+  .device-table thead,
+  .device-table tbody,
+  .device-table tr,
+  .device-table td {
+    display: block;
+    width: auto;
+    min-width: 0;
+  }
+
+  .device-table thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+  }
+
+  .device-table tbody tr.clickable {
+    position: relative;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    margin-bottom: 10px;
+    padding: 12px 14px 10px;
+    height: auto;
+  }
+
+  .device-table tbody tr.clickable.expanded {
+    border-color: var(--primary);
+  }
+
+  .device-table tbody td {
+    border: 0;
+    padding: 0;
+    height: auto;
+    text-align: left;
+  }
+
+  /* 번호·용량·추세·측정시각은 좁은 화면에서 접어 둡니다. */
+  .device-table td.c-no,
+  .device-table td.c-cap,
+  .device-table td.c-spark,
+  .device-table td.c-time {
+    display: none;
+  }
+
+  /* 설비명과 상태는 한 줄에 */
+  .device-table td.c-name {
+    font-size: 17px;
+    padding-right: 76px;
+    margin-bottom: 2px;
+  }
+
+  .device-table td.c-name .cell-sub {
+    font-size: var(--fs-xs);
+  }
+
+  .device-table td.c-status {
+    position: absolute;
+    top: 12px;
+    right: 14px;
+  }
+
+  .device-table td.c-where {
+    color: var(--text-sub);
+    font-size: var(--fs-sm);
+    margin-bottom: 10px;
+  }
+
+  /* 측정값 네 가지는 두 칸씩 */
+  .device-table td[data-label="온도(℃)"],
+  .device-table td[data-label="수소(ppm)"],
+  .device-table td[data-label="메탄(ppm)"],
+  .device-table td[data-label="유면"] {
+    display: inline-flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 8px;
+    width: 50%;
+    padding: 6px 12px 6px 0;
+    font-weight: 600;
+    font-size: var(--fs-base);
+  }
+
+  .device-table td[data-label="온도(℃)"]::before,
+  .device-table td[data-label="수소(ppm)"]::before,
+  .device-table td[data-label="메탄(ppm)"]::before,
+  .device-table td[data-label="유면"]::before {
+    content: attr(data-label);
+    font-size: var(--fs-xs);
+    font-weight: 400;
+    color: var(--text-sub);
+  }
+
+  /* 칸 모양일 때는 줄무늬를 끕니다 — 한 칸이 선택된 것처럼 보입니다. */
+  .device-table tbody tr:nth-child(n) td {
+    background: var(--bg);
+  }
+
+  .device-table td.c-cause[data-empty] {
+    display: none;
+  }
+
+  .device-table td.c-cause {
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px solid var(--line-soft);
+    font-size: var(--fs-sm);
+    white-space: normal;
+  }
+
+  /* 펼친 상세는 칸 아래에 그대로 */
+  .device-table tbody tr.expand-row {
+    border: 1px solid var(--line);
+    border-top: 0;
+    border-radius: 0 0 6px 6px;
+    margin: -11px 0 10px;
+    padding: 0;
+  }
+
+  .device-table tbody tr.expand-row > td {
+    padding: 12px;
   }
 }
