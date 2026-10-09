@@ -2186,12 +2186,16 @@ td.center {
 
   table.form-grid th {
     width: auto;
+    height: auto;
     text-align: left;
     border: 0;
     padding: 8px 10px 4px;
   }
 
+  /* 칸 높이를 36px 로 고정해 두면 입력칸 아래 설명 글자가
+     칸 밖으로 넘쳐 다음 줄 이름 위에 겹쳐 찍힙니다. */
   table.form-grid td {
+    height: auto;
     border: 0;
     padding: 0 10px 10px;
   }
@@ -2908,5 +2912,446 @@ code {
 
   .device-table tbody tr.expand-row > td {
     padding: 12px;
+  }
+}
+
+/* ===========================================================================
+   손가락으로 누르는 화면 — 작은 단추를 키웁니다.
+   마우스 포인터가 없는 기기에서만 적용해, PC 화면의 밀도는 그대로 둡니다.
+   =========================================================================== */
+
+@media (hover: none) and (pointer: coarse), (max-width: 720px) {
+  /* 추세 그래프의 항목 단추 (수소·온도·메탄) */
+  .chart-tab {
+    height: 38px;
+    padding: 0 14px;
+    font-size: var(--fs-sm);
+  }
+
+  /* 탭 닫기 X — 보이는 크기는 그대로 두고 누르는 범위만 넓힙니다. */
+  .tab-close {
+    padding: 10px;
+    margin: -10px -6px -10px 0;
+  }
+
+  .tab {
+    padding: 0 14px;
+  }
+
+  /* 표 안의 작은 단추 (삭제 등) */
+  .cell-btn,
+  .btn.danger-outline,
+  td .btn {
+    height: 34px !important;
+    padding: 0 12px !important;
+    font-size: var(--fs-sm);
+  }
+
+  /* 접기·펼치기 글자도 누르기 쉽게 */
+  .attn-toggle {
+    padding: 8px 4px;
+    margin: -8px -4px;
+  }
+
+  /* 챗봇 단추가 본문 오른쪽 아래를 가리지 않도록 조금 올립니다. */
+  .chat-fab {
+    right: 12px;
+    bottom: 16px;
+  }
+}
+
+/* ===========================================================================
+   입력 줄 — 좁은 화면에서는 이름 위 · 입력칸 아래로 쌓습니다.
+   120px 라벨칸을 그대로 두면 옆칸이 너무 좁아져,
+   "(위험 등급 제외)" 같은 설명이 한 글자씩 세로로 쌓입니다.
+   =========================================================================== */
+
+@media (max-width: 720px) {
+  .field-row {
+    grid-template-columns: minmax(0, 1fr);
+    border-right: 0;
+  }
+
+  .field-row > span:first-child {
+    grid-column: 1;
+    grid-row: auto;
+    flex-direction: row;
+    justify-content: flex-start;
+    padding: 8px 10px 4px;
+    background: transparent;
+    border-right: 0;
+    font-size: var(--fs-xs);
+    font-weight: 400;
+    color: var(--text-sub);
+    white-space: normal;
+  }
+
+  .field-row > :not(:first-child) {
+    grid-column: 1;
+    margin: 0 10px 8px;
+  }
+
+  .field-row > small.hint {
+    margin: -4px 10px 8px;
+  }
+
+  /* 시간 범위처럼 칸이 여러 개 들어가는 줄은 줄바꿈을 허용합니다. */
+  .field-row > span:not(:first-child) {
+    flex-wrap: wrap;
+    row-gap: 4px;
+    white-space: normal;
+  }
+}
+
+/* ===========================================================================
+   추세 분석 — 그래프가 본문인 표입니다. 좁은 화면에서 옆으로 밀면
+   정작 봐야 할 그래프가 화면 밖으로 잘립니다. 한 대가 한 칸이 되게 접고
+   그래프를 가로 전체로 깔아 줍니다.
+   =========================================================================== */
+
+@media (max-width: 720px) {
+  .trend-table .table-wrap {
+    overflow: visible;
+  }
+
+  .trend-table table,
+  .trend-table thead,
+  .trend-table tbody,
+  .trend-table tr,
+  .trend-table td {
+    display: block;
+    width: auto;
+    min-width: 0;
+  }
+
+  .trend-table thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+  }
+
+  .trend-table tbody tr {
+    position: relative;
+    height: auto;
+    margin-bottom: 10px;
+    padding: 12px 14px 8px;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+  }
+
+  /* 칸 모양일 때는 줄무늬를 끕니다 — 한 칸이 선택된 것처럼 보입니다. */
+  .trend-table tbody tr,
+  .trend-table tbody tr:nth-child(n) td {
+    background: var(--bg);
+  }
+
+  .trend-table tbody td {
+    height: auto;
+    padding: 0;
+    border: 0;
+    text-align: left;
+  }
+
+  .trend-table td.t-name {
+    padding-right: 76px;
+    font-size: 17px;
+  }
+
+  .trend-table td.t-where {
+    margin-bottom: 8px;
+    color: var(--text-sub);
+    font-size: var(--fs-sm);
+  }
+
+  .trend-table td.t-status {
+    position: absolute;
+    top: 12px;
+    right: 14px;
+  }
+
+  .trend-table td.t-spark {
+    margin-bottom: 8px;
+    padding: 6px 0;
+    border-top: 1px solid var(--line-soft);
+    border-bottom: 1px solid var(--line-soft);
+  }
+
+  .trend-table td.t-stat {
+    display: inline-flex;
+    align-items: baseline;
+    justify-content: flex-end;
+    gap: 2px;
+    width: 50%;
+    padding: 5px 12px 5px 0;
+    font-size: var(--fs-base);
+    font-weight: 600;
+  }
+
+  /* 이름은 왼쪽 끝, 값과 단위는 오른쪽에 붙여 둡니다. */
+  .trend-table td.t-stat::before {
+    content: attr(data-label);
+    margin-right: auto;
+    padding-right: 8px;
+    font-size: var(--fs-xs);
+    font-weight: 400;
+    color: var(--text-sub);
+  }
+
+  .trend-table td.t-change {
+    width: 100%;
+  }
+}
+
+/* ===========================================================================
+   알람 이력 — 좁은 화면에서는 한 건이 한 칸이 되게 접습니다.
+   여섯 칸짜리 표를 옆으로 밀게 두면 정작 중요한 설비·등급이 화면 밖에 있습니다.
+   =========================================================================== */
+
+@media (max-width: 720px) {
+  .alarm-table .table-wrap {
+    overflow: visible;
+  }
+
+  .alarm-table table,
+  .alarm-table thead,
+  .alarm-table tbody,
+  .alarm-table tr,
+  .alarm-table td {
+    display: block;
+    width: auto;
+    min-width: 0;
+  }
+
+  .alarm-table thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+  }
+
+  /* 표의 칸 순서(번호-시각-설비-…)와 읽는 순서가 다릅니다.
+     설비 이름을 맨 위로 올리고 발생 시각은 아래 꼬리로 내립니다. */
+  .alarm-table tbody tr {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    height: auto;
+    margin-bottom: 10px;
+    padding: 12px 14px 10px;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+  }
+
+  .alarm-table tbody tr,
+  .alarm-table tbody tr:nth-child(n) td {
+    background: var(--bg);
+  }
+
+  .alarm-table tbody td {
+    height: auto;
+    padding: 0;
+    border: 0;
+    text-align: left;
+    white-space: normal;
+  }
+
+  .alarm-table td.a-no {
+    display: none;
+  }
+
+  .alarm-table td.a-unit {
+    order: 1;
+    padding-right: 76px;
+    font-size: 17px;
+  }
+
+  .alarm-table td.a-level {
+    position: absolute;
+    top: 12px;
+    right: 14px;
+  }
+
+  .alarm-table td.a-item {
+    order: 2;
+    margin-top: 2px;
+    font-size: var(--fs-base);
+  }
+
+  .alarm-table td.a-detail[data-empty] {
+    display: none;
+  }
+
+  .alarm-table td.a-detail {
+    order: 3;
+    margin-top: 2px;
+    font-size: var(--fs-sm);
+  }
+
+  .alarm-table td.a-time {
+    order: 4;
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px solid var(--line-soft);
+    color: var(--text-sub);
+    font-size: var(--fs-xs);
+  }
+}
+
+/* 조회 조건 줄 — 좁은 화면에서는 입력칸이 남는 폭을 나눠 갖게 해,
+   날짜 두 칸과 물결표(~)가 한 줄에 같이 들어오게 합니다. */
+@media (max-width: 720px) {
+  .filterbar > .field,
+  .filterbar > input,
+  .filterbar > select {
+    flex: 1 1 110px;
+    margin: 8px;
+  }
+
+  .filterbar .field {
+    min-width: 0;
+  }
+
+  .filter-label {
+    min-width: 0;
+    padding: 0 10px;
+  }
+
+  .filterbar-right {
+    width: 100%;
+    margin-left: 0;
+    border-top: 1px solid var(--line);
+  }
+
+  .filterbar-right .btn {
+    flex: 1;
+  }
+}
+
+/* 요약 타일 — 좁은 화면에서는 28px 숫자가 칸을 넘겨 글자가 잘립니다.
+   크기를 한 단계 줄이고, 홀수로 남는 마지막 칸은 가로로 펴 줍니다. */
+@media (max-width: 720px) {
+  .st-num {
+    height: 44px;
+    line-height: 44px;
+    padding: 0 10px;
+    font-size: 21px;
+  }
+
+  .st-num small {
+    font-size: 12px;
+  }
+
+  .st-tile.total .st-num {
+    font-size: 19px;
+  }
+
+  .st-tiles > .st-tile:last-child:nth-child(odd) {
+    grid-column: 1 / -1;
+  }
+}
+
+/* 확인할 설비 머리줄 — 한 줄에 다 넣으면 좁은 화면에서 "접기"가
+   설비 설명 뒤에 붙어 버립니다. 이름 · 설명 · 판정 시각을 줄로 나눕니다. */
+@media (max-width: 720px) {
+  .attn-head {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 2px 8px;
+    padding: 10px 14px;
+  }
+
+  .attn-head > .badge {
+    grid-area: 1 / 1;
+  }
+
+  .attn-name {
+    grid-area: 1 / 2;
+  }
+
+  .attn-toggle {
+    grid-area: 1 / 3;
+  }
+
+  .attn-meta {
+    grid-area: 2 / 1 / 3 / 4;
+    white-space: normal;
+  }
+
+  .attn-since {
+    grid-area: 3 / 1 / 4 / 4;
+    white-space: normal;
+    font-size: var(--fs-xs);
+  }
+
+  .attn-spacer {
+    display: none;
+  }
+}
+
+/* 센서 임계치 표 — 좁은 화면에서는 센서 한 가지가 한 칸이 되고
+   주의·경고·위험 세 칸이 그 아래 나란히 섭니다. 옆으로 밀면 입력칸이 잘립니다. */
+@media (max-width: 720px) {
+  .table-wrap .threshold-table,
+  .threshold-table thead,
+  .threshold-table tbody,
+  .threshold-table tr {
+    display: block;
+    width: auto;
+    min-width: 0;
+  }
+
+  .threshold-table colgroup {
+    display: none;
+  }
+
+  .threshold-table thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+  }
+
+  .threshold-table tbody tr {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0 8px;
+    margin-bottom: 10px;
+    padding: 10px 12px 12px;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+  }
+
+  .threshold-table tbody td {
+    display: block;
+    height: auto;
+    padding: 0;
+    border: 0;
+    background: var(--bg);
+    text-align: left;
+  }
+
+  .threshold-table td.th-name {
+    grid-column: 1 / -1;
+    margin-bottom: 8px;
+    font-size: var(--fs-base);
+    font-weight: 600;
+  }
+
+  .threshold-table td.th-val::before {
+    content: attr(data-label);
+    display: block;
+    margin-bottom: 3px;
+    font-size: var(--fs-xs);
+    color: var(--text-sub);
+  }
+
+  .threshold-table td.th-val input {
+    width: 100%;
+    min-width: 0;
   }
 }

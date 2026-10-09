@@ -131,9 +131,15 @@ export default function SettingsClient() {
               ] as const
             ).map(([key, label]) => (
               <tr key={key}>
-                <td>{label}</td>
-                {(["caution", "warning", "danger"] as const).map((tier) => (
-                  <td key={tier} className="num">
+                <td className="th-name">{label}</td>
+                {(
+                  [
+                    ["caution", "주의"],
+                    ["warning", "경고"],
+                    ["danger", "위험"],
+                  ] as const
+                ).map(([tier, tierLabel]) => (
+                  <td key={tier} className="num th-val" data-label={tierLabel}>
                     <input
                       type="number"
                       value={form[key][tier]}

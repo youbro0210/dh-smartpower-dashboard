@@ -49,7 +49,7 @@ export default function TrendPage() {
         </select>
       </div>
 
-      <div className="card flush">
+      <div className="card flush trend-table">
         <div className="card-head">
           <div className="card-title">
             <span className="accent-bar" />
@@ -98,24 +98,24 @@ export default function TrendPage() {
                 const change = s ? Number((s.last - s.first).toFixed(1)) : null;
                 return (
                   <tr key={d.device_id}>
-                    <td>
+                    <td className="t-name">
                       <b>{d.name}</b>
                     </td>
-                    <td>{d.building}</td>
-                    <td className="center">
+                    <td className="t-where">{d.building}</td>
+                    <td className="center t-status">
                       <span className={`badge ${d.status}`}>{STATUS_LABEL[d.status]}</span>
                     </td>
-                    <td>
+                    <td className="t-spark">
                       <Sparkline trend={d.trend} />
                     </td>
-                    <td className="num">
+                    <td className="num t-stat" data-label="현재">
                       {current.toFixed(1)}
                       <span style={{ color: "var(--faint)", fontSize: 12 }}> {unit}</span>
                     </td>
-                    <td className="num">{s ? s.min.toFixed(1) : "-"}</td>
-                    <td className="num">{s ? s.avg.toFixed(1) : "-"}</td>
-                    <td className="num">{s ? s.max.toFixed(1) : "-"}</td>
-                    <td className="num">
+                    <td className="num t-stat" data-label="최저">{s ? s.min.toFixed(1) : "-"}</td>
+                    <td className="num t-stat" data-label="평균">{s ? s.avg.toFixed(1) : "-"}</td>
+                    <td className="num t-stat" data-label="최고">{s ? s.max.toFixed(1) : "-"}</td>
+                    <td className="num t-stat t-change" data-label="변화">
                       {change === null ? (
                         <span className="flat">-</span>
                       ) : change > 0.1 ? (

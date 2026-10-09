@@ -135,7 +135,7 @@ export default function AlarmsPage() {
         </tbody>
       </table>
 
-      <div className="card flush">
+      <div className="card flush alarm-table">
         <div className="card-head">
           <div className="card-title">
             <span className="accent-bar" />
@@ -170,18 +170,24 @@ export default function AlarmsPage() {
               )}
               {rows.map((r, i) => (
                 <tr key={r.id}>
-                  <td className="center">{(page - 1) * PAGE_SIZE + i + 1}</td>
-                  <td className="center">
+                  <td className="center a-no">{(page - 1) * PAGE_SIZE + i + 1}</td>
+                  <td className="center a-time">
                     {new Date(r.created_at).toLocaleString("ko-KR", { hour12: false })}
                   </td>
-                  <td>
+                  <td className="a-unit">
                     <b>{r.unit}</b>
                   </td>
-                  <td>{r.item}</td>
-                  <td className="center">
+                  <td className="a-item">{r.item}</td>
+                  <td className="center a-level">
                     <span className={`badge ${r.level}`}>{STATUS_LABEL[r.level]}</span>
                   </td>
-                  <td style={{ color: "var(--muted)" }}>{r.detail ?? "-"}</td>
+                  <td
+                    className="a-detail"
+                    data-empty={r.detail ? undefined : "true"}
+                    style={{ color: "var(--muted)" }}
+                  >
+                    {r.detail ?? "-"}
+                  </td>
                 </tr>
               ))}
             </tbody>
