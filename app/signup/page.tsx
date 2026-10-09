@@ -12,16 +12,22 @@ export default function SignupPage() {
   const [tier, setTier] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  async function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setLoading(true);
     setError(null);
+
+    // 로그인 화면과 같은 이유로, 입력칸의 실제 값을 읽습니다.
+    const data = new FormData(e.currentTarget);
+    const sendEmail = String(data.get("email") ?? "").trim() || email.trim();
+    const sendPassword = String(data.get("password") ?? "") || password;
+    const sendName = String(data.get("name") ?? "").trim() || fullName.trim();
 
     try {
       const res = await fetch("/api/auth/signup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password, fullName }),
+        body: JSON.stringify({ email: sendEmail, password: sendPassword, fullName: sendName }),
       });
 
       const json = await res.json().catch(() => ({}));
@@ -76,15 +82,15 @@ export default function SignupPage() {
           <form onSubmit={handleSubmit}>
             <div className="auth-field">
               <label htmlFor="name">이름</label>
-              <input id="name" type="text" value={fullName} onChange={(e) => setFullName(e.target.value)} required />
+              <input id="name" name="name" type="text" value={fullName} onChange={(e) => setFullName(e.target.value)} required />
             </div>
             <div className="auth-field">
               <label htmlFor="email">이메일</label>
-              <input id="email" type="email" autoComplete="username" value={email} onChange={(e) => setEmail(e.target.value)} required />
+              <input id="email" name="email" type="email" autoComplete="username" value={email} onChange={(e) => setEmail(e.target.value)} required />
             </div>
             <div className="auth-field">
               <label htmlFor="password">비밀번호</label>
-              <input id="password" type="password" autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="8자 이상" minLength={8} required />
+              <input id="password" name="password" type="password" autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="8자 이상" minLength={8} required />
             </div>
 
             {error && <p role="alert" className="auth-error">{error}</p>}

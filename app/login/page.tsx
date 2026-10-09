@@ -14,16 +14,24 @@ function LoginForm() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  async function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setLoading(true);
     setError(null);
+
+    // 입력칸에 실제로 들어 있는 값을 읽습니다.
+    // 브라우저가 저장된 비밀번호를 자동으로 채울 때는 React 의 onChange 가
+    // 울리지 않는 경우가 있습니다. 그러면 화면에는 점이 찍혀 있는데 실제로는
+    // 빈 값이 전송되어, 맞는 비밀번호인데도 로그인이 실패합니다.
+    const data = new FormData(e.currentTarget);
+    const sendEmail = String(data.get("email") ?? "").trim() || email.trim();
+    const sendPassword = String(data.get("password") ?? "") || password;
 
     try {
       const res = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email: sendEmail, password: sendPassword }),
       });
 
       const json = await res.json().catch(() => ({}));
@@ -66,6 +74,7 @@ function LoginForm() {
               <label htmlFor="email">이메일</label>
               <input
                 id="email"
+                name="email"
                 type="email"
                 autoComplete="username"
                 placeholder="name@company.com"
@@ -79,6 +88,7 @@ function LoginForm() {
               <label htmlFor="password">비밀번호</label>
               <input
                 id="password"
+                name="password"
                 type="password"
                 autoComplete="current-password"
                 value={password}
