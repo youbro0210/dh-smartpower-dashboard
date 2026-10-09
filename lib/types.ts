@@ -16,6 +16,20 @@ export type SensorKey = "h2" | "ch4" | "temperature" | "oil_level";
 
 export type SensorLevels = Record<SensorKey, SeverityLevel>;
 
+/**
+ * 설비가 서버까지 오는 길. ㈜헤디와 협의된 세 가지 구성에 대응합니다.
+ *   direct  - 측정모듈이 MQTT 로 서버에 직접 전송 (구성 1안)
+ *   gateway - 측정모듈 → RS-485 → 사용자 PC → MQTT (구성 2안)
+ *   bridge  - 측정모듈 → RS-485 → 브릿지 → MQTT (구성 3안)
+ */
+export type LinkType = "direct" | "gateway" | "bridge";
+
+export const LINK_TYPE_LABEL: Record<LinkType, string> = {
+  direct: "모듈 직결",
+  gateway: "PC 경유",
+  bridge: "브릿지 경유",
+};
+
 // ---- 설비 등록 정보 (설정 화면에서 관리, DB의 devices 테이블) ----
 export interface DeviceRegistry {
   device_id: string;
@@ -25,6 +39,13 @@ export interface DeviceRegistry {
   bridge_id: string | null;
   slave_addr?: number | null;
   sort_order?: number;
+  link_type?: LinkType;
+  /** 모듈 직결(1안)에서 모듈 자신의 접속 상태 */
+  online?: boolean;
+  last_seen_at?: string | null;
+  fw_version?: string | null;
+  /** 장치에 설정된 측정 주기(초) */
+  interval_sec?: number | null;
 }
 
 // ---- 실시간 센서 원본값 (DB의 device_readings 테이블) ----
@@ -72,7 +93,19 @@ export interface Bridge {
   name: string;
   online: boolean;
   last_seen_at?: string | null;
+  /** bridge = 브릿지 보드(3안), gateway = 사용자 PC(2안) */
+  kind?: "bridge" | "gateway";
+  /** RS-485 한 가닥에 붙일 수 있는 최대 대수. 헤디 회신 기준 32대 */
+  max_devices?: number;
 }
+
+export const BRIDGE_KIND_LABEL: Record<"bridge" | "gateway", string> = {
+  bridge: "브릿지 보드",
+  gateway: "사용자 PC",
+};
+
+/** RS-485 한 가닥 기본 수용 대수 (㈜헤디 회신 기준) */
+export const RS485_MAX_DEVICES = 32;
 
 export interface AlarmEvent {
   id?: number;
@@ -103,6 +136,11 @@ export interface ThresholdConfig {
   compositeMinSensors: number;
   /** 이 시간(분) 이상 데이터가 없으면 통신단절로 판정 */
   offlineMinutes: number;
+  /**
+   * 유면 저하를 몇 등급으로 볼지. 웹 화면과 수집 서버가 같은 값을 씁니다.
+   * 유면 규격(접점/아날로그)이 확정되면 임계치 방식으로 바뀝니다.
+   */
+  oilLowLevel?: SeverityLevel;
 }
 
 export interface AppConfig {
@@ -120,4 +158,5 @@ export const DEFAULT_THRESHOLDS: ThresholdConfig = {
   compositeEnabled: true,
   compositeMinSensors: 2,
   offlineMinutes: 15,
+  oilLowLevel: "warning",
 };

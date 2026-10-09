@@ -18,6 +18,9 @@ interface ConfigRow {
   topic_prefix: string;
   site: string;
   keep_log_days: number;
+  ack_timeout_sec: number;
+  max_replay_items: number;
+  log_payload_items: number;
   version: number;
   updated_at: string;
 }
@@ -29,7 +32,8 @@ export async function GET() {
   const [config, status] = await Promise.all([
     one<ConfigRow>(
       `SELECT host, port, username, password, tls, ca_path, client_id,
-              topic_prefix, site, keep_log_days, version, updated_at
+              topic_prefix, site, keep_log_days, ack_timeout_sec,
+              max_replay_items, log_payload_items, version, updated_at
          FROM mqtt_config WHERE id = 1`
     ),
     one(
@@ -61,6 +65,9 @@ export async function PUT(request: Request) {
   const site = String(body.site ?? "").trim();
   const clientId = String(body.client_id ?? "").trim();
   const keepDays = Number(body.keep_log_days ?? 7);
+  const ackTimeout = Number(body.ack_timeout_sec ?? 10);
+  const maxReplay = Number(body.max_replay_items ?? 500);
+  const logItems = Number(body.log_payload_items ?? 20);
 
   if (!host) return NextResponse.json({ error: "브로커 주소를 입력하세요." }, { status: 400 });
   if (!Number.isInteger(port) || port < 1 || port > 65535) {
@@ -76,6 +83,22 @@ export async function PUT(request: Request) {
   if (!Number.isInteger(keepDays) || keepDays < 1 || keepDays > 365) {
     return NextResponse.json({ error: "수신 내역 보관은 1~365일 사이여야 합니다." }, { status: 400 });
   }
+  // 장비 규격은 1초 이내 응답입니다. 왕복 지연을 감안해 1~120초 범위로 둡니다.
+  if (!Number.isInteger(ackTimeout) || ackTimeout < 1 || ackTimeout > 120) {
+    return NextResponse.json({ error: "응답 대기시간은 1~120초 사이여야 합니다." }, { status: 400 });
+  }
+  if (!Number.isInteger(maxReplay) || maxReplay < 10 || maxReplay > 5000) {
+    return NextResponse.json(
+      { error: "한 메시지 항목 수 상한은 10~5000 사이여야 합니다." },
+      { status: 400 }
+    );
+  }
+  if (!Number.isInteger(logItems) || logItems < 1 || logItems > 500) {
+    return NextResponse.json(
+      { error: "수신 내역 원문 보관 항목 수는 1~500 사이여야 합니다." },
+      { status: 400 }
+    );
+  }
 
   // 화면에서 가려진 채로 돌아온 비밀번호는 기존 값을 그대로 둡니다.
   const keepPassword = body.password === MASK;
@@ -85,8 +108,9 @@ export async function PUT(request: Request) {
         SET host = $1, port = $2, username = $3,
             password = CASE WHEN $4 THEN password ELSE $5 END,
             tls = $6, ca_path = $7, client_id = $8, topic_prefix = $9,
-            site = $10, keep_log_days = $11,
-            version = version + 1, updated_at = now(), updated_by = $12
+            site = $10, keep_log_days = $11, ack_timeout_sec = $12,
+            max_replay_items = $13, log_payload_items = $14,
+            version = version + 1, updated_at = now(), updated_by = $15
       WHERE id = 1`,
     [
       host,
@@ -100,6 +124,9 @@ export async function PUT(request: Request) {
       prefix,
       site,
       keepDays,
+      ackTimeout,
+      maxReplay,
+      logItems,
       admin.id,
     ]
   );

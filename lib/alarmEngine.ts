@@ -70,7 +70,8 @@ export function evaluateDevice(
       previous.temperature,
       config.hysteresisMarginPct
     ),
-    oil_level: reading.oil_level === "낮음" ? "warning" : "normal",
+    // 유면 저하 등급은 설정값입니다. 수집 서버(collector.py)와 같은 값을 씁니다.
+    oil_level: reading.oil_level === "낮음" ? config.oilLowLevel ?? "warning" : "normal",
   };
 
   const entries = Object.entries(sensorLevels) as [keyof SensorLevels, SeverityLevel][];

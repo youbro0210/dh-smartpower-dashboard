@@ -2,7 +2,14 @@
 
 import { useEffect, useState } from "react";
 import { useDashboard } from "@/lib/configStore";
-import { ThresholdConfig } from "@/lib/types";
+import {
+  BRIDGE_KIND_LABEL,
+  LINK_TYPE_LABEL,
+  RS485_MAX_DEVICES,
+  SeverityLevel,
+  STATUS_LABEL,
+  ThresholdConfig,
+} from "@/lib/types";
 import PageHeader from "./PageHeader";
 import SettingsTabs from "./SettingsTabs";
 
@@ -24,11 +31,9 @@ export default function SettingsClient() {
   // 서버에서 설정을 받아오면 폼 초기값을 맞춥니다.
   useEffect(() => setForm(thresholds), [thresholds]);
 
-  useEffect(() => {
-    if (!newDevice.bridge_id && bridges.length) {
-      setNewDevice((prev) => ({ ...prev, bridge_id: bridges[0].bridge_id }));
-    }
-  }, [bridges, newDevice.bridge_id]);
+  /** RS-485 한 가닥에 지금 몇 대가 걸려 있는지 셉니다. */
+  const countOn = (bridgeId: string) =>
+    devices.filter((d) => d.bridge_id === bridgeId).length;
 
   function setSensor(
     sensor: "h2" | "ch4" | "temperature",
@@ -63,7 +68,7 @@ export default function SettingsClient() {
       bridge_id: newDevice.bridge_id || null,
     });
     if (result.ok) {
-      setNewDevice({ name: "", building: "", capacity: "", bridge_id: bridges[0]?.bridge_id ?? "" });
+      setNewDevice({ name: "", building: "", capacity: "", bridge_id: newDevice.bridge_id });
       setMessage({ kind: "ok", text: "설비가 등록되었습니다." });
     } else {
       setMessage({ kind: "error", text: result.error ?? "설비 추가에 실패했습니다." });
@@ -197,6 +202,30 @@ export default function SettingsClient() {
                 <span style={{ marginLeft: 6 }}>개 이상 동시 이상 시 한 단계 격상</span>
               </td>
             </tr>
+            <tr>
+              <th>유면 저하 등급</th>
+              <td>
+                <select
+                  className="select"
+                  style={{ width: 120 }}
+                  value={form.oilLowLevel ?? "warning"}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, oilLowLevel: e.target.value as SeverityLevel }))
+                  }
+                >
+                  {(["caution", "warning", "danger"] as const).map((level) => (
+                    <option key={level} value={level}>
+                      {STATUS_LABEL[level]}
+                    </option>
+                  ))}
+                </select>
+                <span className="t-muted" style={{ marginLeft: 6 }}>
+                  유면 낮음 감지 시 적용 (규격 협의 중)
+                </span>
+              </td>
+              <th />
+              <td />
+            </tr>
           </tbody>
         </table>
       </div>
@@ -245,19 +274,25 @@ export default function SettingsClient() {
                   onChange={(e) => setNewDevice((f) => ({ ...f, capacity: e.target.value }))}
                 />
               </td>
-              <th>브릿지</th>
+              <th>연결 경로</th>
               <td>
                 <select
                   className="select"
-                  style={{ width: 200 }}
+                  style={{ width: 240 }}
                   value={newDevice.bridge_id}
                   onChange={(e) => setNewDevice((f) => ({ ...f, bridge_id: e.target.value }))}
                 >
-                  {bridges.map((b) => (
-                    <option key={b.bridge_id} value={b.bridge_id}>
-                      {b.name}
-                    </option>
-                  ))}
+                  <option value="">모듈 직결 (MQTT 직접 전송)</option>
+                  {bridges.map((b) => {
+                    const used = countOn(b.bridge_id);
+                    const limit = b.max_devices ?? RS485_MAX_DEVICES;
+                    const kind = BRIDGE_KIND_LABEL[b.kind ?? "bridge"];
+                    return (
+                      <option key={b.bridge_id} value={b.bridge_id} disabled={used >= limit}>
+                        {b.name} ({kind} · {used}/{limit})
+                      </option>
+                    );
+                  })}
                 </select>
                 <button className="btn" style={{ marginLeft: 4 }} onClick={handleAddDevice}>
                   설비 추가
@@ -275,14 +310,15 @@ export default function SettingsClient() {
                 <th>이름</th>
                 <th>위치</th>
                 <th>용량</th>
-                <th>브릿지</th>
+                <th style={{ width: 110 }}>연결 방식</th>
+                <th>브릿지 / PC</th>
                 <th style={{ width: 72 }}>삭제</th>
               </tr>
             </thead>
             <tbody>
               {devices.length === 0 && (
                 <tr>
-                  <td className="empty" colSpan={6}>
+                  <td className="empty" colSpan={7}>
                     조회된 데이터가 없습니다.
                   </td>
                 </tr>
@@ -293,6 +329,9 @@ export default function SettingsClient() {
                   <td>{d.name}</td>
                   <td>{d.building}</td>
                   <td>{d.capacity}</td>
+                  <td className="center">
+                    {LINK_TYPE_LABEL[d.link_type ?? (d.bridge_id ? "bridge" : "direct")]}
+                  </td>
                   <td>
                     {bridges.find((b) => b.bridge_id === d.bridge_id)?.name ?? d.bridge_id ?? "-"}
                   </td>
@@ -307,6 +346,67 @@ export default function SettingsClient() {
                   </td>
                 </tr>
               ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* ── 브릿지 · 게이트웨이 수용 현황 ──────────────────────── */}
+      <div className="card">
+        <div className="card-head">
+          <div className="card-title">
+            <span className="accent-bar" />
+            브릿지 · 게이트웨이
+          </div>
+          <span className="card-note">
+            RS-485 한 가닥 최대 {RS485_MAX_DEVICES}대 (㈜헤디 회신 기준)
+          </span>
+        </div>
+
+        <div className="table-wrap">
+          <table className="grid">
+            <thead>
+              <tr>
+                <th style={{ width: 52 }}>No</th>
+                <th>식별자</th>
+                <th>이름</th>
+                <th style={{ width: 110 }}>종류</th>
+                <th style={{ width: 110 }}>접속</th>
+                <th style={{ width: 130 }}>등록 대수</th>
+                <th>마지막 수신</th>
+              </tr>
+            </thead>
+            <tbody>
+              {bridges.length === 0 && (
+                <tr>
+                  <td className="empty" colSpan={7}>
+                    등록된 브릿지·게이트웨이가 없습니다. 장비가 값을 보내면 자동 등록됩니다.
+                  </td>
+                </tr>
+              )}
+              {bridges.map((b, i) => {
+                const used = countOn(b.bridge_id);
+                const limit = b.max_devices ?? RS485_MAX_DEVICES;
+                return (
+                  <tr key={b.bridge_id}>
+                    <td className="center">{i + 1}</td>
+                    <td>{b.bridge_id}</td>
+                    <td>{b.name}</td>
+                    <td className="center">{BRIDGE_KIND_LABEL[b.kind ?? "bridge"]}</td>
+                    <td className="center">
+                      <span className={`badge ${b.online ? "normal" : "offline"}`}>
+                        {b.online ? "온라인" : "오프라인"}
+                      </span>
+                    </td>
+                    <td className="num" style={{ color: used >= limit ? "var(--danger)" : undefined }}>
+                      {used} / {limit}
+                    </td>
+                    <td>
+                      {b.last_seen_at ? new Date(b.last_seen_at).toLocaleString("ko-KR") : "-"}
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>

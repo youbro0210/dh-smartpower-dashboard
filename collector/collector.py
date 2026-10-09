@@ -70,7 +70,6 @@ load_env()
 
 DATABASE_URL = os.environ.get("DATABASE_URL")
 LOG_LEVEL = os.environ.get("COLLECTOR_LOG_LEVEL", "INFO").upper()
-ACK_TIMEOUT_SEC = int(os.environ.get("COMMAND_ACK_TIMEOUT", "60"))
 
 logging.basicConfig(
     level=getattr(logging, LOG_LEVEL, logging.INFO),
@@ -95,8 +94,17 @@ ENV_FALLBACK = {
     "topic_prefix": os.environ.get("MQTT_TOPIC_PREFIX", "dh/v1"),
     "site": os.environ.get("MQTT_SITE", "dh1"),
     "keep_log_days": 7,
+    # 명령 응답 대기시간. 헤디 회신은 1초 이내이지만 왕복 지연을 감안한 값입니다.
+    "ack_timeout_sec": int(os.environ.get("COMMAND_ACK_TIMEOUT", "10")),
+    # 재전송 한 메시지에 담을 수 있는 최대 항목 수.
+    "max_replay_items": int(os.environ.get("MAX_REPLAY_ITEMS", "500")),
+    # 수신 내역에 원문을 남길 최대 항목 수. 넘으면 요약만 남깁니다.
+    "log_payload_items": int(os.environ.get("LOG_PAYLOAD_ITEMS", "20")),
     "version": 0,
 }
+
+# 값을 모아 보내는 주체(브릿지 · PC 게이트웨이)의 토픽상 종류입니다.
+PARENT_TYPES = {"bridge", "gateway"}
 
 # ---------------------------------------------------------------------------
 # 판정 규칙 — 웹 화면(lib/alarmEngine.ts)과 같은 규칙입니다.
@@ -119,6 +127,8 @@ DEFAULT_THRESHOLDS: dict[str, Any] = {
     "compositeEnabled": True,
     "compositeMinSensors": 2,
     "offlineMinutes": 15,
+    # 유면 저하를 몇 등급으로 볼지. 웹 화면(lib/types.ts)과 같은 기본값입니다.
+    "oilLowLevel": "warning",
 }
 
 
@@ -167,6 +177,11 @@ def to_float(value: Any) -> float | None:
     return f if f == f and abs(f) != float("inf") else None
 
 
+def to_int(value: Any) -> int | None:
+    f = to_float(value)
+    return int(f) if f is not None else None
+
+
 def to_oil(value: Any) -> str | None:
     """
     유면은 아직 규격 협의 중입니다.
@@ -206,15 +221,24 @@ def parse_time(value: Any) -> datetime:
         return now
 
 
+MEASURE_KEYS = ("h2", "ch4", "temp", "temperature", "oil", "oil_level")
+
+
 def extract_items(payload: dict[str, Any]) -> list[dict[str, Any]]:
     """
     items 배열 형태와, 설비 하나만 담은 납작한 형태를 모두 받습니다.
     장비 업체가 어느 쪽으로 보내든 동작하게 하기 위한 것입니다.
+
+    구성 1안처럼 모듈이 자기 값 하나만 올릴 때는 deviceId 가 없을 수 있습니다.
+    측정값 키가 하나라도 있으면 설비 한 대의 값으로 보고, 어느 설비인지는
+    호출한 쪽에서 토픽의 발신자 ID 로 채웁니다.
     """
     items = payload.get("items")
     if isinstance(items, list):
         return [i for i in items if isinstance(i, dict)]
     if payload.get("deviceId") or payload.get("device_id"):
+        return [payload]
+    if any(key in payload for key in MEASURE_KEYS):
         return [payload]
     return []
 
@@ -231,6 +255,8 @@ class Collector:
         self.config_version = -1
         self.broker: dict[str, Any] = dict(ENV_FALLBACK)
         self.levels: dict[str, dict[str, str]] = {}
+        # 복합 판정으로 격상된 종합 등급. 같은 등급을 반복 기록하지 않기 위해 둡니다.
+        self.composite: dict[str, str] = {}
         self.known_devices: set[str] = set()
         self.lock = threading.Lock()
         self.stats = {"messages": 0, "rows": 0, "alarms": 0, "errors": 0}
@@ -247,7 +273,9 @@ class Collector:
             cur.execute(
                 """
                 SELECT host, port, username, password, tls, ca_path,
-                       client_id, topic_prefix, site, keep_log_days, version
+                       client_id, topic_prefix, site, keep_log_days,
+                       ack_timeout_sec, max_replay_items, log_payload_items,
+                       version
                   FROM mqtt_config WHERE id = 1
                 """
             )
@@ -358,7 +386,7 @@ class Collector:
 
     # ---- 설비 · 브릿지 ----
 
-    def ensure_device(self, device_id: str, bridge_id: str | None) -> bool:
+    def ensure_device(self, device_id: str, parent_id: str | None, link_type: str) -> bool:
         """
         등록되지 않은 설비가 값을 올리면 임시로 만들어 둡니다.
         현장 데이터를 버리는 것보다, 관리자가 나중에 이름을 고치는 편이 낫습니다.
@@ -369,30 +397,70 @@ class Collector:
         with self.conn.cursor() as cur:
             cur.execute(
                 """
-                INSERT INTO devices (device_id, name, building, capacity, bridge_id)
-                VALUES (%s, %s, '미지정', '', %s)
+                INSERT INTO devices (device_id, name, building, capacity, bridge_id, link_type)
+                VALUES (%s, %s, '미지정', '', %s, %s)
                 ON CONFLICT (device_id) DO NOTHING
                 """,
-                (device_id, device_id, bridge_id),
+                (device_id, device_id, parent_id, link_type),
             )
         self.known_devices.add(device_id)
-        log.warning("미등록 설비 %s 가 값을 보내 임시 등록했습니다.", device_id)
+        log.warning("미등록 설비 %s 가 값을 보내 임시 등록했습니다. (연결 %s)", device_id, link_type)
         return True
 
-    def ensure_bridge(self, bridge_id: str) -> None:
+    def ensure_bridge(self, bridge_id: str, kind: str = "bridge") -> None:
+        """브릿지와 2안의 사용자 PC(게이트웨이)를 같은 표에 담습니다."""
         with self.conn.cursor() as cur:
             cur.execute(
-                "INSERT INTO bridges (bridge_id, name) VALUES (%s, %s) ON CONFLICT DO NOTHING",
-                (bridge_id, bridge_id),
+                """
+                INSERT INTO bridges (bridge_id, name, kind) VALUES (%s, %s, %s)
+                ON CONFLICT (bridge_id) DO UPDATE SET kind = EXCLUDED.kind
+                 WHERE bridges.kind <> EXCLUDED.kind
+                """,
+                (bridge_id, bridge_id, kind),
             )
+
+    def check_capacity(self, parent_id: str) -> str | None:
+        """
+        RS-485 한 가닥의 수용 대수를 넘었는지 봅니다.
+        넘었어도 값은 버리지 않고 경고만 남깁니다 — 현장 데이터가 우선입니다.
+        """
+        with self.conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT b.max_devices,
+                       (SELECT count(*) FROM devices d WHERE d.bridge_id = b.bridge_id) AS used
+                  FROM bridges b WHERE b.bridge_id = %s
+                """,
+                (parent_id,),
+            )
+            row = cur.fetchone()
+        if not row:
+            return None
+        limit = int(row["max_devices"] or 32)
+        used = int(row["used"] or 0)
+        if used > limit:
+            return f"{parent_id} 에 등록된 설비가 {used}대로 수용 한도 {limit}대를 넘었습니다."
+        return None
 
     # ---- 계측값 ----
 
     def handle_tele(self, topic: str, src_type: str, src_id: str, payload: dict[str, Any]) -> None:
+        """
+        계측값을 받습니다. 세 가지 구성 모두 이 한 곳에서 처리합니다.
+
+          1안  토픽 .../module/<모듈ID>/tele     → 앞단 없음, link_type = direct
+          2안  토픽 .../gateway/<PC ID>/tele     → 앞단은 사용자 PC
+          3안  토픽 .../bridge/<브릿지ID>/tele   → 앞단은 브릿지
+
+        어느 설비의 값인지는 페이로드의 deviceId 로 판단하고,
+        1안처럼 deviceId 가 없으면 토픽의 발신자 ID 를 설비 ID 로 씁니다.
+        """
         replay = bool(payload.get("replay"))
-        bridge_id = src_id if src_type == "bridge" else None
-        if bridge_id:
-            self.ensure_bridge(bridge_id)
+        is_parent = src_type in PARENT_TYPES
+        parent_id = src_id if is_parent else None
+        link_type = src_type if is_parent else "direct"
+        if parent_id:
+            self.ensure_bridge(parent_id, src_type)
 
         items = extract_items(payload)
         if not items:
@@ -402,19 +470,34 @@ class Collector:
             log.warning("계측값이 비어 있습니다: %s", topic)
             return
 
-        seen: list[str] = []
-        stored = 0
         notes: list[str] = []
+        received = len(items)  # 장비가 실제로 보낸 항목 수 (수신 내역에 그대로 남깁니다)
+        limit = int(self.broker.get("max_replay_items") or 500)
+        if len(items) > limit:
+            # 1개월분을 한 번에 쏟아부으면 수집이 막힙니다.
+            # 상한까지만 받고, 남은 구간은 다시 요청하게 둡니다.
+            notes.append(f"한 메시지 항목 수 상한 {limit}개를 넘어 앞의 {limit}개만 받았습니다.")
+            log.warning("%s 항목 %d개 — 상한 %d개까지만 처리합니다.", topic, len(items), limit)
+            items = items[:limit]
+
+        seen: list[str] = []
+        rows: list[tuple[Any, ...]] = []
+        # 설비별 마지막 값만 현재값·판정에 씁니다 (한 메시지에 여러 시각이 담길 수 있음).
+        latest: dict[str, tuple[datetime, float | None, float | None, float | None, str | None]] = {}
 
         for item in items:
-            device_id = str(item.get("deviceId") or item.get("device_id") or "").strip()
+            device_id = str(
+                item.get("deviceId") or item.get("device_id")
+                or (src_id if not is_parent else "")
+            ).strip()
             if not device_id:
                 notes.append("deviceId 없는 항목을 건너뛰었습니다.")
                 continue
 
-            if self.ensure_device(device_id, bridge_id):
+            if self.ensure_device(device_id, parent_id, link_type):
                 notes.append(f"미등록 설비 {device_id} 임시 등록")
-            seen.append(device_id)
+            if device_id not in seen:
+                seen.append(device_id)
 
             measured_at = parse_time(item.get("ts") or payload.get("ts"))
             h2 = to_float(item.get("h2"))
@@ -425,48 +508,127 @@ class Collector:
             if h2 is None and ch4 is None and temp is None and oil is None:
                 notes.append(f"{device_id}: 읽을 수 있는 측정값이 없습니다.")
 
-            with self.conn.cursor() as cur:
-                cur.execute(
-                    """
-                    INSERT INTO telemetry (device_id, h2, ch4, temperature, oil_level, measured_at)
-                    VALUES (%s, %s, %s, %s, %s, %s)
-                    ON CONFLICT (device_id, measured_at) DO NOTHING
-                    """,
-                    (device_id, h2, ch4, temp, oil, measured_at),
-                )
-                stored += cur.rowcount
+            rows.append((device_id, h2, ch4, temp, oil, measured_at))
+            prior = latest.get(device_id)
+            if prior is None or measured_at >= prior[0]:
+                latest[device_id] = (measured_at, h2, ch4, temp, oil)
 
-            if replay:
-                # 재전송분은 이력만 채웁니다.
-                # 지금 상태를 과거 값으로 덮어쓰거나, 지난 이상으로 알람을 울리면 안 됩니다.
-                continue
+        stored = self.store_telemetry(rows)
 
-            with self.conn.cursor() as cur:
-                cur.execute(
-                    """
-                    INSERT INTO device_readings (device_id, h2, ch4, temperature, oil_level, updated_at)
-                    VALUES (%s, %s, %s, %s, %s, %s)
-                    ON CONFLICT (device_id) DO UPDATE
-                       SET h2 = EXCLUDED.h2,
-                           ch4 = EXCLUDED.ch4,
-                           temperature = EXCLUDED.temperature,
-                           oil_level = EXCLUDED.oil_level,
-                           updated_at = EXCLUDED.updated_at
-                     WHERE EXCLUDED.updated_at >= device_readings.updated_at
-                    """,
-                    (device_id, h2, ch4, temp, oil, measured_at),
-                )
+        if parent_id:
+            warn = self.check_capacity(parent_id)
+            if warn:
+                notes.append(warn)
 
-            self.evaluate(device_id, h2, ch4, temp, oil)
+        if not replay:
+            for device_id, (measured_at, h2, ch4, temp, oil) in latest.items():
+                self.store_current(device_id, h2, ch4, temp, oil, measured_at)
+                self.mark_device_seen(device_id, measured_at)
+                self.evaluate(device_id, h2, ch4, temp, oil)
+        else:
+            # 재전송분은 이력만 채웁니다.
+            # 지금 상태를 과거 값으로 덮어쓰거나, 지난 이상으로 알람을 울리면 안 됩니다.
+            notes.append(f"재전송 {len(rows)}건 — 이력만 적용(현재값·알람 제외)")
 
         self.stats["rows"] += stored
         self.stats["messages"] += 1
         self.write_ingest(
-            topic, src_type, src_id, "tele", payload,
+            topic, src_type, src_id, "tele", self.log_payload(payload, received),
             "warn" if notes else "ok",
             " / ".join(notes) if notes else None,
-            device_ids=seen, item_count=len(items), stored_count=stored, replay=replay,
+            device_ids=seen, item_count=received, stored_count=stored, replay=replay,
         )
+
+    def store_telemetry(self, rows: list[tuple[Any, ...]]) -> int:
+        """
+        계측값을 한 번에 넣습니다. 1개월분 재전송처럼 항목이 많을 때
+        한 건씩 왕복하면 수집이 따라가지 못합니다.
+        """
+        if not rows:
+            return 0
+        with self.conn.cursor() as cur:
+            cur.executemany(
+                """
+                INSERT INTO telemetry (device_id, h2, ch4, temperature, oil_level, measured_at)
+                VALUES (%s, %s, %s, %s, %s, %s)
+                ON CONFLICT (device_id, measured_at) DO NOTHING
+                """,
+                rows,
+            )
+            # executemany 의 rowcount 는 드라이버마다 다릅니다. 음수면 건수를 알 수 없다는 뜻입니다.
+            return cur.rowcount if cur.rowcount and cur.rowcount > 0 else len(rows)
+
+    def store_current(
+        self, device_id: str, h2: float | None, ch4: float | None,
+        temp: float | None, oil: str | None, measured_at: datetime,
+    ) -> None:
+        with self.conn.cursor() as cur:
+            cur.execute(
+                """
+                INSERT INTO device_readings (device_id, h2, ch4, temperature, oil_level, updated_at)
+                VALUES (%s, %s, %s, %s, %s, %s)
+                ON CONFLICT (device_id) DO UPDATE
+                   SET h2 = EXCLUDED.h2,
+                       ch4 = EXCLUDED.ch4,
+                       temperature = EXCLUDED.temperature,
+                       oil_level = EXCLUDED.oil_level,
+                       updated_at = EXCLUDED.updated_at
+                 WHERE EXCLUDED.updated_at >= device_readings.updated_at
+                """,
+                (device_id, h2, ch4, temp, oil, measured_at),
+            )
+
+    def mark_device_seen(self, device_id: str, measured_at: datetime) -> None:
+        """값이 올라온 설비는 접속 중으로 봅니다 (1안 모듈 직결에서 특히 필요)."""
+        with self.conn.cursor() as cur:
+            cur.execute(
+                """
+                UPDATE devices
+                   SET online = true,
+                       last_seen_at = GREATEST(COALESCE(last_seen_at, %s), %s)
+                 WHERE device_id = %s
+                """,
+                (measured_at, measured_at, device_id),
+            )
+
+    def mark_stale_offline(self) -> None:
+        """
+        통신단절 판정 시간을 넘긴 설비·앞단을 오프라인으로 내립니다.
+        화면은 updated_at 으로도 판정하지만, 표에 접속 상태를 직접 보여주기 위해 적어 둡니다.
+        """
+        minutes = int(self.thresholds.get("offlineMinutes", 15))
+        with self.conn.cursor() as cur:
+            cur.execute(
+                """
+                UPDATE devices SET online = false
+                 WHERE online = true
+                   AND (last_seen_at IS NULL OR last_seen_at < now() - (%s || ' minutes')::interval)
+                """,
+                (minutes,),
+            )
+            cur.execute(
+                """
+                UPDATE bridges SET online = false
+                 WHERE online = true
+                   AND (last_seen_at IS NULL OR last_seen_at < now() - (%s || ' minutes')::interval)
+                """,
+                (minutes,),
+            )
+
+    def log_payload(self, payload: dict[str, Any], item_count: int) -> dict[str, Any]:
+        """
+        수신 내역에는 원문을 남기지만, 재전송처럼 항목이 많으면
+        앞부분만 남기고 나머지는 건수로 적습니다. 로그 표가 비대해지는 것을 막습니다.
+        """
+        keep = int(self.broker.get("log_payload_items") or 20)
+        if item_count <= keep:
+            return payload
+        trimmed = {k: v for k, v in payload.items() if k != "items"}
+        items = payload.get("items")
+        if isinstance(items, list):
+            trimmed["items"] = items[:keep]
+        trimmed["_생략"] = f"항목 {item_count}개 중 앞 {keep}개만 보관"
+        return trimmed
 
     # ---- 판정 및 알람 ----
 
@@ -493,7 +655,11 @@ class Collector:
                 continue
             current[key] = classify(value, t[key], prev.get(key, "normal"), margin)
 
-        current["oil_level"] = "danger" if oil == "낮음" else "normal"
+        # 유면 저하를 몇 등급으로 볼지는 설정값입니다. 웹 화면과 같은 값을 씁니다.
+        oil_level = str(t.get("oilLowLevel", "warning"))
+        if oil_level not in SEVERITY_ORDER:
+            oil_level = "warning"
+        current["oil_level"] = oil_level if oil == "낮음" else "normal"
 
         name = self.device_name(device_id)
         for key, level in current.items():
@@ -504,13 +670,18 @@ class Collector:
 
         self.levels[device_id] = current
 
+        # ---- 복합 판정: 동시에 이상인 센서가 기준 개수 이상이면 한 단계 격상 ----
         abnormal = [k for k, v in current.items() if v != "normal"]
+        worst = max(current.values(), key=SEVERITY_ORDER.index)
+        overall = worst
         if t.get("compositeEnabled") and len(abnormal) >= int(t.get("compositeMinSensors", 2)):
-            worst = max(current.values(), key=SEVERITY_ORDER.index)
-            raised = escalate(worst)
-            if raised != worst:
-                log.info("%s 복합 판정 — %d개 센서 동시 이상으로 %s → %s",
-                         name, len(abnormal), worst, raised)
+            overall = escalate(worst)
+
+        before_overall = self.composite.get(device_id, "normal")
+        if overall != worst and SEVERITY_ORDER.index(overall) > SEVERITY_ORDER.index(before_overall):
+            labels = ", ".join(SENSOR_LABEL[k] for k in abnormal)
+            self.write_composite_alarm(device_id, name, overall, len(abnormal), labels)
+        self.composite[device_id] = overall
 
     def device_name(self, device_id: str) -> str:
         with self.conn.cursor() as cur:
@@ -542,28 +713,70 @@ class Collector:
         self.stats["alarms"] += 1
         log.info("알람 기록 — %s %s (%s)", name, item, detail)
 
+    def write_composite_alarm(
+        self, device_id: str, name: str, level: str, count: int, labels: str,
+    ) -> None:
+        """여러 센서가 동시에 이상일 때의 종합 판정을 알람으로 남깁니다."""
+        level_word = {"caution": "주의", "warning": "경고", "danger": "위험"}[level]
+        with self.conn.cursor() as cur:
+            cur.execute(
+                "INSERT INTO alarm_events (device_id, unit, item, level, detail) VALUES (%s,%s,%s,%s,%s)",
+                (device_id, name, f"복합 이상 {level_word} 판정", level,
+                 f"{count}개 센서 동시 이상 ({labels})"),
+            )
+        self.stats["alarms"] += 1
+        log.info("복합 판정 알람 — %s %d개 센서 동시 이상 → %s", name, count, level)
+
     # ---- 장치 상태 ----
 
     def handle_stat(self, topic: str, src_type: str, src_id: str, payload: dict[str, Any]) -> None:
+        """
+        접속 상태를 받습니다. 브릿지(3안) · 사용자 PC(2안) · 모듈 직결(1안)
+        모두 자기 자신의 상태를 올릴 수 있습니다.
+        """
         online = bool(payload.get("online", True))
-        if src_type == "bridge":
-            self.ensure_bridge(src_id)
+        note = "온라인" if online else "오프라인"
+
+        if src_type in PARENT_TYPES:
+            self.ensure_bridge(src_id, src_type)
             with self.conn.cursor() as cur:
                 cur.execute(
                     """
                     UPDATE bridges
                        SET online = %s,
+                           kind = %s,
                            fw_version = COALESCE(%s, fw_version),
                            rssi = COALESCE(%s, rssi),
                            last_seen_at = now()
                      WHERE bridge_id = %s
                     """,
-                    (online, payload.get("fw"), payload.get("rssi"), src_id),
+                    (online, src_type, payload.get("fw"), payload.get("rssi"), src_id),
                 )
-            log.info("브릿지 %s 상태 — %s", src_id, "온라인" if online else "오프라인")
+            label = "브릿지" if src_type == "bridge" else "게이트웨이"
+            log.info("%s %s 상태 — %s", label, src_id, note)
+        else:
+            # 1안. 모듈이 직접 붙은 경우입니다. 설비 자신의 상태로 적습니다.
+            device_id = str(payload.get("deviceId") or payload.get("device_id") or src_id).strip()
+            self.ensure_device(device_id, None, "direct")
+            with self.conn.cursor() as cur:
+                cur.execute(
+                    """
+                    UPDATE devices
+                       SET online = %s,
+                           fw_version = COALESCE(%s, fw_version),
+                           rssi = COALESCE(%s, rssi),
+                           interval_sec = COALESCE(%s, interval_sec),
+                           last_seen_at = now()
+                     WHERE device_id = %s
+                    """,
+                    (online, payload.get("fw"), payload.get("rssi"),
+                     to_int(payload.get("interval")), device_id),
+                )
+            note = f"설비 {device_id} {note}"
+            log.info("측정모듈 %s 상태 — %s", device_id, "온라인" if online else "오프라인")
+
         self.stats["messages"] += 1
-        self.write_ingest(topic, src_type, src_id, "stat", payload, "ok",
-                          "온라인" if online else "오프라인")
+        self.write_ingest(topic, src_type, src_id, "stat", payload, "ok", note)
 
     # ---- 명령 응답 ----
 
@@ -584,11 +797,24 @@ class Collector:
                    SET status = %s, acked_at = now(), ack = %s,
                        error = CASE WHEN %s THEN NULL ELSE %s END
                  WHERE id = %s AND status IN ('pending','sent','timeout')
+             RETURNING command, params, device_id, target_id, target_type
                 """,
                 ("acked" if ok else "failed", Json(payload), ok,
                  str(payload.get("error") or "장치가 실패로 응답했습니다."), int(cmd_id)),
             )
+            row = cur.fetchone()
             matched = cur.rowcount
+
+        # 측정 주기 변경이 성공했으면 설비에 적용된 값으로 적어 둡니다.
+        if row and ok and row["command"] == "set_interval":
+            seconds = to_int((row["params"] or {}).get("seconds"))
+            target = row["device_id"] or (row["target_id"] if row["target_type"] == "module" else None)
+            if seconds and target:
+                with self.conn.cursor() as cur:
+                    cur.execute(
+                        "UPDATE devices SET interval_sec = %s WHERE device_id = %s",
+                        (seconds, target),
+                    )
 
         self.write_ingest(topic, src_type, src_id, "cmd/ack", payload,
                           "ok" if matched else "warn",
@@ -626,7 +852,12 @@ class Collector:
             )
 
     def expire_commands(self) -> None:
-        """응답이 오지 않은 명령을 시간이 지나면 미응답으로 정리합니다."""
+        """
+        응답이 오지 않은 명령을 시간이 지나면 미응답으로 정리합니다.
+        대기시간은 화면(데이터 연결)에서 바꿀 수 있습니다.
+        장비 규격은 1초 이내 응답이므로 기본 10초면 넉넉합니다.
+        """
+        timeout = int(self.broker.get("ack_timeout_sec") or 10)
         with self.conn.cursor() as cur:
             cur.execute(
                 """
@@ -636,7 +867,7 @@ class Collector:
                  WHERE status = 'sent'
                    AND sent_at < now() - (%s || ' seconds')::interval
                 """,
-                (f"{ACK_TIMEOUT_SEC}초 안에 응답이 오지 않았습니다.", ACK_TIMEOUT_SEC),
+                (f"{timeout}초 안에 응답이 오지 않았습니다.", timeout),
             )
             if cur.rowcount:
                 log.warning("명령 %s건이 응답 없이 시간 초과되었습니다.", cur.rowcount)
@@ -779,18 +1010,27 @@ def main() -> None:
                 with psycopg.connect(DATABASE_URL, autocommit=True) as conn:
                     conn.execute("LISTEN device_command")
                     conn.execute("LISTEN mqtt_config")
-                    log.info("DB 통지 구독 — device_command, mqtt_config")
-                    for note in conn.notifies(timeout=5):
-                        if stopping.is_set():
-                            break
-                        if note.channel == "device_command":
-                            command_queue.put(int(note.payload))
-                        elif note.channel == "mqtt_config":
-                            log.info("브로커 설정 변경 감지 — 다시 접속합니다.")
-                            restart.set()
-                            client = state.get("client")
-                            if client:
-                                client.disconnect()
+                    conn.execute("LISTEN devices_changed")
+                    log.info("DB 통지 구독 — device_command, mqtt_config, devices_changed")
+                    # notifies() 는 timeout 이 지나면 끝납니다.
+                    # 같은 접속을 유지한 채 다시 기다립니다 (매번 재접속하지 않습니다).
+                    while not stopping.is_set():
+                        for note in conn.notifies(timeout=5):
+                            if stopping.is_set():
+                                break
+                            if note.channel == "device_command":
+                                command_queue.put(int(note.payload))
+                            elif note.channel == "devices_changed":
+                                # 화면에서 설비를 지우거나 추가한 직후에도
+                                # 다음 값이 그대로 적재되게 합니다.
+                                with collector.lock:
+                                    collector.load_devices()
+                            elif note.channel == "mqtt_config":
+                                log.info("브로커 설정 변경 감지 — 다시 접속합니다.")
+                                restart.set()
+                                client = state.get("client")
+                                if client:
+                                    client.disconnect()
             except psycopg.Error as err:
                 if stopping.is_set():
                     break
@@ -806,16 +1046,23 @@ def main() -> None:
             publish_commands(cmd_id)
 
     def housekeeping():
-        while not stopping.wait(30):
+        # 응답 대기시간이 10초 단위이므로 5초마다 돌립니다.
+        # 무거운 작업(설정 재읽기 · 로그 정리)은 6번에 한 번만 합니다.
+        tick = 0
+        while not stopping.wait(5):
+            tick += 1
             try:
                 with collector.lock:
-                    collector.reload_thresholds()
-                    collector.load_devices()
                     collector.expire_commands()
-                    collector.report_status()
-                    collector.prune_logs()
-                # 통지를 놓쳤을 경우를 대비해 밀린 명령을 훑습니다.
-                publish_commands(None)
+                    if tick % 6 == 0:
+                        collector.reload_thresholds()
+                        collector.load_devices()
+                        collector.report_status()
+                        collector.prune_logs()
+                        collector.mark_stale_offline()
+                if tick % 6 == 0:
+                    # 통지를 놓쳤을 경우를 대비해 밀린 명령을 훑습니다.
+                    publish_commands(None)
             except psycopg.Error as err:
                 log.error("주기 작업 실패: %s", err)
 

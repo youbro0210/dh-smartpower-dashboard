@@ -15,6 +15,9 @@ interface Config {
   topic_prefix: string;
   site: string;
   keep_log_days: number;
+  ack_timeout_sec: number;
+  max_replay_items: number;
+  log_payload_items: number;
   version: number;
   updated_at: string;
 }
@@ -249,6 +252,39 @@ export default function MqttClient() {
                   onChange={(e) => set("site", e.target.value)} placeholder="dh1" />
               </label>
             </div>
+
+            <div className="spark-title" style={{ marginTop: 16 }}>수집 동작</div>
+            <div className="form-grid">
+              <label className="field-row">
+                <span>명령 응답 대기</span>
+                <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                  <input className="field num" type="number" min={1} max={120} style={{ width: 90 }}
+                    value={config.ack_timeout_sec}
+                    onChange={(e) => set("ack_timeout_sec", Number(e.target.value))} />
+                  <span style={{ color: "var(--muted)" }}>초 (장비 규격 1초 이내)</span>
+                </span>
+              </label>
+
+              <label className="field-row">
+                <span>메시지당 항목 상한</span>
+                <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                  <input className="field num" type="number" min={10} max={5000} style={{ width: 90 }}
+                    value={config.max_replay_items}
+                    onChange={(e) => set("max_replay_items", Number(e.target.value))} />
+                  <span style={{ color: "var(--muted)" }}>개 (재전송 분할 기준)</span>
+                </span>
+              </label>
+
+              <label className="field-row">
+                <span>수신 내역 원문 보관</span>
+                <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                  <input className="field num" type="number" min={1} max={500} style={{ width: 90 }}
+                    value={config.log_payload_items}
+                    onChange={(e) => set("log_payload_items", Number(e.target.value))} />
+                  <span style={{ color: "var(--muted)" }}>개 항목까지</span>
+                </span>
+              </label>
+            </div>
           </>
         )}
       </div>
@@ -260,7 +296,7 @@ export default function MqttClient() {
             <span className="accent-bar" />
             장비에 전달할 토픽 규격
           </div>
-          <span className="card-note">협의 중</span>
+          <span className="card-note">v2 · 구성 1·2·3안 공통</span>
         </div>
 
         <pre className="codeblock">
@@ -269,7 +305,11 @@ ${config?.topic_prefix ?? "dh/v1"}/${config?.site ?? "dh1"}/{srcType}/{srcId}/st
 ${config?.topic_prefix ?? "dh/v1"}/${config?.site ?? "dh1"}/{srcType}/{srcId}/cmd       서버 → 장치 명령
 ${config?.topic_prefix ?? "dh/v1"}/${config?.site ?? "dh1"}/{srcType}/{srcId}/cmd/ack   장치 → 서버 응답
 
-srcType = bridge | module | gateway`}
+srcType / srcId — 브로커에 접속한 주체를 그대로 적습니다.
+
+  1안  module/{모듈ID}     측정모듈이 직접 전송
+  2안  gateway/{PC ID}     측정모듈 → RS-485 → 사용자 PC
+  3안  bridge/{브릿지ID}    측정모듈 → RS-485 → 브릿지`}
         </pre>
 
         <div className="spark-title" style={{ marginTop: 12 }}>계측값 페이로드</div>
@@ -287,6 +327,11 @@ srcType = bridge | module | gateway`}
 
         <ul className="spec-list">
           <li>
+            <b>발신 주체와 설비의 분리</b> — 어느 설비의 값인지는 토픽이 아니라 페이로드의
+            deviceId 로 판단합니다. 1안처럼 모듈 하나가 자기 값만 올릴 때는 deviceId 를
+            생략해도 되며, 이때는 토픽의 srcId 를 설비 식별자로 씁니다.
+          </li>
+          <li>
             <b>deviceId</b> — 설비 식별자. 브릿지·모듈을 교체해도 바뀌지 않아야 합니다.
             등록되지 않은 값이 오면 임시로 설비를 만들고 수신 내역에 경고를 남깁니다.
           </li>
@@ -296,7 +341,9 @@ srcType = bridge | module | gateway`}
           </li>
           <li>
             <b>replay</b> — 버퍼에 쌓였다가 뒤늦게 보내는 과거분. true 면 이력만 적재하고
-            알람을 울리지 않으며 현재값도 덮어쓰지 않습니다.
+            알람을 울리지 않으며 현재값도 덮어쓰지 않습니다. 브릿지가 최대 1개월분을
+            보관하므로, 한 메시지에 위 상한({config?.max_replay_items ?? 500}개)까지만 담고
+            나머지는 다음 메시지로 나눠 보내야 합니다.
           </li>
           <li>
             <b>oil</b> — 유면. 현재 2치(정상/낮음)로 저장합니다. 접점(0/1)·문자열·숫자를

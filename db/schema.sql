@@ -381,3 +381,78 @@ DROP TRIGGER IF EXISTS mqtt_config_notify ON mqtt_config;
 CREATE TRIGGER mqtt_config_notify
   AFTER UPDATE ON mqtt_config
   FOR EACH ROW EXECUTE FUNCTION notify_mqtt_config();
+
+-- ----------------------------------------------------------------------------
+-- 9. 장비 구성 3안 수용  (㈜헤디 2026-10 협의 반영)
+--
+--    1안  측정모듈 → (MQTT) → 서버
+--    2안  측정모듈 → (RS-485) → 사용자 PC → (MQTT) → 서버
+--    3안  측정모듈 → (RS-485) → 브릿지 → (MQTT) → 서버
+--
+--    세 경우 모두 "설비(측정모듈)" 는 devices 에, 그 앞단에서 값을 모아
+--    보내는 주체(브릿지 · PC 게이트웨이)는 bridges 에 담습니다.
+--    1안은 앞단이 없으므로 devices.bridge_id 가 NULL 로 남습니다.
+--    이 절은 반복 실행해도 안전합니다.
+-- ----------------------------------------------------------------------------
+
+-- 값을 모아 보내는 주체의 종류. 2안의 사용자 PC 도 여기에 들어갑니다.
+ALTER TABLE bridges ADD COLUMN IF NOT EXISTS kind text NOT NULL DEFAULT 'bridge';
+ALTER TABLE bridges DROP CONSTRAINT IF EXISTS bridges_kind_check;
+ALTER TABLE bridges ADD CONSTRAINT bridges_kind_check
+  CHECK (kind IN ('bridge', 'gateway'));
+
+-- RS-485 한 가닥에 붙일 수 있는 최대 대수. 헤디 회신 기준 32대입니다.
+ALTER TABLE bridges ADD COLUMN IF NOT EXISTS max_devices integer NOT NULL DEFAULT 32;
+
+-- 설비가 서버까지 어떤 길로 오는지. 화면에서 구성을 구분해 보여주기 위한 값입니다.
+ALTER TABLE devices ADD COLUMN IF NOT EXISTS link_type text NOT NULL DEFAULT 'bridge';
+ALTER TABLE devices DROP CONSTRAINT IF EXISTS devices_link_type_check;
+ALTER TABLE devices ADD CONSTRAINT devices_link_type_check
+  CHECK (link_type IN ('direct', 'bridge', 'gateway'));
+
+-- 1안처럼 모듈이 직접 붙는 경우, 모듈 자신의 접속 상태를 여기에 적습니다.
+ALTER TABLE devices ADD COLUMN IF NOT EXISTS online       boolean NOT NULL DEFAULT false;
+ALTER TABLE devices ADD COLUMN IF NOT EXISTS last_seen_at timestamptz;
+ALTER TABLE devices ADD COLUMN IF NOT EXISTS fw_version   text;
+ALTER TABLE devices ADD COLUMN IF NOT EXISTS rssi         integer;
+-- 장치에 설정된 측정 주기(초). 측정 주기 변경 명령이 성공하면 갱신됩니다.
+ALTER TABLE devices ADD COLUMN IF NOT EXISTS interval_sec integer;
+
+-- 앞단별 등록 대수를 세기 위한 색인입니다.
+CREATE INDEX IF NOT EXISTS devices_bridge_idx ON devices (bridge_id);
+
+-- 명령 응답 대기시간. 헤디 회신은 1초 이내이지만, 네트워크 왕복과
+-- 브로커 지연을 감안해 기본 10초로 두고 화면에서 조정합니다.
+ALTER TABLE mqtt_config ADD COLUMN IF NOT EXISTS ack_timeout_sec integer NOT NULL DEFAULT 10;
+
+-- 재전송(미전송분 백필) 한 메시지에 담을 수 있는 최대 항목 수.
+-- 브릿지가 최대 1개월분을 보관하므로, 한 번에 쏟아지지 않도록 상한을 둡니다.
+ALTER TABLE mqtt_config ADD COLUMN IF NOT EXISTS max_replay_items integer NOT NULL DEFAULT 500;
+
+-- 수신 내역의 원문 보관 상한. 재전송 메시지는 원문이 매우 크므로
+-- 이 수를 넘는 항목은 요약만 남깁니다.
+ALTER TABLE mqtt_config ADD COLUMN IF NOT EXISTS log_payload_items integer NOT NULL DEFAULT 20;
+
+-- 유면 저하를 몇 등급으로 볼지. 웹 화면과 수집 서버가 같은 값을 씁니다.
+-- (유면 규격은 헤디와 협의 중이며, 아날로그로 확정되면 임계치로 바뀝니다.)
+UPDATE app_config
+   SET thresholds = thresholds || '{"oilLowLevel": "warning"}'::jsonb
+ WHERE id = 1 AND NOT (thresholds ? 'oilLowLevel');
+
+-- 기존 데이터 정리: 앞단이 없는 설비는 직결로 표시합니다.
+UPDATE devices SET link_type = 'direct' WHERE bridge_id IS NULL AND link_type = 'bridge';
+
+-- 설비 목록이 바뀌면 수집기가 곧바로 다시 읽도록 통지합니다.
+-- (화면에서 설비를 지운 직후 그 설비의 값이 들어오면, 수집기가 아직
+--  예전 목록을 들고 있어 적재에 실패하는 일을 막습니다.)
+CREATE OR REPLACE FUNCTION notify_devices_changed() RETURNS trigger AS $$
+BEGIN
+  PERFORM pg_notify('devices_changed', COALESCE(NEW.device_id, OLD.device_id));
+  RETURN NULL;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS devices_changed_notify ON devices;
+CREATE TRIGGER devices_changed_notify
+  AFTER INSERT OR DELETE ON devices
+  FOR EACH ROW EXECUTE FUNCTION notify_devices_changed();

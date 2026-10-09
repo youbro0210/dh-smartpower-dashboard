@@ -23,6 +23,14 @@ dh/v1/{site}/{srcType}/{srcId}/cmd
 dh/v1/{site}/{srcType}/{srcId}/cmd/ack
 ```
 
+| 구성 | 토픽의 발신 주체 | `devices.link_type` | 앞단 기록 |
+|---|---|---|---|
+| 1안 모듈 직결 | `module/{모듈ID}` | `direct` | 없음 (`bridge_id` 는 NULL) |
+| 2안 PC 경유 | `gateway/{PC ID}` | `gateway` | `bridges` 에 `kind='gateway'` |
+| 3안 브릿지 경유 | `bridge/{브릿지ID}` | `bridge` | `bridges` 에 `kind='bridge'` |
+
+연결 방식은 장비가 보낸 토픽을 보고 수집기가 스스로 적습니다.
+
 계측값 페이로드:
 
 ```json
@@ -37,8 +45,9 @@ dh/v1/{site}/{srcType}/{srcId}/cmd/ack
 }
 ```
 
-설비 하나만 담은 납작한 형태(`items` 없이 최상위에 `deviceId`)도 받습니다.
-장비 업체가 어느 쪽으로 보내든 동작하게 하기 위한 것입니다.
+설비 하나만 담은 납작한 형태(`items` 없이 최상위에 값)도 받습니다.
+1안처럼 모듈이 자기 값만 올릴 때는 `deviceId` 를 생략해도 되며, 이때는
+토픽의 `srcId` 를 설비 식별자로 씁니다.
 
 | 필드 | 뜻 |
 |---|---|
@@ -48,8 +57,10 @@ dh/v1/{site}/{srcType}/{srcId}/cmd/ack
 | `oil` | 유면. 현재 2치(정상/낮음)로 저장합니다. 접점(0/1)·문자열·숫자를 모두 받습니다 |
 | `q` | 품질 코드. 통신단절과 센서 고장을 구분하기 위한 예비 필드 |
 
-상태 토픽(`stat`)은 `{"online":true,"fw":"1.2.3","rssi":-62}` 형태로,
-`bridges` 테이블의 online·fw_version·rssi·last_seen_at 에 반영됩니다.
+상태 토픽(`stat`)은 `{"online":true,"fw":"1.2.3","rssi":-62}` 형태입니다.
+브릿지·게이트웨이가 보내면 `bridges` 에, 모듈이 직접 보내면(1안) `devices` 의
+online·fw_version·rssi·last_seen_at 에 반영됩니다. 모듈은 `interval` 로
+현재 설정된 측정 주기(초)도 함께 알릴 수 있습니다.
 LWT 로 `{"online":false}` 를 retain 설정해 두면 장치가 죽었을 때 바로 표시됩니다.
 
 ## 2. 저장 규칙
@@ -63,6 +74,15 @@ LWT 로 `{"online":false}` 를 retain 설정해 두면 장치가 죽었을 때 �
   이뤄져 경계값 근처에서 알람이 반복되지 않습니다.
 - 등록되지 않은 `deviceId` 가 값을 올리면 임시로 설비를 만들고 경고를 남깁니다.
   현장 데이터를 버리는 것보다 관리자가 나중에 이름을 고치는 편이 낫습니다.
+- **대량 재전송** — 한 메시지의 항목은 일괄 INSERT 로 한 번에 넣습니다.
+  설정값(기본 500개)을 넘는 항목은 받지 않고 수신 내역에 경고를 남깁니다.
+  수신 내역에 남기는 원문도 앞의 20개 항목까지만 보관해 로그가 비대해지지
+  않게 합니다. 1개월분(3대 × 5분 간격 = 25,920건)을 500개 단위로 나눠 보내면
+  약 10초 안에 전량 적재되는 것을 확인했습니다.
+- **복합 판정** — 동시에 이상인 센서가 기준 개수 이상이면 종합 등급을 한 단계
+  격상하고, 격상된 순간을 `복합 이상 ○○ 판정` 알람으로 남깁니다.
+- **유면 저하 등급** — `app_config.thresholds.oilLowLevel` 한 곳에서 정하며
+  웹 화면과 수집기가 같은 값을 씁니다(기본 경고).
 
 임계치와 복합 판정 규칙은 웹 화면(설정)에서 바꾸며, 수집기가 30초마다
 `app_config` 를 다시 읽어 반영합니다.
@@ -79,7 +99,8 @@ JSON 이 깨진 건, items 가 빈 건, 미등록 설비가 올린 건이 각각
 
 **설정 › 장비 제어** 는 서버에서 장치로 명령을 보냅니다. 화면에서 넣으면
 DB 통지로 수집기가 즉시 발행하고, 장치가 같은 cmdId 로 답하면 응답 완료로
-바뀝니다. 60초 안에 응답이 없으면 응답 없음으로 정리합니다.
+바뀝니다. 응답 대기시간은 같은 화면에서 정하며(기본 10초), 장비 규격은
+1초 이내 응답입니다. 늦게 온 응답은 미응답으로 정리된 뒤에도 반영됩니다.
 명령 집합은 `lib/commands.ts` 에 있으며 아직 장비 업체와 확정 전입니다.
 
 `.env` 의 MQTT_* 값은 DB 에 설정이 없을 때만 쓰는 예비값입니다.
@@ -113,9 +134,14 @@ pm2 start deploy/ecosystem.config.js --only dh-collector   # 운영
 `simulator.py` 가 장비를 흉내내 발행합니다. 운영에는 쓰지 않습니다.
 
 ```bash
-python3 simulator.py                       # 정상값 주기 발행
-python3 simulator.py --scenario rise       # 수소·온도를 올려 알람 유발
-python3 simulator.py --replay              # 과거 1시간치를 재전송으로 발행
+python3 simulator.py --link bridge                  # 3안 — 브릿지가 모아 전송
+python3 simulator.py --link gateway --src-id PC-1    # 2안 — 사용자 PC가 모아 전송
+python3 simulator.py --link direct --device MOD-7 --flat
+                                                     # 1안 — 모듈이 자기 값만 전송
+python3 simulator.py --scenario rise                 # 수소·온도를 올려 알람 유발
+python3 simulator.py --scenario oil                  # 유면 저하 알람
+python3 simulator.py --replay --replay-hours 720 --chunk 500
+                                                     # 1개월분 백필
 ```
 
 `--scenario rise` 는 주의 → 경고 → 위험을 차례로 넘기므로, 수집 → 판정 →
@@ -125,8 +151,11 @@ python3 simulator.py --replay              # 과거 1시간치를 재전송으�
 가짜 장치입니다.
 
 ```bash
-python3 fake_device.py            # 성공으로 응답
-python3 fake_device.py --fail     # 실패로 응답
+python3 fake_device.py --type bridge  --id BR-1    # 3안
+python3 fake_device.py --type gateway --id PC-1    # 2안
+python3 fake_device.py --type module  --id MOD-7   # 1안
+python3 fake_device.py --fail                      # 실패로 응답
+python3 fake_device.py --delay 14                  # 늦게 응답 — 미응답 처리 확인
 ```
 
 ## 7. 협의가 끝나면 고쳐야 할 곳
@@ -135,5 +164,10 @@ python3 fake_device.py --fail     # 실패로 응답
   컬럼(현재 text), 그리고 화면의 게이지를 함께 바꿉니다. 지금 구조에서
   가장 영향이 큰 미확정 항목입니다.
 - **토픽 접두사** — `MQTT_TOPIC_PREFIX` 로 조정합니다.
-- **재전송 속도 제한** — 장비 쪽에서 한 메시지당 건수와 초당 메시지 수를
-  제한해 주어야 합니다. 1분 주기 × 32대 × 30일이면 한 브릿지당 약 138만 건입니다.
+- **재전송 속도 제한** — 서버는 한 메시지당 항목 수에 상한을 둡니다(기본 500개).
+  장비 쪽에서도 초당 메시지 수를 제한해 주어야 합니다.
+  1분 주기 × 32대 × 30일이면 한 브릿지당 약 138만 건입니다.
+- **명령 집합** — `lib/commands.ts`. 헤디와 확정되면 이 한 파일만 고치면
+  화면과 서버 검증이 함께 따라옵니다.
+- **RS-485 수용 대수** — `bridges.max_devices`(기본 32). 현장 환경에 따라
+  줄여야 하면 이 값을 조정합니다.

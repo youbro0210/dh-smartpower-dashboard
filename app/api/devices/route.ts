@@ -1,7 +1,12 @@
 import { NextResponse } from "next/server";
 import { getSessionUser, requireAdmin } from "@/lib/auth";
 import { query, one, execute } from "@/lib/db";
-import { DEFAULT_THRESHOLDS, ThresholdConfig } from "@/lib/types";
+import {
+  DEFAULT_THRESHOLDS,
+  LinkType,
+  RS485_MAX_DEVICES,
+  ThresholdConfig,
+} from "@/lib/types";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -24,9 +29,11 @@ export async function GET() {
   if (!user) return NextResponse.json({ error: "로그인이 필요합니다." }, { status: 401 });
 
   const [devices, bridges, readings, config, alarms, trendRows, baselines] = await Promise.all([
-    query(`SELECT device_id, name, building, capacity, bridge_id, slave_addr, sort_order
+    query(`SELECT device_id, name, building, capacity, bridge_id, slave_addr, sort_order,
+                  link_type, online, last_seen_at, fw_version, interval_sec
              FROM devices ORDER BY sort_order, device_id`),
-    query(`SELECT bridge_id, name, online, last_seen_at FROM bridges ORDER BY bridge_id`),
+    query(`SELECT bridge_id, name, online, last_seen_at, kind, max_devices
+             FROM bridges ORDER BY bridge_id`),
     query(`SELECT device_id, h2, ch4, temperature, oil_level, updated_at FROM device_readings`),
     one<{ thresholds: ThresholdConfig; version: number }>(
       `SELECT thresholds, version FROM app_config WHERE id = 1`
@@ -98,6 +105,31 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "이름과 위치는 필수입니다." }, { status: 400 });
   }
 
+  const bridgeId = body.bridge_id ? String(body.bridge_id) : null;
+
+  // 연결 방식. 앞단(브릿지·PC)을 고르지 않았으면 모듈 직결입니다.
+  let linkType: LinkType = "direct";
+  if (bridgeId) {
+    const parent = await one<{ kind: string; max_devices: number; used: number }>(
+      `SELECT kind, max_devices,
+              (SELECT count(*)::int FROM devices d WHERE d.bridge_id = b.bridge_id) AS used
+         FROM bridges b WHERE b.bridge_id = $1`,
+      [bridgeId]
+    );
+    if (!parent) {
+      return NextResponse.json({ error: "선택한 브릿지/게이트웨이를 찾을 수 없습니다." }, { status: 400 });
+    }
+    // RS-485 한 가닥의 수용 한도입니다 (헤디 회신 기준 32대).
+    const limit = parent.max_devices || RS485_MAX_DEVICES;
+    if (parent.used >= limit) {
+      return NextResponse.json(
+        { error: `${bridgeId} 에 이미 ${parent.used}대가 등록되어 수용 한도 ${limit}대를 채웠습니다.` },
+        { status: 409 }
+      );
+    }
+    linkType = parent.kind === "gateway" ? "gateway" : "bridge";
+  }
+
   // 숫자형 device_id 중 가장 큰 값 + 1
   const next = await one<{ next_id: number }>(
     `SELECT COALESCE(max(NULLIF(regexp_replace(device_id, '\\D', '', 'g'), '')::int), 0) + 1 AS next_id
@@ -106,16 +138,17 @@ export async function POST(request: Request) {
   const deviceId = String(next?.next_id ?? 1);
 
   await execute(
-    `INSERT INTO devices (device_id, name, building, capacity, bridge_id, slave_addr, sort_order)
-     VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+    `INSERT INTO devices (device_id, name, building, capacity, bridge_id, slave_addr, sort_order, link_type)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
     [
       deviceId,
       name,
       building,
       String(body.capacity ?? "").trim() || "3상 500kVA",
-      body.bridge_id ? String(body.bridge_id) : null,
+      bridgeId,
       body.slave_addr != null ? Number(body.slave_addr) : null,
       Number(next?.next_id ?? 1),
+      linkType,
     ]
   );
 
