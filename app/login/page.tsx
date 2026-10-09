@@ -4,6 +4,7 @@ import { Suspense, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import AuthAside from "@/components/AuthAside";
+import NavIcon from "@/components/NavIcon";
 
 function LoginForm() {
   const params = useSearchParams();
@@ -11,6 +12,7 @@ function LoginForm() {
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -86,15 +88,30 @@ function LoginForm() {
 
             <div className="auth-field">
               <label htmlFor="password">비밀번호</label>
-              <input
-                id="password"
-                name="password"
-                type="password"
-                autoComplete="current-password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-              />
+              {/* 입력한 글자를 눈으로 확인할 수 있어야 합니다.
+                  한글 입력 상태나 Caps Lock 때문에 다른 글자가 들어가도
+                  점으로만 보이면 알 길이 없습니다. */}
+              <div className="pw-wrap">
+                <input
+                  id="password"
+                  name="password"
+                  type={showPassword ? "text" : "password"}
+                  autoComplete="current-password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                />
+                <button
+                  type="button"
+                  className="pw-toggle"
+                  onClick={() => setShowPassword((v) => !v)}
+                  aria-label={showPassword ? "비밀번호 가리기" : "비밀번호 보기"}
+                  aria-pressed={showPassword}
+                  title={showPassword ? "비밀번호 가리기" : "비밀번호 보기"}
+                >
+                  <NavIcon name={showPassword ? "eye-off" : "eye"} size={19} />
+                </button>
+              </div>
             </div>
 
             {error && (

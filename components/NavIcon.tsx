@@ -17,7 +17,9 @@ export type IconName =
   | "logout"
   | "close"
   | "search"
-  | "caret";
+  | "caret"
+  | "eye"
+  | "eye-off";
 
 const PATHS: Record<IconName, JSX.Element> = {
   // 집
@@ -102,6 +104,22 @@ const PATHS: Record<IconName, JSX.Element> = {
   ),
   // 묶음 접기·펴기
   caret: <path d="m6 9 6 6 6-6" />,
+  // 비밀번호 보기
+  eye: (
+    <>
+      <path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7Z" />
+      <circle cx="12" cy="12" r="3" />
+    </>
+  ),
+  // 비밀번호 가리기
+  "eye-off": (
+    <>
+      <path d="M10.6 6.2A9.9 9.9 0 0 1 12 6c6.4 0 10 6 10 6a18 18 0 0 1-2.6 3.3" />
+      <path d="M6.6 6.7A18 18 0 0 0 2 12s3.6 6 10 6a9.6 9.6 0 0 0 4.1-.9" />
+      <path d="M9.9 9.9a3 3 0 0 0 4.2 4.2" />
+      <path d="M3 3l18 18" />
+    </>
+  ),
 };
 
 export default function NavIcon({

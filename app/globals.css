@@ -1463,6 +1463,41 @@ table input[type="number"] {
   font-weight: 600;
 }
 
+/* 비밀번호 보기 단추 — 입력칸 안 오른쪽에 둡니다. */
+.pw-wrap {
+  position: relative;
+}
+
+.pw-wrap input {
+  padding-right: 46px;
+}
+
+.pw-toggle {
+  position: absolute;
+  top: 50%;
+  right: 6px;
+  transform: translateY(-50%);
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 5px;
+  background: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 0;
+}
+
+.pw-toggle:hover {
+  background: var(--bg-head);
+  color: var(--text);
+}
+
+.pw-toggle[aria-pressed="true"] {
+  color: var(--primary);
+}
+
 .auth-error {
   color: var(--danger);
   font-size: 14px;
