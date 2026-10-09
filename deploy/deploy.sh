@@ -24,8 +24,25 @@ npm run build
 echo "==> 재기동"
 pm2 reload dh-dashboard --update-env
 
+# 발송 워커와 수집 서버도 같은 코드를 쓰므로 함께 올립니다.
+# 등록되어 있지 않으면 건너뜁니다.
+for app in dh-notify dh-collector; do
+  if pm2 describe "$app" > /dev/null 2>&1; then
+    echo "    $app 재기동"
+    pm2 restart "$app" --update-env
+  else
+    echo "    $app 등록되어 있지 않아 건너뜁니다."
+  fi
+done
+
 echo "==> 상태 확인"
 sleep 3
 curl -fsS -o /dev/null -w "  로컬 응답: %{http_code}\n" http://127.0.0.1:3000/login
+
+# 수집기가 브로커에 다시 붙었는지 확인합니다.
+psql "$DATABASE_URL" -tA -c \
+  "SELECT '  수집기: ' || CASE WHEN connected THEN '연결됨' ELSE '연결 끊김' END
+          || ' / 마지막 심장박동 ' || COALESCE(to_char(last_heartbeat,'HH24:MI:SS'),'없음')
+     FROM collector_status WHERE id = 1" 2>/dev/null || true
 
 echo "배포 완료: $(date '+%Y-%m-%d %H:%M:%S')"
