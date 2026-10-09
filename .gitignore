@@ -6,3 +6,9 @@ node_modules
 tsconfig.tsbuildinfo
 __pycache__
 collector/.env
+
+# 화면 점검용 임시 스크립트 (각자 환경의 경로가 박혀 있어 저장소에 넣지 않습니다)
+audit.mjs
+shots.mjs
+.dh-sync.bundle
+Claude outputs/
