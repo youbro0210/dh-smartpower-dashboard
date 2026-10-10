@@ -1999,8 +1999,11 @@ div.st-tile:hover .st-num {
 .gauge-bar .tick.caution { background: var(--caution); }
 .gauge-bar .tick.warning { background: var(--warning); }
 
+/* 네 칸의 줄 높이를 같게 고정합니다. 한 칸만 줄 수가 달라도
+   값 · 기준 · 변화가 서로 다른 높이에 찍혀 비교가 어려워집니다. */
 .gauge-foot,
 .gauge-delta {
+  min-height: 20px;
   padding: 0 8px;
   font-size: var(--fs-xs);
   color: var(--text-sub);
@@ -2180,6 +2183,12 @@ td.center {
     width: auto;
   }
 
+  /* 쌓아 놓아도 바깥 테두리와 줄 사이 선은 그대로 둡니다. */
+  table.form-grid {
+    border: 1px solid var(--line);
+    border-bottom: 0;
+  }
+
   table.form-grid tr {
     border-bottom: 1px solid var(--line);
   }
@@ -2189,7 +2198,8 @@ td.center {
     height: auto;
     text-align: left;
     border: 0;
-    padding: 8px 10px 4px;
+    border-bottom: 1px solid var(--line);
+    padding: 7px 10px;
   }
 
   /* 칸 높이를 36px 로 고정해 두면 입력칸 아래 설명 글자가
@@ -2197,7 +2207,7 @@ td.center {
   table.form-grid td {
     height: auto;
     border: 0;
-    padding: 0 10px 10px;
+    padding: 7px 10px 9px;
   }
 
   table.form-grid th:empty,
@@ -2603,32 +2613,49 @@ code {
 .now-bar > span.danger { background: var(--danger); }
 .now-bar > span.offline { background: var(--line-strong); }
 
-/* 보조 수치 — 숫자를 크게 키우지 않습니다. 위 문장을 거드는 자리입니다. */
+/* 보조 수치 — 이름 줄과 값 줄을 칸으로 맞춘 실선 표입니다.
+   띄어쓰기로만 나누면 이름과 값이 어느 칸의 것인지 눈으로 따라가야 합니다. */
 .now-facts {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
-  gap: 2px;
-  margin: 0;
-  padding-top: 16px;
-  border-top: 1px solid var(--line-soft);
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-auto-flow: column;
+  gap: 0;
+  margin: 16px 0 0;
+  padding: 0;
+  border-top: 1px solid var(--line);
+  border-left: 1px solid var(--line);
 }
 
 .now-facts > div {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 10px;
-  padding: 7px 16px 7px 0;
+  display: contents;
 }
 
 .now-facts dt {
-  font-size: var(--fs-sm);
+  grid-row: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 30px;
+  padding: 0 10px;
+  background: var(--bg-sum);
+  border-right: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  font-size: var(--fs-xs);
+  font-weight: 500;
   color: var(--text-sub);
   white-space: nowrap;
 }
 
 .now-facts dd {
+  grid-row: 2;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  height: 36px;
   margin: 0;
+  padding: 0 10px;
+  border-right: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
   font-size: var(--fs-base);
   font-weight: 700;
   font-variant-numeric: tabular-nums;
@@ -2673,41 +2700,47 @@ code {
 
 /* ---- 알람 목록 (표가 아니라 목록입니다) ---- */
 
+/* 알람 목록 — 시각 · 내용 · 등급 세 칸이 위아래로 맞는 실선 표입니다. */
 .feed {
+  display: grid;
+  grid-template-columns: 146px minmax(0, 1fr) 72px;
   list-style: none;
   margin: 0;
   padding: 0;
-}
-
-.feed li {
-  display: flex;
-  align-items: baseline;
-  gap: 14px;
-  padding: 13px 0 13px 12px;
-  border-bottom: 1px solid var(--line-soft);
-  border-left: 3px solid transparent;
+  border-top: 1px solid var(--line);
+  border-left: 1px solid var(--line);
   font-size: var(--fs-sm);
 }
 
-.feed li:last-child { border-bottom: 0; }
-.feed li.danger { border-left-color: var(--danger); }
-.feed li.warning { border-left-color: var(--warning); }
-.feed li.caution { border-left-color: var(--caution); }
+.feed li {
+  display: contents;
+}
+
+.feed li > * {
+  display: flex;
+  align-items: center;
+  min-height: 36px;
+  padding: 7px 10px;
+  border-right: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+
+/* 등급은 왼쪽 끝 색 띠로도 한 번 더 알려 줍니다. */
+.feed li.danger > .feed-time { box-shadow: inset 3px 0 0 var(--danger); }
+.feed li.warning > .feed-time { box-shadow: inset 3px 0 0 var(--warning); }
+.feed li.caution > .feed-time { box-shadow: inset 3px 0 0 var(--caution); }
 
 .feed-time {
-  flex: none;
-  width: 132px;
   color: var(--text-sub);
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 
 .feed-body {
-  flex: 1;
   min-width: 0;
-  display: flex;
   flex-wrap: wrap;
   align-items: baseline;
-  gap: 4px 10px;
+  gap: 2px 10px;
 }
 
 .feed-body b {
@@ -2724,8 +2757,7 @@ code {
 }
 
 .feed li > .badge {
-  flex: none;
-  margin-left: auto;
+  justify-content: center;
 }
 
 .feed-empty {
@@ -2747,36 +2779,31 @@ code {
     font-size: 20px;
   }
 
+  /* 좁은 화면에서는 이름 칸과 값 칸을 좌우로 둔 두 칸짜리 표가 됩니다. */
   .now-facts {
-    grid-template-columns: 1fr;
-    gap: 0;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-auto-flow: row;
   }
 
-  .now-facts > div {
-    padding: 9px 0;
-    border-bottom: 1px solid var(--line-soft);
+  .now-facts dt,
+  .now-facts dd {
+    grid-row: auto;
+    height: 34px;
   }
 
-  .now-facts > div:last-child {
-    border-bottom: 0;
-    padding-bottom: 0;
+  .now-facts dt {
+    justify-content: flex-start;
+    font-size: var(--fs-sm);
   }
 
-  /* 알람은 시각을 위로 올리고 두 줄로 흘립니다. */
-  .feed li {
-    flex-wrap: wrap;
-    gap: 4px 10px;
-    padding: 12px 0 12px 10px;
+  /* 알람은 시각을 윗줄로 빼고, 아래에 내용과 등급을 나란히 둡니다. */
+  .feed {
+    grid-template-columns: minmax(0, 1fr) 64px;
   }
 
   .feed-time {
-    width: auto;
+    grid-column: 1 / -1;
     font-size: var(--fs-xs);
-  }
-
-  .feed-body {
-    order: 3;
-    flex-basis: 100%;
   }
 }
 
@@ -2808,12 +2835,16 @@ code {
     clip: rect(0 0 0 0);
   }
 
+  /* 값들이 좌우로 맞고 칸마다 선이 들어가도록 두 칸짜리 격자로 둡니다. */
   .device-table tbody tr.clickable {
     position: relative;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     border: 1px solid var(--line);
     border-radius: 6px;
+    overflow: hidden;
     margin-bottom: 10px;
-    padding: 12px 14px 10px;
+    padding: 0;
     height: auto;
   }
 
@@ -2836,11 +2867,11 @@ code {
     display: none;
   }
 
-  /* 설비명과 상태는 한 줄에 */
+  /* 설비명과 상태는 머리줄에 */
   .device-table td.c-name {
+    grid-column: 1 / -1;
+    padding: 10px 88px 2px 12px;
     font-size: 17px;
-    padding-right: 76px;
-    margin-bottom: 2px;
   }
 
   .device-table td.c-name .cell-sub {
@@ -2849,29 +2880,40 @@ code {
 
   .device-table td.c-status {
     position: absolute;
-    top: 12px;
-    right: 14px;
+    top: 11px;
+    right: 12px;
   }
 
   .device-table td.c-where {
+    grid-column: 1 / -1;
+    padding: 0 12px 9px;
+    border-bottom: 1px solid var(--line);
     color: var(--text-sub);
     font-size: var(--fs-sm);
-    margin-bottom: 10px;
   }
 
-  /* 측정값 네 가지는 두 칸씩 */
+  /* 측정값 네 가지는 2×2 격자 — 가로·세로 선을 모두 넣습니다. */
   .device-table td[data-label="온도(℃)"],
   .device-table td[data-label="수소(ppm)"],
   .device-table td[data-label="메탄(ppm)"],
   .device-table td[data-label="유면"] {
-    display: inline-flex;
+    display: flex;
     align-items: baseline;
     justify-content: space-between;
     gap: 8px;
-    width: 50%;
-    padding: 6px 12px 6px 0;
+    padding: 8px 12px;
     font-weight: 600;
     font-size: var(--fs-base);
+  }
+
+  .device-table td[data-label="온도(℃)"],
+  .device-table td[data-label="메탄(ppm)"] {
+    border-right: 1px solid var(--line);
+  }
+
+  .device-table td[data-label="온도(℃)"],
+  .device-table td[data-label="수소(ppm)"] {
+    border-bottom: 1px solid var(--line);
   }
 
   .device-table td[data-label="온도(℃)"]::before,
@@ -2894,15 +2936,16 @@ code {
   }
 
   .device-table td.c-cause {
-    margin-top: 8px;
-    padding-top: 8px;
-    border-top: 1px solid var(--line-soft);
+    grid-column: 1 / -1;
+    padding: 8px 12px;
+    border-top: 1px solid var(--line);
     font-size: var(--fs-sm);
     white-space: normal;
   }
 
   /* 펼친 상세는 칸 아래에 그대로 */
   .device-table tbody tr.expand-row {
+    display: block;
     border: 1px solid var(--line);
     border-top: 0;
     border-radius: 0 0 6px 6px;
@@ -2969,30 +3012,32 @@ code {
 @media (max-width: 720px) {
   .field-row {
     grid-template-columns: minmax(0, 1fr);
-    border-right: 0;
   }
 
+  /* 이름은 회색 띠 한 줄로 올려 두고 아래 칸에 값을 둡니다.
+     표의 머리글과 같은 모양이라 어디가 이름인지 바로 갈립니다. */
   .field-row > span:first-child {
     grid-column: 1;
     grid-row: auto;
     flex-direction: row;
     justify-content: flex-start;
-    padding: 8px 10px 4px;
-    background: transparent;
+    padding: 7px 10px;
+    background: var(--bg-head);
     border-right: 0;
-    font-size: var(--fs-xs);
-    font-weight: 400;
-    color: var(--text-sub);
+    border-bottom: 1px solid var(--line);
+    font-size: var(--fs-sm);
+    font-weight: 500;
+    color: var(--text);
     white-space: normal;
   }
 
   .field-row > :not(:first-child) {
     grid-column: 1;
-    margin: 0 10px 8px;
+    margin: 7px 10px;
   }
 
   .field-row > small.hint {
-    margin: -4px 10px 8px;
+    margin: -3px 10px 7px;
   }
 
   /* 시간 범위처럼 칸이 여러 개 들어가는 줄은 줄바꿈을 허용합니다. */
@@ -3034,11 +3079,14 @@ code {
 
   .trend-table tbody tr {
     position: relative;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     height: auto;
     margin-bottom: 10px;
-    padding: 12px 14px 8px;
+    padding: 0;
     border: 1px solid var(--line);
     border-radius: 6px;
+    overflow: hidden;
   }
 
   /* 칸 모양일 때는 줄무늬를 끕니다 — 한 칸이 선택된 것처럼 보입니다. */
@@ -3055,38 +3103,46 @@ code {
   }
 
   .trend-table td.t-name {
-    padding-right: 76px;
+    grid-column: 1 / -1;
+    padding: 10px 88px 2px 12px;
     font-size: 17px;
   }
 
   .trend-table td.t-where {
-    margin-bottom: 8px;
+    grid-column: 1 / -1;
+    padding: 0 12px 9px;
+    border-bottom: 1px solid var(--line);
     color: var(--text-sub);
     font-size: var(--fs-sm);
   }
 
   .trend-table td.t-status {
     position: absolute;
-    top: 12px;
-    right: 14px;
+    top: 11px;
+    right: 12px;
   }
 
   .trend-table td.t-spark {
-    margin-bottom: 8px;
-    padding: 6px 0;
-    border-top: 1px solid var(--line-soft);
-    border-bottom: 1px solid var(--line-soft);
+    grid-column: 1 / -1;
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--line);
   }
 
   .trend-table td.t-stat {
-    display: inline-flex;
+    display: flex;
     align-items: baseline;
     justify-content: flex-end;
     gap: 2px;
-    width: 50%;
-    padding: 5px 12px 5px 0;
+    padding: 7px 12px;
+    border-bottom: 1px solid var(--line);
     font-size: var(--fs-base);
     font-weight: 600;
+  }
+
+  /* 왼쪽 칸(현재 · 평균)에만 세로선을 둬 2열 격자를 만듭니다. */
+  .trend-table td[data-label="현재"],
+  .trend-table td[data-label="평균"] {
+    border-right: 1px solid var(--line);
   }
 
   /* 이름은 왼쪽 끝, 값과 단위는 오른쪽에 붙여 둡니다. */
@@ -3100,7 +3156,8 @@ code {
   }
 
   .trend-table td.t-change {
-    width: 100%;
+    grid-column: 1 / -1;
+    border-bottom: 0;
   }
 }
 
@@ -3140,9 +3197,10 @@ code {
     flex-direction: column;
     height: auto;
     margin-bottom: 10px;
-    padding: 12px 14px 10px;
+    padding: 0;
     border: 1px solid var(--line);
     border-radius: 6px;
+    overflow: hidden;
   }
 
   .alarm-table tbody tr,
@@ -3164,19 +3222,22 @@ code {
 
   .alarm-table td.a-unit {
     order: 1;
-    padding-right: 76px;
+    padding: 8px 88px 8px 12px;
+    background: var(--bg-head);
+    border-bottom: 1px solid var(--line);
     font-size: 17px;
   }
 
   .alarm-table td.a-level {
     position: absolute;
-    top: 12px;
-    right: 14px;
+    top: 9px;
+    right: 12px;
   }
 
   .alarm-table td.a-item {
     order: 2;
-    margin-top: 2px;
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--line);
     font-size: var(--fs-base);
   }
 
@@ -3186,43 +3247,76 @@ code {
 
   .alarm-table td.a-detail {
     order: 3;
-    margin-top: 2px;
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--line);
     font-size: var(--fs-sm);
   }
 
   .alarm-table td.a-time {
     order: 4;
-    margin-top: 8px;
-    padding-top: 8px;
-    border-top: 1px solid var(--line-soft);
+    padding: 7px 12px;
     color: var(--text-sub);
     font-size: var(--fs-xs);
   }
 }
 
-/* 조회 조건 줄 — 좁은 화면에서는 입력칸이 남는 폭을 나눠 갖게 해,
-   날짜 두 칸과 물결표(~)가 한 줄에 같이 들어오게 합니다. */
+/* 조회 조건 줄 — 좁은 화면에서는 이름 칸과 입력 칸이 위아래로 맞는
+   두 칸짜리 표가 됩니다. 칸 사이 1px 틈에 바탕색이 비쳐 선이 됩니다. */
 @media (max-width: 720px) {
+  .filterbar {
+    display: grid;
+    grid-template-columns: 78px minmax(0, 1fr);
+    align-items: stretch;
+    gap: 1px;
+    background: var(--line);
+    min-height: 0;
+  }
+
+  .filterbar > * {
+    background: var(--bg);
+  }
+
+  .filterbar > .filter-label {
+    min-width: 0;
+    padding: 0 10px;
+    border: 0;
+    background: var(--bg-sum);
+    font-size: var(--fs-sm);
+  }
+
+  /* 물결표처럼 이름이 아닌 칸도 이름 자리에 같은 모양으로 채웁니다. */
+  .filterbar > span:not(.filter-label) {
+    display: flex;
+    align-self: stretch;
+    align-items: center;
+    justify-content: center;
+    background: var(--bg-sum);
+  }
+
+  /* 입력칸이 칸을 꽉 채웁니다. 여백을 두면 그 틈으로 선 색이 비칩니다. */
   .filterbar > .field,
   .filterbar > input,
   .filterbar > select {
-    flex: 1 1 110px;
-    margin: 8px;
+    width: 100%;
+    min-width: 0;
+    height: auto;
+    min-height: 42px;
+    margin: 0;
+    padding: 0 10px;
+    border: 0;
+    border-radius: 0;
+    background-color: var(--bg);
   }
 
   .filterbar .field {
     min-width: 0;
   }
 
-  .filter-label {
-    min-width: 0;
-    padding: 0 10px;
-  }
-
   .filterbar-right {
-    width: 100%;
+    grid-column: 1 / -1;
+    width: auto;
     margin-left: 0;
-    border-top: 1px solid var(--line);
+    padding: 6px 8px;
   }
 
   .filterbar-right .btn {
@@ -3319,11 +3413,12 @@ code {
   .threshold-table tbody tr {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 0 8px;
+    gap: 0;
     margin-bottom: 10px;
-    padding: 10px 12px 12px;
+    padding: 0;
     border: 1px solid var(--line);
     border-radius: 6px;
+    overflow: hidden;
   }
 
   .threshold-table tbody td {
@@ -3337,9 +3432,19 @@ code {
 
   .threshold-table td.th-name {
     grid-column: 1 / -1;
-    margin-bottom: 8px;
+    padding: 7px 12px;
+    background: var(--bg-head);
+    border-bottom: 1px solid var(--line);
     font-size: var(--fs-base);
     font-weight: 600;
+  }
+
+  .threshold-table td.th-val {
+    padding: 7px 8px 9px;
+  }
+
+  .threshold-table td.th-val:not(:last-child) {
+    border-right: 1px solid var(--line);
   }
 
   .threshold-table td.th-val::before {
@@ -3354,4 +3459,28 @@ code {
     width: 100%;
     min-width: 0;
   }
+}
+
+/* 추세 그래프가 들어가는 칸 — 그림이 칸 선에 닿거나 넘치지 않게 합니다. */
+td.c-spark {
+  overflow: hidden;
+  padding: 4px 6px;
+}
+
+td.c-spark .mini-spark {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+}
+
+/* 추세 분석 표의 그래프 칸도 선에 닿지 않게 여백을 둡니다. */
+.trend-table td.t-spark {
+  overflow: hidden;
+  padding: 6px 8px;
+}
+
+.trend-table td.t-spark svg {
+  display: block;
+  width: 100%;
+  max-width: 100%;
 }

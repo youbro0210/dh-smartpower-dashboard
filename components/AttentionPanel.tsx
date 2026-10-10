@@ -188,6 +188,11 @@ export default function AttentionPanel({
                             <div className="gauge-foot">
                               {low ? "기준 유면 아래 — 누유 여부 확인" : "기준 유면 유지"}
                             </div>
+                            {/* 유면은 비교할 수치가 없습니다. 빈 줄을 두어
+                                옆 칸들과 줄 높이를 맞춥니다. */}
+                            <div className="gauge-delta" aria-hidden="true">
+                              &nbsp;
+                            </div>
                           </div>
                         );
                       }
