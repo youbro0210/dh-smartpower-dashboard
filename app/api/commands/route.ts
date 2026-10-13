@@ -28,8 +28,8 @@ export async function GET(request: Request) {
     query(
       `SELECT bridge_id AS id, name, online, last_seen_at FROM bridges ORDER BY bridge_id`
     ),
-    one<{ site: string; topic_prefix: string }>(
-      `SELECT site, topic_prefix FROM mqtt_config WHERE id = 1`
+    one<{ site: string; topic_prefix: string; ack_timeout_sec: number }>(
+      `SELECT site, topic_prefix, ack_timeout_sec FROM mqtt_config WHERE id = 1`
     ),
   ]);
 
@@ -37,7 +37,14 @@ export async function GET(request: Request) {
     `SELECT device_id, name, bridge_id FROM devices ORDER BY sort_order, device_id`
   );
 
-  return NextResponse.json({ commands, bridges: targets, devices, site });
+  return NextResponse.json({
+    commands,
+    bridges: targets,
+    devices,
+    site,
+    // 화면에 적는 응답 대기시간. 설정값을 그대로 보여 줍니다.
+    ackTimeoutSec: site?.ack_timeout_sec ?? 10,
+  });
 }
 
 export async function POST(request: Request) {

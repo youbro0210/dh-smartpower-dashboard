@@ -64,6 +64,7 @@ export default function CommandClient() {
   const [message, setMessage] = useState<{ kind: "ok" | "error"; text: string } | null>(null);
   const [busy, setBusy] = useState(false);
   const [openId, setOpenId] = useState<number | null>(null);
+  const [ackTimeout, setAckTimeout] = useState(10);
 
   const [targetType, setTargetType] = useState("bridge");
   const [targetId, setTargetId] = useState("");
@@ -81,6 +82,7 @@ export default function CommandClient() {
       setCommands(body.commands ?? []);
       setBridges(body.bridges ?? []);
       setDevices(body.devices ?? []);
+      if (body.ackTimeoutSec) setAckTimeout(body.ackTimeoutSec);
       if (!targetId && body.bridges?.length) setTargetId(body.bridges[0].id);
     } catch {
       setMessage({ kind: "error", text: "목록을 불러오지 못했습니다." });
@@ -329,7 +331,7 @@ export default function CommandClient() {
 
       <div className="note">
         토픽 <code>{"{접두사}/{현장}/{대상종류}/{대상id}/cmd"}</code> · 응답{" "}
-        <code>cmd/ack</code> (<code>cmdId</code>) · 응답 대기 60초
+        <code>cmd/ack</code> (<code>cmdId</code>) · 응답 대기 {ackTimeout}초
       </div>
     </>
   );

@@ -12,3 +12,4 @@ audit.mjs
 shots.mjs
 .dh-sync.bundle
 Claude outputs/
+shotdoc.mjs

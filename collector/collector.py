@@ -839,6 +839,13 @@ class Collector:
             return cur.fetchall()
 
     def mark_command(self, cmd_id: int, status: str, error: str | None = None) -> None:
+        """
+        발행 결과를 적습니다. 아직 '대기' 인 명령만 바꿉니다.
+
+        장비가 1초 안에 응답하면(헤디 규격) 응답이 먼저 들어와 '응답 완료' 가
+        되어 있는데, 그 뒤에 발행 기록이 덮어써서 '발행됨' 으로 되돌아가고
+        결국 미응답으로 정리되는 일이 있었습니다. 조건을 걸어 막습니다.
+        """
         with self.conn.cursor() as cur:
             cur.execute(
                 """
@@ -846,7 +853,7 @@ class Collector:
                    SET status = %s,
                        sent_at = CASE WHEN %s = 'sent' THEN now() ELSE sent_at END,
                        error = %s
-                 WHERE id = %s
+                 WHERE id = %s AND status = 'pending'
                 """,
                 (status, status, error, cmd_id),
             )
