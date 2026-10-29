@@ -19,12 +19,16 @@ export const NAV: NavGroup[] = [
       { href: "/", label: "홈", icon: "home" },
       { href: "/devices", label: "설비 현황", icon: "device" },
       { href: "/alarms", label: "알람 이력", icon: "bell" },
+      { href: "/maintenance", label: "점검 이력", icon: "wrench" },
     ],
   },
   {
     label: "분석",
     items: [
       { href: "/trend", label: "추세 분석", icon: "chart" },
+      { href: "/diagnosis", label: "가스 진단", icon: "flask" },
+      { href: "/aging", label: "열화·수명", icon: "thermo" },
+      { href: "/report", label: "운영 보고서", icon: "report" },
       { href: "/sample", label: "샘플 대시보드", icon: "sample" },
     ],
   },

@@ -3709,3 +3709,170 @@ td.picked {
     display: none;
   }
 }
+
+/* ===========================================================================
+   운영 보고서 · 점검 이력
+   =========================================================================== */
+
+.btn-group {
+  display: inline-flex;
+  align-self: center;
+  align-items: center;
+  gap: 4px;
+  margin-left: 8px;
+}
+
+/* 두 줄 머리글 — 고정(sticky)을 끄지 않으면 두 줄이 같은 자리에 겹칩니다. */
+.report-table thead th {
+  position: static;
+  height: 30px;
+}
+
+.report-table thead tr:first-child th {
+  border-bottom: 1px solid var(--line);
+}
+
+.report-table td,
+.report-table th {
+  white-space: nowrap;
+}
+
+.print-only {
+  display: none;
+}
+
+.report-title {
+  justify-content: space-between;
+  align-items: baseline;
+  padding: 0 0 8px;
+  margin-bottom: 12px;
+  border-bottom: 2px solid var(--text);
+  font-size: 16px;
+}
+
+.report-title span {
+  font-size: var(--fs-xs);
+  color: var(--text-sub);
+}
+
+@media print {
+  @page {
+    size: A4 landscape;
+    margin: 12mm;
+  }
+
+  .topbar,
+  .sidebar,
+  .sidebar-scrim,
+  .tabbar,
+  .chat-fab,
+  .chat-panel,
+  .page-actions,
+  .no-print,
+  .filterbar {
+    display: none !important;
+  }
+
+  .main {
+    margin: 0 !important;
+    padding: 0 !important;
+    min-height: 0;
+  }
+
+  .print-only {
+    display: flex;
+  }
+
+  .card {
+    break-inside: avoid;
+  }
+
+  .table-wrap {
+    overflow: visible;
+  }
+
+  .report-table {
+    font-size: 11px;
+  }
+
+  tbody tr:hover td {
+    background: none;
+  }
+}
+
+/* 점검 이력 — 상세는 한 줄로 줄여 보여 주고, 전체는 마우스를 올리면 나옵니다. */
+.maint-table td .cell-sub {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.maint-table tbody td {
+  height: auto;
+  min-height: var(--h-row);
+  padding-top: 5px;
+  padding-bottom: 5px;
+}
+
+/* 조회 줄 안의 단위·보조 글자 */
+.filter-unit {
+  font-size: var(--fs-xs);
+  color: var(--text-sub);
+  white-space: nowrap;
+}
+
+/* 화면 아래 판정 근거 설명 표 */
+.note-grid {
+  margin-top: 4px;
+}
+
+.note-grid th {
+  width: 120px;
+  vertical-align: top;
+  padding-top: 8px;
+}
+
+.note-grid td {
+  font-size: var(--fs-xs);
+  color: var(--text-sub);
+  line-height: 1.6;
+  padding-top: 6px;
+  padding-bottom: 6px;
+}
+
+.diag-table td.diag-hint {
+  white-space: normal;
+  min-width: 220px;
+  font-size: var(--fs-xs);
+  line-height: 1.4;
+}
+
+/* 숫자 기준값처럼 짧은 입력칸 */
+.field.narrow {
+  width: 76px !important;
+  min-width: 0 !important;
+  flex: 0 0 auto;
+}
+
+.inline-fields {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+@media (max-width: 720px) {
+  /* 좁은 화면 입력 표에서도 짧은 숫자칸은 한 줄로 나란히 둡니다. */
+  table.form-grid td .inline-fields {
+    display: flex;
+  }
+
+  table.form-grid td .inline-fields > * {
+    display: inline-flex;
+    width: auto;
+  }
+
+  table.form-grid td .inline-fields .field.narrow {
+    width: 72px !important;
+  }
+}

@@ -19,7 +19,11 @@ export type IconName =
   | "search"
   | "caret"
   | "eye"
-  | "eye-off";
+  | "eye-off"
+  | "flask"
+  | "thermo"
+  | "wrench"
+  | "report";
 
 const PATHS: Record<IconName, JSX.Element> = {
   // 집
@@ -118,6 +122,33 @@ const PATHS: Record<IconName, JSX.Element> = {
       <path d="M6.6 6.7A18 18 0 0 0 2 12s3.6 6 10 6a9.6 9.6 0 0 0 4.1-.9" />
       <path d="M9.9 9.9a3 3 0 0 0 4.2 4.2" />
       <path d="M3 3l18 18" />
+    </>
+  ),
+  // 가스 진단 (시험관)
+  flask: (
+    <>
+      <path d="M9 3h6M10 3v6L4.5 18.5A1.7 1.7 0 0 0 6 21h12a1.7 1.7 0 0 0 1.5-2.5L14 9V3" />
+      <path d="M7 15h10" />
+    </>
+  ),
+  // 열화·수명 (온도계)
+  thermo: (
+    <>
+      <path d="M14 14.8V5a2 2 0 0 0-4 0v9.8a4 4 0 1 0 4 0z" />
+      <path d="M12 9v7" />
+    </>
+  ),
+  // 점검 이력 (렌치)
+  wrench: (
+    <>
+      <path d="M14.7 6.3a4 4 0 0 0 5 5L21 13l-8 8-3-3 8-8-1.3-1.3a4 4 0 0 1-5-5l2.6 2.6 2.1-.6.6-2.1z" />
+    </>
+  ),
+  // 보고서 (문서)
+  report: (
+    <>
+      <path d="M14 3H6v18h12V7z" />
+      <path d="M14 3v4h4M9 12h6M9 16h6" />
     </>
   ),
 };
