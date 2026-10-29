@@ -144,36 +144,66 @@ export default function DashboardPage() {
         </section>
       )}
 
-      {/* ④ 최근 알람 ------------------------------------------------------- */}
-      <section className="card">
+      {/* ④ 최근 알람 — 알람 이력 화면과 같은 표 ------------------------- */}
+      <div className="card flush alarm-table">
         <div className="card-head">
           <div className="card-title">
             <span className="accent-bar" />
             최근 알람
           </div>
-          <Link href="/alarms" className="btn">
-            알람 이력
-          </Link>
+          <div className="card-tools">
+            <span className="card-note">최근 7일 · {Math.min(alarms.length, 8)}건</span>
+            <Link href="/alarms" className="btn sm">
+              알람 이력
+            </Link>
+          </div>
         </div>
 
-        {alarms.length === 0 ? (
-          <p className="feed-empty">최근 7일 사이 발생한 알람이 없습니다.</p>
-        ) : (
-          <ul className="feed">
-            {alarms.slice(0, 8).map((a, i) => (
-              <li key={a.id ?? i} className={a.level}>
-                <span className="feed-time">{a.time}</span>
-                <span className="feed-body">
-                  <b>{a.unit}</b>
-                  <span className="feed-item">{a.item}</span>
-                  {a.detail && <span className="feed-detail">{a.detail}</span>}
-                </span>
-                <span className={`badge ${a.level}`}>{STATUS_LABEL[a.level]}</span>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
+        <div className="table-wrap">
+          <table className="fixed">
+            <colgroup>
+              <col style={{ width: 150 }} />
+              <col style={{ width: 96 }} />
+              <col style={{ width: 128 }} />
+              <col style={{ width: 72 }} />
+              <col />
+            </colgroup>
+            <thead>
+              <tr>
+                <th>발생 시각</th>
+                <th>설비</th>
+                <th>항목</th>
+                <th>등급</th>
+                <th>내용</th>
+              </tr>
+            </thead>
+            <tbody>
+              {alarms.length === 0 && (
+                <tr>
+                  <td className="empty" colSpan={5}>
+                    최근 7일 사이 발생한 알람이 없습니다.
+                  </td>
+                </tr>
+              )}
+              {alarms.slice(0, 8).map((a, i) => (
+                <tr key={a.id ?? i}>
+                  <td className="center a-time">{a.time}</td>
+                  <td className="a-unit">
+                    <b>{a.unit}</b>
+                  </td>
+                  <td className="a-item">{a.item}</td>
+                  <td className="center a-level">
+                    <span className={`badge ${a.level}`}>{STATUS_LABEL[a.level]}</span>
+                  </td>
+                  <td className="a-detail" data-empty={a.detail ? undefined : "true"} title={a.detail ?? undefined}>
+                    {a.detail ?? "-"}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
     </>
   );
 }

@@ -110,7 +110,7 @@ export default function IngestClient() {
 
       <SettingsTabs active="ingest" />
 
-      <table className="grid" style={{ marginBottom: 16 }}>
+      <table className="grid compact fixed summary-strip" style={{ marginBottom: 16 }}>
         <thead>
           <tr>
             <th>24시간 수신</th>
@@ -121,12 +121,14 @@ export default function IngestClient() {
         </thead>
         <tbody>
           <tr>
-            <td className="num">{(summary?.total ?? 0).toLocaleString()}건</td>
-            <td className="num">{(summary?.ok ?? 0).toLocaleString()}</td>
-            <td className="num" style={{ color: "var(--caution)" }}>
-              {(summary?.warn ?? 0).toLocaleString()}
+            <td data-label="24시간 수신" className="num">{(summary?.total ?? 0).toLocaleString()}건</td>
+            <td data-label="정상" className="num">{(summary?.ok ?? 0).toLocaleString()}건</td>
+            <td data-label="주의" className={`num${summary?.warn ? " t-caution" : ""}`}>
+              {(summary?.warn ?? 0).toLocaleString()}건
             </td>
-            <td className="num t-danger">{(summary?.error ?? 0).toLocaleString()}</td>
+            <td data-label="오류" className={`num${summary?.error ? " t-danger" : ""}`}>
+              {(summary?.error ?? 0).toLocaleString()}건
+            </td>
           </tr>
         </tbody>
       </table>
@@ -181,16 +183,26 @@ export default function IngestClient() {
         </div>
 
         <div className="table-wrap">
-          <table>
+          <table className="fixed">
+            <colgroup>
+              <col style={{ width: 128 }} />
+              <col style={{ width: 120 }} />
+              <col style={{ width: 300 }} />
+              <col style={{ width: 110 }} />
+              <col style={{ width: 64 }} />
+              <col style={{ width: 64 }} />
+              <col style={{ width: 64 }} />
+              <col />
+            </colgroup>
             <thead>
               <tr>
-                <th style={{ width: 120 }}>수신 시각</th>
-                <th style={{ width: 80 }}>종류</th>
-                <th style={{ minWidth: 230 }}>토픽</th>
-                <th style={{ width: 130 }}>설비</th>
-                <th className="num" style={{ width: 90 }}>건수</th>
-                <th className="num" style={{ width: 80 }}>적재</th>
-                <th style={{ width: 70 }}>결과</th>
+                <th>수신 시각</th>
+                <th>종류</th>
+                <th>토픽</th>
+                <th>설비</th>
+                <th className="num">건수</th>
+                <th className="num">적재</th>
+                <th>결과</th>
                 <th>비고</th>
               </tr>
             </thead>
@@ -212,8 +224,8 @@ export default function IngestClient() {
                       {KIND_LABEL[row.kind ?? ""] ?? row.kind ?? "-"}
                       {row.replay && <span className="chip">재전송</span>}
                     </td>
-                    <td style={{ wordBreak: "break-all" }}>{row.topic}</td>
-                    <td style={{ whiteSpace: "nowrap" }}>
+                    <td title={row.topic}>{row.topic}</td>
+                    <td className="center">
                       {devices.length === 0
                         ? "-"
                         : devices.length <= 2
@@ -227,7 +239,10 @@ export default function IngestClient() {
                         {STATUS_LABEL[row.status]}
                       </span>
                     </td>
-                    <td style={{ color: row.status === "ok" ? "var(--faint)" : "var(--danger)" }}>
+                    <td
+                      className={row.status === "error" ? "t-danger" : row.status === "warn" ? "t-caution" : "t-muted"}
+                      title={row.message ?? undefined}
+                    >
                       {row.message ?? "-"}
                     </td>
                   </tr>

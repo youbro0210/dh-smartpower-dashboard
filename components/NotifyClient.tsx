@@ -328,16 +328,25 @@ export default function NotifyClient() {
           <span className="card-note">{recipients.length}명</span>
         </div>
         <div className="table-wrap">
-          <table>
+          <table className="fixed">
+            <colgroup>
+              <col style={{ width: 200 }} />
+              <col style={{ width: 120 }} />
+              <col />
+              <col style={{ width: 100 }} />
+              <col style={{ width: 110 }} />
+              <col style={{ width: 72 }} />
+              <col style={{ width: 200 }} />
+            </colgroup>
             <thead>
               <tr>
-                <th style={{ minWidth: 110 }}>이름</th>
-                <th style={{ width: 120 }}>발송 경로</th>
-                <th style={{ minWidth: 160 }}>받는 곳</th>
-                <th style={{ width: 100 }}>발송 기준</th>
-                <th style={{ width: 110 }}>야간 미발송</th>
-                <th style={{ width: 80 }}>사용</th>
-                <th style={{ width: 190 }}>동작</th>
+                <th>이름</th>
+                <th>발송 경로</th>
+                <th>받는 곳</th>
+                <th>발송 기준</th>
+                <th>야간 미발송</th>
+                <th>사용</th>
+                <th>동작</th>
               </tr>
             </thead>
             <tbody>
@@ -475,14 +484,22 @@ export default function NotifyClient() {
           <span className="card-note">최근 50건</span>
         </div>
         <div className="table-wrap">
-          <table>
+          <table className="fixed">
+            <colgroup>
+              <col style={{ width: 170 }} />
+              <col style={{ width: 160 }} />
+              <col style={{ width: 120 }} />
+              <col style={{ width: 260 }} />
+              <col style={{ width: 80 }} />
+              <col />
+            </colgroup>
             <thead>
               <tr>
-                <th style={{ width: 170 }}>시각</th>
-                <th style={{ width: 110 }}>수신자</th>
-                <th style={{ width: 110 }}>경로</th>
-                <th style={{ minWidth: 150 }}>받는 곳</th>
-                <th style={{ width: 80 }}>결과</th>
+                <th>시각</th>
+                <th>수신자</th>
+                <th>경로</th>
+                <th>받는 곳</th>
+                <th>결과</th>
                 <th>사유 · 오류</th>
               </tr>
             </thead>

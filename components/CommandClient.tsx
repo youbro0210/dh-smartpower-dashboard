@@ -257,17 +257,27 @@ export default function CommandClient() {
         </div>
 
         <div className="table-wrap">
-          <table>
+          <table className="fixed">
+            <colgroup>
+              <col style={{ width: 56 }} />
+              <col style={{ width: 128 }} />
+              <col style={{ width: 150 }} />
+              <col style={{ width: 200 }} />
+              <col style={{ width: 84 }} />
+              <col style={{ width: 128 }} />
+              <col />
+              <col style={{ width: 80 }} />
+            </colgroup>
             <thead>
               <tr>
-                <th className="num" style={{ width: 55 }}>번호</th>
-                <th style={{ width: 120 }}>요청 시각</th>
-                <th style={{ width: 150 }}>대상</th>
-                <th style={{ minWidth: 150 }}>명령</th>
-                <th style={{ width: 90 }}>상태</th>
-                <th style={{ width: 120 }}>응답 시각</th>
+                <th className="num">번호</th>
+                <th>요청 시각</th>
+                <th>대상</th>
+                <th>명령</th>
+                <th>상태</th>
+                <th>응답 시각</th>
                 <th>비고</th>
-                <th style={{ width: 80 }}>동작</th>
+                <th>동작</th>
               </tr>
             </thead>
             <tbody>

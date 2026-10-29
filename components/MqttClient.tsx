@@ -123,38 +123,30 @@ export default function MqttClient() {
       {message && <div className={`banner ${message.kind}`}>{message.text}</div>}
 
       {/* ── 수집기 상태 ─────────────────────────────────────── */}
-      <div className="status-summary">
-        <div className="st-tiles" style={{ gridTemplateColumns: "repeat(5, 1fr)" }}>
-          <div className={`st-tile ${connected ? "normal" : "danger"}`}>
-            <span className="st-lbl">수집기</span>
-            <span className="st-num">
+      <table className="grid compact fixed summary-strip" style={{ marginBottom: 16 }}>
+        <thead>
+          <tr>
+            <th>수집기</th>
+            <th>브로커</th>
+            <th>마지막 수신</th>
+            <th>누적 수신</th>
+            <th>오류</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td data-label="수집기" className={`center ${connected ? "t-success" : "t-danger"}`}>
               {!alive ? "중지됨" : connected ? "연결됨" : "연결 끊김"}
-            </span>
-          </div>
-          <div className="st-tile total">
-            <span className="st-lbl">브로커</span>
-            <span className="st-num" style={{ textAlign: "left" }}>{status?.broker ?? "-"}</span>
-          </div>
-          <div className="st-tile total">
-            <span className="st-lbl">마지막 수신</span>
-            <span className="st-num">{ago(status?.last_message_at ?? null)}</span>
-          </div>
-          <div className="st-tile total">
-            <span className="st-lbl">누적 수신</span>
-            <span className="st-num">
-              {status?.messages ?? 0}
-              <small>건</small>
-            </span>
-          </div>
-          <div className={`st-tile ${status?.errors ? "danger" : "total"}`}>
-            <span className="st-lbl">오류</span>
-            <span className="st-num">
-              {status?.errors ?? 0}
-              <small>건</small>
-            </span>
-          </div>
-        </div>
-      </div>
+            </td>
+            <td data-label="브로커">{status?.broker ?? "-"}</td>
+            <td data-label="마지막 수신" className="center">{ago(status?.last_message_at ?? null)}</td>
+            <td data-label="누적 수신" className="num">{(status?.messages ?? 0).toLocaleString()}건</td>
+            <td data-label="오류" className={`num${status?.errors ? " t-danger" : ""}`}>
+              {(status?.errors ?? 0).toLocaleString()}건
+            </td>
+          </tr>
+        </tbody>
+      </table>
 
       {!alive && (
         <div className="banner error">수집기가 동작하지 않고 있습니다.</div>
