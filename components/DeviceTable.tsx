@@ -346,7 +346,7 @@ export default function DeviceTable({
                                     <td className="center">{a.time}</td>
                                     <td>
                                       {a.item}
-                                      {a.detail && <span className="chip">{a.detail}</span>}
+                                      {a.detail && <span className="t-muted" style={{ marginLeft: 8 }}>{a.detail}</span>}
                                     </td>
                                     <td
                                       className="center"
