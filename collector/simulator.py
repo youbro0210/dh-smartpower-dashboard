@@ -46,6 +46,9 @@ def connect(client_id: str) -> mqtt.Client:
     client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2, client_id=client_id)
     if USER:
         client.username_pw_set(USER, PASSWORD)
+    # 운영 브로커(8883)는 TLS 필수입니다. 발급받은 CA 인증서 경로를 MQTT_CA 로 주면 TLS 로 접속합니다.
+    if os.environ.get("MQTT_CA"):
+        client.tls_set(ca_certs=os.environ["MQTT_CA"])
     client.connect(HOST, PORT, 60)
     client.loop_start()
     return client

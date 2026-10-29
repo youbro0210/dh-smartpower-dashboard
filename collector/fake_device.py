@@ -69,6 +69,9 @@ client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2,
                      client_id=f"fake-{args.src_type}-{args.src_id}")
 if os.environ.get("MQTT_USER"):
     client.username_pw_set(os.environ["MQTT_USER"], os.environ.get("MQTT_PASS"))
+# 운영 브로커(8883)는 TLS 필수입니다. 발급받은 CA 인증서 경로를 MQTT_CA 로 주면 TLS 로 접속합니다.
+if os.environ.get("MQTT_CA"):
+    client.tls_set(ca_certs=os.environ["MQTT_CA"])
 client.on_connect, client.on_message = on_connect, on_message
 client.connect(os.environ.get("MQTT_HOST", "127.0.0.1"),
                int(os.environ.get("MQTT_PORT", "1883")), 60)
