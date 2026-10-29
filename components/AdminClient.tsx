@@ -30,6 +30,16 @@ export default function AdminClient() {
   const [userLoading, setUserLoading] = useState(true);
   const [userError, setUserError] = useState<string | null>(null);
   const [savingId, setSavingId] = useState<string | null>(null);
+  const [notice, setNotice] = useState<{ ok: boolean; text: string } | null>(null);
+
+  // 회원 추가
+  const [adding, setAdding] = useState(false);
+  const [newUser, setNewUser] = useState({ email: "", fullName: "", password: "", tier: "viewer" });
+  const [addBusy, setAddBusy] = useState(false);
+
+  // 비밀번호 변경 — 한 번에 한 사람만 엽니다.
+  const [pwId, setPwId] = useState<string | null>(null);
+  const [pwValue, setPwValue] = useState("");
 
   const [logins, setLogins] = useState<LoginEvent[]>([]);
   const [loginTotal, setLoginTotal] = useState(0);
@@ -96,6 +106,46 @@ export default function AdminClient() {
     setSavingId(null);
   }
 
+  async function addUser(e: React.FormEvent) {
+    e.preventDefault();
+    setAddBusy(true);
+    setNotice(null);
+    const res = await fetch("/api/admin/users", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(newUser),
+    });
+    const json = await res.json().catch(() => ({}));
+    setAddBusy(false);
+    if (!res.ok) {
+      setNotice({ ok: false, text: json.error ?? "회원을 등록하지 못했습니다." });
+      return;
+    }
+    setNotice({ ok: true, text: `${newUser.email} 계정을 등록했습니다.` });
+    setNewUser({ email: "", fullName: "", password: "", tier: "viewer" });
+    setAdding(false);
+    await loadUsers(1);
+  }
+
+  async function savePassword(u: AdminUser) {
+    setSavingId(u.id);
+    setNotice(null);
+    const res = await fetch("/api/admin/users", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ user_id: u.id, password: pwValue }),
+    });
+    const json = await res.json().catch(() => ({}));
+    setSavingId(null);
+    if (!res.ok) {
+      setNotice({ ok: false, text: json.error ?? "비밀번호를 바꾸지 못했습니다." });
+      return;
+    }
+    setNotice({ ok: true, text: `${u.email} 의 비밀번호를 바꿨습니다. 기존 접속은 끊겼습니다.` });
+    setPwId(null);
+    setPwValue("");
+  }
+
   const userPages = Math.max(1, Math.ceil(userTotal / PAGE_SIZE));
   const loginPages = Math.max(1, Math.ceil(loginTotal / PAGE_SIZE));
 
@@ -104,7 +154,7 @@ export default function AdminClient() {
       <PageHeader
         title="회원 관리"
         breadcrumb="홈 › 회원관리"
-        subtitle="회원 등급 변경 · 로그인 이력 조회"
+        subtitle="회원 등록 · 등급 · 비밀번호 변경 · 로그인 이력 조회"
       />
 
       <div className="card">
@@ -113,8 +163,72 @@ export default function AdminClient() {
             <span className="accent-bar" />
             전체 회원
           </div>
-          <span className="card-note">총 {userTotal.toLocaleString()}명</span>
+          <div className="card-tools">
+            <span className="card-note">총 {userTotal.toLocaleString()}명</span>
+            <button className="btn sm" onClick={() => setAdding((v) => !v)}>
+              {adding ? "닫기" : "회원 추가"}
+            </button>
+          </div>
         </div>
+
+        {adding && (
+          <form onSubmit={addUser} style={{ marginBottom: 12 }}>
+            <table className="form-grid">
+              <tbody>
+                <tr>
+                  <th className="req">이메일(아이디)</th>
+                  <td>
+                    <input
+                      className="field"
+                      type="email"
+                      autoComplete="off"
+                      value={newUser.email}
+                      onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
+                    />
+                  </td>
+                  <th className="req">이름</th>
+                  <td>
+                    <input
+                      className="field"
+                      value={newUser.fullName}
+                      onChange={(e) => setNewUser({ ...newUser, fullName: e.target.value })}
+                    />
+                  </td>
+                </tr>
+                <tr>
+                  <th className="req">비밀번호</th>
+                  <td>
+                    <input
+                      className="field"
+                      type="text"
+                      autoComplete="new-password"
+                      value={newUser.password}
+                      onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
+                    />
+                  </td>
+                  <th>등급</th>
+                  <td>
+                    <select
+                      className="field"
+                      value={newUser.tier}
+                      onChange={(e) => setNewUser({ ...newUser, tier: e.target.value })}
+                    >
+                      <option value="viewer">뷰어</option>
+                      <option value="admin">관리자</option>
+                    </select>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+            <div className="save-bar">
+              <button className="btn primary" type="submit" disabled={addBusy}>
+                등록
+              </button>
+            </div>
+          </form>
+        )}
+
+        {notice && <div className={`banner ${notice.ok ? "ok" : "error"}`}>{notice.text}</div>}
 
         <div className="filterbar">
           <span className="filter-label">가입일</span>
@@ -134,13 +248,13 @@ export default function AdminClient() {
         <div className="table-wrap">
           <table className="grid">
             <thead>
-              <tr><th>이메일</th><th style={{ width: 160 }}>이름</th><th style={{ width: 110 }}>가입일</th><th style={{ width: 150 }}>최근 로그인</th><th style={{ width: 110 }}>등급</th></tr>
+              <tr><th>이메일</th><th style={{ width: 160 }}>이름</th><th style={{ width: 110 }}>가입일</th><th style={{ width: 150 }}>최근 로그인</th><th style={{ width: 110 }}>등급</th><th style={{ width: 230 }}>비밀번호</th></tr>
             </thead>
             <tbody>
               {userLoading ? (
-                <tr><td className="empty" colSpan={5}>불러오는 중...</td></tr>
+                <tr><td className="empty" colSpan={6}>불러오는 중...</td></tr>
               ) : users.length === 0 && !userError ? (
-                <tr><td className="empty" colSpan={5}>조회된 데이터가 없습니다.</td></tr>
+                <tr><td className="empty" colSpan={6}>조회된 데이터가 없습니다.</td></tr>
               ) : (
                 users.map((u) => (
                   <tr key={u.id}>
@@ -153,6 +267,46 @@ export default function AdminClient() {
                         <option value="viewer">뷰어</option>
                         <option value="admin">관리자</option>
                       </select>
+                    </td>
+                    <td className="center">
+                      {pwId === u.id ? (
+                        <span className="pw-edit">
+                          <input
+                            className="field"
+                            type="text"
+                            autoComplete="new-password"
+                            aria-label={`${u.email} 새 비밀번호`}
+                            value={pwValue}
+                            autoFocus
+                            onChange={(e) => setPwValue(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") void savePassword(u);
+                              if (e.key === "Escape") setPwId(null);
+                            }}
+                          />
+                          <button
+                            className="btn sm primary"
+                            disabled={savingId === u.id || !pwValue}
+                            onClick={() => void savePassword(u)}
+                          >
+                            저장
+                          </button>
+                          <button className="btn sm" onClick={() => setPwId(null)}>
+                            취소
+                          </button>
+                        </span>
+                      ) : (
+                        <button
+                          className="btn sm"
+                          onClick={() => {
+                            setPwId(u.id);
+                            setPwValue("");
+                            setNotice(null);
+                          }}
+                        >
+                          변경
+                        </button>
+                      )}
                     </td>
                   </tr>
                 ))

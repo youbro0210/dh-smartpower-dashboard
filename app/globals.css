@@ -3619,3 +3619,15 @@ td.picked {
 
 .t-caution { color: var(--caution); }
 .cell-link:disabled { cursor: default; }
+
+/* 회원관리 — 표 안에서 비밀번호를 바로 바꾸는 칸 */
+.pw-edit {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.pw-edit .field {
+  width: 110px;
+  height: 28px;
+}
