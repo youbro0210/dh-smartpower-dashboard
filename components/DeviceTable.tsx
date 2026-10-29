@@ -23,18 +23,19 @@ const STATUS_RANK: Record<DeviceStatus, number> = {
 
 type SortKey = "no" | "name" | "status" | "temperature" | "h2" | "ch4" | "since";
 
-const COLUMNS: { key: SortKey | null; label: string; num?: boolean; width: number }[] = [
+// opt: 태블릿 폭에서는 접어 두는 칸 (측정값과 이상 내용이 잘리지 않게)
+const COLUMNS: { key: SortKey | null; label: string; num?: boolean; width: number; opt?: boolean }[] = [
   { key: "no", label: "No", width: 48 },
   { key: "name", label: "설비명", width: 84 },
-  { key: null, label: "연결", width: 128 },
+  { key: null, label: "연결", width: 128, opt: true },
   { key: null, label: "위치", width: 64 },
-  { key: null, label: "용량", width: 104 },
+  { key: null, label: "용량", width: 104, opt: true },
   { key: "status", label: "상태", width: 76 },
   { key: "temperature", label: "온도(℃)", num: true, width: 84 },
   { key: "h2", label: "수소(ppm)", num: true, width: 90 },
   { key: "ch4", label: "메탄(ppm)", num: true, width: 90 },
   { key: null, label: "유면", width: 60 },
-  { key: null, label: "추세", width: 92 },
+  { key: null, label: "추세", width: 92, opt: true },
   { key: null, label: "주요 이상", width: 0 },
   { key: "since", label: "측정 시각", width: 108 },
 ];
@@ -166,7 +167,11 @@ export default function DeviceTable({
         <table className="sortable">
           <colgroup>
             {COLUMNS.map((c) => (
-              <col key={c.label} style={c.width ? { width: c.width } : undefined} />
+              <col
+                key={c.label}
+                className={c.opt ? "opt" : undefined}
+                style={c.width ? { width: c.width } : undefined}
+              />
             ))}
           </colgroup>
           <thead>
@@ -176,7 +181,7 @@ export default function DeviceTable({
                 return (
                   <th
                     key={c.label}
-                    className={c.num ? "num" : undefined}
+                    className={[c.num && "num", c.opt && "opt"].filter(Boolean).join(" ") || undefined}
                     aria-sort={active ? (sort.asc ? "ascending" : "descending") : undefined}
                   >
                     {c.key ? (
@@ -225,9 +230,9 @@ export default function DeviceTable({
                       <span className="cell-sub">{linkText(u)}</span>
                     </td>
                     {/* 값이 서버까지 오는 길. 헤디 구성 1·2·3안을 여기서 구분합니다. */}
-                    <td className="c-link">{linkText(u)}</td>
+                    <td className="c-link opt">{linkText(u)}</td>
                     <td className="c-where" data-label="위치" style={{ whiteSpace: "nowrap" }}>{u.building}</td>
-                    <td className="c-cap" data-label="용량" style={{ color: "var(--muted)", whiteSpace: "nowrap" }}>{u.capacity}</td>
+                    <td className="c-cap opt" data-label="용량" style={{ color: "var(--muted)", whiteSpace: "nowrap" }}>{u.capacity}</td>
                     <td className="center c-status">
                       <span className={`badge ${u.status}`}>{STATUS_LABEL[u.status]}</span>
                     </td>
@@ -243,7 +248,7 @@ export default function DeviceTable({
                     <td className={`center${levelClass(u.sensorLevels?.oil_level)}`} data-label="유면">
                       {u.oil_level}
                     </td>
-                    <td className="c-spark">
+                    <td className="c-spark opt">
                       <Sparkline trend={u.trend} compact />
                     </td>
                     {/* 등급과 무관하게 전부 빨갛게 쓰면 정작 위험한 설비가 묻힙니다. */}

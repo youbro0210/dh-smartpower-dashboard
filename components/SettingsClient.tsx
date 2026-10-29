@@ -111,9 +111,9 @@ export default function SettingsClient() {
         <table className="grid threshold-table">
           <colgroup>
             <col style={{ width: 180 }} />
-            <col />
-            <col />
-            <col />
+            <col style={{ width: 150 }} />
+            <col style={{ width: 150 }} />
+            <col style={{ width: 150 }} />
           </colgroup>
           <thead>
             <tr>
@@ -316,9 +316,9 @@ export default function SettingsClient() {
             <thead>
               <tr>
                 <th style={{ width: 52 }}>No</th>
-                <th>이름</th>
-                <th>위치</th>
-                <th>용량</th>
+                <th style={{ width: 140 }}>이름</th>
+                <th style={{ width: 120 }}>위치</th>
+                <th style={{ width: 140 }}>용량</th>
                 <th style={{ width: 110 }}>연결 방식</th>
                 <th>브릿지 / PC</th>
                 <th style={{ width: 72 }}>삭제</th>
@@ -377,12 +377,12 @@ export default function SettingsClient() {
             <thead>
               <tr>
                 <th style={{ width: 52 }}>No</th>
-                <th>식별자</th>
+                <th style={{ width: 160 }}>식별자</th>
                 <th>이름</th>
                 <th style={{ width: 110 }}>종류</th>
                 <th style={{ width: 110 }}>접속</th>
                 <th style={{ width: 130 }}>등록 대수</th>
-                <th>마지막 수신</th>
+                <th style={{ width: 170 }}>마지막 수신</th>
               </tr>
             </thead>
             <tbody>

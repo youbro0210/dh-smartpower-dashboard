@@ -28,9 +28,9 @@
 
   /* 상태색: 글자에만 사용. 감시 화면은 3단계 등급이 구분돼야 하므로
      위험(빨강) · 경고(주황) · 주의(황갈) 로 나눕니다. */
-  --danger: #b42318;
-  --warning: #c4320a;
-  --caution: #a15c07;
+  --danger: #b42318;   /* 빨강 */
+  --warning: #c2570c;  /* 주황 — 예전 #c4320a 는 위험과 거의 같아 보였습니다 */
+  --caution: #8a6a00;  /* 황토 */
   --success: #067647;
   --normal: #067647;
   --offline: #667085;
@@ -148,7 +148,7 @@ textarea {
   flex: none;
   background: none;
   border: 0;
-  border-radius: 5px;
+  border-radius: 4px;
   color: var(--side-muted);
   cursor: pointer;
   padding: 0;
@@ -214,7 +214,7 @@ textarea {
   font-size: var(--fs-sm);
   font-weight: 500;
   border: 1px solid var(--side-line);
-  border-radius: 5px;
+  border-radius: 4px;
   background: var(--side-bg-soft);
   color: var(--side-text);
   cursor: pointer;
@@ -285,7 +285,7 @@ textarea {
   height: 38px;
   padding: 0 12px 0 36px;
   border: 1px solid var(--side-line);
-  border-radius: 6px;
+  border-radius: 4px;
   background: var(--side-bg-soft);
   color: var(--side-text);
   font: inherit;
@@ -421,7 +421,7 @@ textarea {
   height: 32px;
   padding: 0 14px;
   border: 1px solid var(--side-line);
-  border-radius: 5px;
+  border-radius: 4px;
   background: var(--side-bg-soft);
   color: var(--side-text);
   font: inherit;
@@ -561,7 +561,7 @@ textarea {
   align-items: stretch;
   flex-wrap: wrap;
   border: 1px solid var(--line);
-  border-radius: 6px;
+  border-radius: 4px;
   background: var(--bg);
   margin-bottom: 18px;
   min-height: 52px;
@@ -758,7 +758,7 @@ textarea {
 .card {
   background: var(--bg);
   border: 1px solid var(--line);
-  border-radius: 6px;
+  border-radius: 4px;
   margin-bottom: 18px;
   padding: 0 18px 18px;
   overflow: hidden;
@@ -1482,7 +1482,7 @@ table input[type="number"] {
   display: grid;
   place-items: center;
   border: 0;
-  border-radius: 5px;
+  border-radius: 4px;
   background: none;
   color: var(--text-muted);
   cursor: pointer;
@@ -1835,7 +1835,7 @@ div.st-tile:hover .st-num {
 .attn {
   border: 1px solid var(--line);
   border-left: 4px solid var(--offline);
-  border-radius: 6px;
+  border-radius: 4px;
   overflow: hidden;
   background: var(--bg);
 }
@@ -2418,7 +2418,7 @@ td.center {
   overflow-x: auto;
   background: var(--bg-head);
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: 4px;
 }
 
 .subtab {
@@ -2426,7 +2426,7 @@ td.center {
   align-items: center;
   height: 36px;
   padding: 0 18px;
-  border-radius: 6px;
+  border-radius: 4px;
   font-size: var(--fs-sm);
   font-weight: 500;
   color: var(--text-sub);
@@ -2575,7 +2575,7 @@ code {
 
 .now {
   border: 1px solid var(--line);
-  border-radius: 6px;
+  border-radius: 4px;
   padding: 20px 22px 18px;
   margin-bottom: 18px;
 }
@@ -2583,7 +2583,9 @@ code {
 /* 한 줄 요약 — 이 화면에서 가장 먼저 읽히는 문장입니다. */
 .now-line {
   margin: 0 0 16px;
-  font-size: 24px;
+  padding-left: 12px;
+  border-left: 4px solid var(--line-strong);
+  font-size: 21px;
   font-weight: 700;
   line-height: 1.4;
   letter-spacing: -0.02em;
@@ -2591,23 +2593,23 @@ code {
   word-break: keep-all;
 }
 
-.now-line.danger { color: var(--danger); }
-.now-line.warning { color: var(--warning); }
-.now-line.caution { color: var(--caution); }
-.now-line.offline { color: var(--offline); }
-.now-line.normal { color: var(--normal); }
+.now-line.danger { border-left-color: var(--danger); }
+.now-line.warning { border-left-color: var(--warning); }
+.now-line.caution { border-left-color: var(--caution); }
+.now-line.offline { border-left-color: var(--offline); }
+.now-line.normal { border-left-color: var(--normal); }
 
 .now-bar {
   display: flex;
   height: 10px;
-  border-radius: 5px;
+  border-radius: 4px;
   overflow: hidden;
   background: var(--line-soft);
   margin-bottom: 18px;
 }
 
 .now-bar > span { display: block; }
-.now-bar > span.normal { background: #8fb0d6; }
+.now-bar > span.normal { background: #a9d3ba; }
 .now-bar > span.caution { background: var(--caution); }
 .now-bar > span.warning { background: var(--warning); }
 .now-bar > span.danger { background: var(--danger); }
@@ -2672,7 +2674,7 @@ code {
   padding: 14px 18px;
   margin-bottom: 18px;
   border: 1px solid var(--line-soft);
-  border-radius: 6px;
+  border-radius: 4px;
   background: var(--bg-sum);
   font-size: var(--fs-sm);
 }
@@ -2841,7 +2843,7 @@ code {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     border: 1px solid var(--line);
-    border-radius: 6px;
+    border-radius: 4px;
     overflow: hidden;
     margin-bottom: 10px;
     padding: 0;
@@ -3085,7 +3087,7 @@ code {
     margin-bottom: 10px;
     padding: 0;
     border: 1px solid var(--line);
-    border-radius: 6px;
+    border-radius: 4px;
     overflow: hidden;
   }
 
@@ -3199,7 +3201,7 @@ code {
     margin-bottom: 10px;
     padding: 0;
     border: 1px solid var(--line);
-    border-radius: 6px;
+    border-radius: 4px;
     overflow: hidden;
   }
 
@@ -3417,7 +3419,7 @@ code {
     margin-bottom: 10px;
     padding: 0;
     border: 1px solid var(--line);
-    border-radius: 6px;
+    border-radius: 4px;
     overflow: hidden;
   }
 
@@ -3613,7 +3615,7 @@ td.picked {
 @media (min-width: 721px) {
   /* 주요 이상 칸이 너무 좁아지지 않도록 — 모자라면 표만 옆으로 밀립니다. */
   .device-table table.sortable {
-    min-width: 1180px;
+    min-width: 1100px;
   }
 }
 
@@ -3630,4 +3632,80 @@ td.picked {
 .pw-edit .field {
   width: 110px;
   height: 28px;
+}
+
+/* ===========================================================================
+   좁은 화면 — 챗봇 단추를 상단바로 올립니다.
+   아래 구석에 떠 있으면 카드 오른쪽 열(측정값)을 가립니다.
+   =========================================================================== */
+@media (max-width: 720px) {
+  .chat-fab {
+    top: calc((var(--topbar-h) - 28px) / 2);
+    bottom: auto;
+    right: 52px;
+    height: 28px;
+    padding: 0 10px;
+    font-size: var(--fs-xs);
+    background: transparent;
+    border-color: var(--side-line);
+    color: var(--side-text);
+    box-shadow: none;
+  }
+
+  .chat-fab:hover {
+    background: var(--side-bg-soft);
+  }
+
+  /* 단추 자리만큼 제목을 줄입니다. */
+  .topbar-brand {
+    padding-right: 64px;
+    font-size: 15px;
+  }
+}
+
+/* 임계치 표 — 두 자리 숫자를 넓은 칸 끝에 두면 값과 이름이 멀어집니다.
+   넓은 화면에서는 표 너비를 내용에 맞추고 입력칸을 칸에 꽉 채웁니다. */
+@media (min-width: 721px) {
+  .table-wrap .threshold-table {
+    width: auto;
+    min-width: 0;
+  }
+
+  .threshold-table td input {
+    width: 100%;
+  }
+}
+
+/* 태블릿·작은 노트북 폭(721~1365px) — 보조 칸을 접어 표가 옆으로 밀리지 않게 합니다. */
+@media (min-width: 721px) and (max-width: 1365px) {
+  .device-table table.sortable {
+    min-width: 0;
+    table-layout: auto;
+  }
+
+  /* 넓은 화면용 고정 너비를 풀고 내용 길이에 맞춥니다. */
+  .device-table col {
+    width: auto !important;
+  }
+
+  .device-table th,
+  .device-table td {
+    padding-left: 6px;
+    padding-right: 6px;
+  }
+
+  /* 주요 이상은 줄을 바꿔서라도 다 보이게 합니다. */
+  .device-table td.c-cause {
+    min-width: 128px;
+    white-space: normal;
+    line-height: 1.35;
+    padding-top: 4px;
+    padding-bottom: 4px;
+  }
+
+  .device-table col.opt,
+  .device-table th.opt,
+  .device-table td.opt {
+    display: none;
+  }
 }
