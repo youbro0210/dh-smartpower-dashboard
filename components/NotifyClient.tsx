@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import PageHeader from "./PageHeader";
 import SettingsTabs from "./SettingsTabs";
+import { fmtDateTime } from "@/lib/format";
 import {
   CHANNEL_FIELDS,
   CHANNEL_LABEL,
@@ -477,7 +478,7 @@ export default function NotifyClient() {
           <table>
             <thead>
               <tr>
-                <th style={{ width: 150 }}>시각</th>
+                <th style={{ width: 170 }}>시각</th>
                 <th style={{ width: 110 }}>수신자</th>
                 <th style={{ width: 110 }}>경로</th>
                 <th style={{ minWidth: 150 }}>받는 곳</th>
@@ -496,7 +497,7 @@ export default function NotifyClient() {
               {log.map((row) => (
                 <tr key={row.id}>
                   <td className="center">
-                    {new Date(row.created_at).toLocaleString("ko-KR", { hour12: false })}
+                    {fmtDateTime(row.created_at, true)}
                   </td>
                   <td style={{ whiteSpace: "nowrap" }}>{row.recipient ?? "-"}</td>
                   <td style={{ whiteSpace: "nowrap" }}>{CHANNEL_LABEL[row.channel]}</td>

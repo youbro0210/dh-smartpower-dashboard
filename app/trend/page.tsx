@@ -106,7 +106,7 @@ export default function TrendPage() {
                       <span className={`badge ${d.status}`}>{STATUS_LABEL[d.status]}</span>
                     </td>
                     <td className="t-spark">
-                      <Sparkline trend={d.trend} />
+                      <Sparkline trend={d.trend} height={36} />
                     </td>
                     <td className="num t-stat" data-label="현재">
                       {current.toFixed(1)}
@@ -119,9 +119,9 @@ export default function TrendPage() {
                       {change === null ? (
                         <span className="flat">-</span>
                       ) : change > 0.1 ? (
-                        <span className="up">▲ +{change}</span>
+                        <span className="up">▲ +{change.toFixed(1)}</span>
                       ) : change < -0.1 ? (
-                        <span className="down">▼ {change}</span>
+                        <span className="down">▼ {change.toFixed(1)}</span>
                       ) : (
                         <span className="flat">변화 없음</span>
                       )}

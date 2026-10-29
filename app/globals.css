@@ -3484,3 +3484,138 @@ td.c-spark .mini-spark {
   width: 100%;
   max-width: 100%;
 }
+
+/* ===========================================================================
+   표 공통 보강 — 정렬 머리글, 기준 초과 값, 칸 너비 고정
+   =========================================================================== */
+
+/* colgroup 으로 너비를 정한 표는 내용 길이에 따라 칸이 흔들리지 않게 고정합니다. */
+table.sortable,
+table.fixed {
+  table-layout: fixed;
+}
+
+table.sortable td,
+table.fixed td {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 머리글 전체가 눌리는 자리입니다. 글자만 누르게 두면 칸 끝을 눌렀을 때 반응이 없습니다. */
+.th-sort {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-weight: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+th.num .th-sort {
+  justify-content: flex-end;
+}
+
+.th-sort:hover {
+  color: var(--primary);
+}
+
+.sort-mark {
+  font-size: 10px;
+  color: var(--text-muted);
+}
+
+.sort-mark.on {
+  color: var(--primary);
+}
+
+/* 기준을 넘은 측정값 — 칸 배경은 그대로 두고 글자만 등급 색으로 */
+td.lv-caution { color: var(--caution); font-weight: 600; }
+td.lv-warning { color: var(--warning); font-weight: 600; }
+td.lv-danger  { color: var(--danger);  font-weight: 700; }
+
+/* 통신이 끊긴 설비의 마지막 측정 시각 */
+td.t-stale { color: var(--danger); }
+
+/* 카드 머리 오른쪽 — 건수와 내려받기 버튼 */
+.card-tools {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.btn.sm {
+  height: 28px;
+  padding: 0 10px;
+  font-size: var(--fs-xs);
+}
+
+/* 요약 표의 숫자를 눌러 바로 걸러 볼 수 있게 합니다. */
+.cell-link {
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  text-decoration: underline;
+  text-decoration-color: var(--line);
+  text-underline-offset: 3px;
+}
+
+.cell-link:hover {
+  text-decoration-color: currentColor;
+}
+
+td.picked {
+  background: var(--bg-selected);
+  box-shadow: inset 0 -2px 0 var(--primary);
+}
+
+/* 설비 목록: 넓은 화면은 연결 칸을 따로, 좁은 화면은 이름 아래에 */
+@media (min-width: 721px) {
+  .device-table td.c-name .cell-sub {
+    display: none;
+  }
+
+  .device-table td.c-link {
+    color: var(--text-sub);
+  }
+}
+
+@media (max-width: 720px) {
+  .device-table td.c-link {
+    display: none;
+  }
+
+  .device-table .card-tools .btn {
+    display: none;
+  }
+
+  table.sortable,
+  table.fixed {
+    table-layout: auto;
+  }
+
+  table.sortable td,
+  table.fixed td {
+    white-space: normal;
+  }
+}
+
+@media (min-width: 721px) {
+  /* 주요 이상 칸이 너무 좁아지지 않도록 — 모자라면 표만 옆으로 밀립니다. */
+  .device-table table.sortable {
+    min-width: 1180px;
+  }
+}
+
+.t-caution { color: var(--caution); }
+.cell-link:disabled { cursor: default; }

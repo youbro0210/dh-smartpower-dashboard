@@ -13,6 +13,7 @@ export async function GET(request: Request) {
   const from = params.get("from");
   const to = params.get("to");
   const level = params.get("level");
+  const device = params.get("device");
   const page = Math.max(1, parseInt(params.get("page") ?? "1", 10) || 1);
   const pageSize = Math.min(200, Math.max(1, parseInt(params.get("pageSize") ?? "50", 10) || 50));
 
@@ -27,6 +28,16 @@ export async function GET(request: Request) {
     values.push(to);
     where.push(`created_at < ($${values.length}::date + interval '1 day')`);
   }
+  if (device) {
+    values.push(device);
+    where.push(`device_id = $${values.length}`);
+  }
+
+  // 등급별 건수는 등급 조건을 빼고 셉니다. 등급으로 걸러 봐도 다른 등급이 몇 건인지 보여야
+  // 화면의 요약 칸을 눌러 바로 옮겨 갈 수 있습니다.
+  const baseWhereSql = where.length ? `WHERE ${where.join(" AND ")}` : "";
+  const baseValues = [...values];
+
   if (level && ["caution", "warning", "danger"].includes(level)) {
     values.push(level);
     where.push(`level = $${values.length}`);
@@ -47,8 +58,8 @@ export async function GET(request: Request) {
   );
 
   const byLevel = await query<{ level: string; count: number }>(
-    `SELECT level, count(*)::int AS count FROM alarm_events ${whereSql} GROUP BY level`,
-    values
+    `SELECT level, count(*)::int AS count FROM alarm_events ${baseWhereSql} GROUP BY level`,
+    baseValues
   );
 
   return NextResponse.json({

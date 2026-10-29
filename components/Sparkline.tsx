@@ -27,11 +27,14 @@ function buildPath(raw: (number | null)[], width: number, height: number): strin
 export default function Sparkline({
   trend,
   compact,
+  height: fixedHeight,
 }: {
   trend?: DeviceTrend;
   compact?: boolean;
+  /** 표 안에서 행 높이를 맞출 때만 지정합니다. */
+  height?: number;
 }) {
-  const height = compact ? 26 : 70;
+  const height = fixedHeight ?? (compact ? 26 : 70);
   const width = 300;
 
   const temperaturePath = buildPath(trend?.temperature ?? [], width, height);

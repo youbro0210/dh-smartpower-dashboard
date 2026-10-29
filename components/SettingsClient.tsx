@@ -12,6 +12,7 @@ import {
 } from "@/lib/types";
 import PageHeader from "./PageHeader";
 import SettingsTabs from "./SettingsTabs";
+import { fmtDateTime } from "@/lib/format";
 
 export default function SettingsClient() {
   const { thresholds, bridges, devices, configVersion, saveThresholds, addDevice, removeDevice } =
@@ -410,7 +411,7 @@ export default function SettingsClient() {
                       {used} / {limit}
                     </td>
                     <td>
-                      {b.last_seen_at ? new Date(b.last_seen_at).toLocaleString("ko-KR") : "-"}
+                      {fmtDateTime(b.last_seen_at, true)}
                     </td>
                   </tr>
                 );

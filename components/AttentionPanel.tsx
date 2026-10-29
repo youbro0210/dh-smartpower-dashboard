@@ -10,6 +10,7 @@ import {
   ThresholdConfig,
 } from "@/lib/types";
 import TrendChart, { MetricKey } from "./TrendChart";
+import { fmtDateTime } from "@/lib/format";
 
 const GUIDANCE: Record<string, string> = {
   danger: "즉시 현장 점검과 절연유 상태 확인이 필요합니다. 필요 시 부하를 낮추고 담당자에게 보고하세요.",
@@ -152,7 +153,7 @@ export default function AttentionPanel({
                 <span className="attn-since">
                   {d.since === "-"
                     ? "판정 시각 없음"
-                    : `${new Date(d.since).toLocaleString("ko-KR", { hour12: false })} 판정`}
+                    : `${fmtDateTime(d.since, true)} 판정`}
                 </span>
                 <span className="attn-toggle">{open ? "접기" : "펼치기"}</span>
               </button>

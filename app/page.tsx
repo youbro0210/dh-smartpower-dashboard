@@ -6,6 +6,7 @@ import { useDashboard } from "@/lib/configStore";
 import PageHeader from "@/components/PageHeader";
 import AttentionPanel from "@/components/AttentionPanel";
 import { DeviceStatus, STATUS_LABEL } from "@/lib/types";
+import { fmtDateTime } from "@/lib/format";
 
 /**
  * 홈 화면.
@@ -29,7 +30,7 @@ export default function DashboardPage() {
   const [now, setNow] = useState("");
 
   useEffect(() => {
-    const update = () => setNow(new Date().toLocaleString("ko-KR", { hour12: false }));
+    const update = () => setNow(fmtDateTime(new Date(), true));
     update();
     const t = setInterval(update, 1000);
     return () => clearInterval(t);

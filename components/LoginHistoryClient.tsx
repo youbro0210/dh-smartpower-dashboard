@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import PageHeader from "./PageHeader";
+import { fmtDateTime } from "@/lib/format";
 
 interface LoginEvent {
   id: number;
@@ -109,11 +110,11 @@ export default function LoginHistoryClient() {
           <table>
             <thead>
               <tr>
-                <th style={{ width: 52 }}>No</th>
-                <th>시각</th>
+                <th style={{ width: 56 }}>No</th>
+                <th style={{ width: 170 }}>시각</th>
                 <th>이메일</th>
-                <th>결과</th>
-                <th>IP</th>
+                <th style={{ width: 72 }}>결과</th>
+                <th style={{ width: 160 }}>IP</th>
               </tr>
             </thead>
             <tbody>
@@ -128,7 +129,7 @@ export default function LoginHistoryClient() {
                 <tr key={r.id}>
                   <td className="center">{(page - 1) * PAGE_SIZE + i + 1}</td>
                   <td className="center">
-                    {new Date(r.created_at).toLocaleString("ko-KR", { hour12: false })}
+                    {fmtDateTime(r.created_at, true)}
                   </td>
                   <td>{r.email ?? "-"}</td>
                   <td className="center">

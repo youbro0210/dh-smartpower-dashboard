@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import PageHeader from "./PageHeader";
+import { fmtDate, fmtDateTime } from "@/lib/format";
 
 interface AdminUser {
   id: string;
@@ -133,7 +134,7 @@ export default function AdminClient() {
         <div className="table-wrap">
           <table className="grid">
             <thead>
-              <tr><th>이메일</th><th>이름</th><th style={{ width: 110 }}>가입일</th><th style={{ width: 170 }}>최근 로그인</th><th style={{ width: 110 }}>등급</th></tr>
+              <tr><th>이메일</th><th style={{ width: 160 }}>이름</th><th style={{ width: 110 }}>가입일</th><th style={{ width: 150 }}>최근 로그인</th><th style={{ width: 110 }}>등급</th></tr>
             </thead>
             <tbody>
               {userLoading ? (
@@ -145,8 +146,8 @@ export default function AdminClient() {
                   <tr key={u.id}>
                     <td>{u.email}</td>
                     <td>{u.full_name ?? "-"}</td>
-                    <td className="center">{new Date(u.created_at).toLocaleDateString("ko-KR")}</td>
-                    <td className="center">{u.last_login_at ? new Date(u.last_login_at).toLocaleString("ko-KR") : "-"}</td>
+                    <td className="center">{fmtDate(u.created_at)}</td>
+                    <td className="center">{fmtDateTime(u.last_login_at)}</td>
                     <td className="center">
                       <select value={u.tier} disabled={savingId === u.id} onChange={(e) => changeTier(u.id, e.target.value)}>
                         <option value="viewer">뷰어</option>
@@ -196,7 +197,7 @@ export default function AdminClient() {
         <div className="table-wrap">
           <table className="grid">
             <thead>
-              <tr><th style={{ width: 52 }}>No</th><th style={{ width: 190 }}>시각</th><th>계정</th></tr>
+              <tr><th style={{ width: 52 }}>No</th><th style={{ width: 170 }}>시각</th><th>계정</th></tr>
             </thead>
             <tbody>
               {loginLoading ? (
@@ -207,7 +208,7 @@ export default function AdminClient() {
                 logins.map((l, i) => (
                   <tr key={l.id}>
                     <td className="center">{(loginPage - 1) * PAGE_SIZE + i + 1}</td>
-                    <td className="center">{new Date(l.created_at).toLocaleString("ko-KR")}</td>
+                    <td className="center">{fmtDateTime(l.created_at, true)}</td>
                     <td>{l.email ?? l.user_id ?? "알 수 없음"}</td>
                   </tr>
                 ))
