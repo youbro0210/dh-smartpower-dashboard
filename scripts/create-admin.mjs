@@ -80,6 +80,7 @@ try {
      ON CONFLICT (lower(email)) DO UPDATE
         SET password_hash = EXCLUDED.password_hash,
             tier          = 'admin',
+            approval      = 'approved',
             is_active     = true,
             full_name     = COALESCE(EXCLUDED.full_name, users.full_name)
      RETURNING id, email, full_name, tier`,

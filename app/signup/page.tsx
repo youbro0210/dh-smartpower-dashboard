@@ -11,7 +11,7 @@ export default function SignupPage() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [tier, setTier] = useState<string | null>(null);
+  const [done, setDone] = useState<{ pending: boolean } | null>(null);
   const [loading, setLoading] = useState(false);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -39,22 +39,22 @@ export default function SignupPage() {
         setError(json.error ?? "가입에 실패했습니다.");
         return;
       }
-      setTier(json.tier ?? "viewer");
+      setDone({ pending: json.approval !== "approved" });
     } catch {
       setLoading(false);
       setError("서버에 연결할 수 없습니다. 네트워크 상태를 확인해 주세요.");
     }
   }
 
-  if (tier) {
+  if (done) {
     return (
       <div className="auth-page">
         <AuthAside />
         <div className="auth-main">
           <div className="auth-card">
-            <h2>가입이 완료되었습니다</h2>
+            <h2>{done.pending ? "가입 신청이 접수되었습니다" : "가입이 완료되었습니다"}</h2>
             <p className="auth-lead">
-              부여된 등급은 {tier === "admin" ? "관리자" : "뷰어"} 입니다.
+              {done.pending ? "관리자 승인 후 로그인할 수 있습니다." : "부여된 등급은 관리자입니다."}
             </p>
             <Link href="/login" className="btn primary auth-submit">
               로그인하러 가기
@@ -79,7 +79,7 @@ export default function SignupPage() {
           </div>
 
           <h2>회원가입</h2>
-          <p className="auth-lead">가입 후 관리자가 등급을 올려주면 설정을 바꿀 수 있습니다.</p>
+          <p className="auth-lead">관리자 승인 후 로그인할 수 있습니다.</p>
 
           <form onSubmit={handleSubmit}>
             <div className="auth-field">

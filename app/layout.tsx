@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import "@/cs-engine/react/progress.css";
 import { ConfigProvider } from "@/lib/configStore";
 import AppShell from "@/components/AppShell";
 

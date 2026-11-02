@@ -8,15 +8,18 @@
     "start": "next start",
     "db:schema": "psql \"$DATABASE_URL\" -v ON_ERROR_STOP=1 -f db/schema.sql",
     "db:seed": "node scripts/seed-devices.mjs",
-    "create-admin": "node scripts/create-admin.mjs"
+    "create-admin": "node scripts/create-admin.mjs",
+    "test": "node --import tsx --test --test-concurrency=1 tests/*.test.mts"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "0.125.0",
     "next": "14.2.35",
     "nodemailer": "^10.0.10",
     "pg": "^8.13.1",
     "react": "18.3.1",
     "react-dom": "18.3.1",
-    "server-only": "^0.0.1"
+    "server-only": "^0.0.1",
+    "zod": "4.5.4"
   },
   "devDependencies": {
     "@types/node": "20.14.15",
@@ -24,6 +27,7 @@
     "@types/pg": "^8.11.10",
     "@types/react": "18.3.3",
     "@types/react-dom": "18.3.0",
+    "tsx": "4.23.15",
     "typescript": "5.5.4"
   }
 }

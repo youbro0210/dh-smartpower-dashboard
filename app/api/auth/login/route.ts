@@ -86,6 +86,15 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: INVALID }, { status: 401 });
   }
 
+  // 비밀번호가 맞을 때만 알려, 가입 여부가 다른 사람에게 드러나지 않게 합니다.
+  if (user.approval !== "approved") {
+    await recordAttempt(user.id, false);
+    return NextResponse.json(
+      { error: "관리자 승인을 기다리고 있습니다. 승인 후 로그인할 수 있습니다." },
+      { status: 403 }
+    );
+  }
+
   await pruneSessions();
   const token = await createSession(user.id, { ip, userAgent });
   await recordAttempt(user.id, true);

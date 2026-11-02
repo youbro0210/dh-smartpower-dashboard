@@ -1,0 +1,10 @@
+[Unit]
+Description=autofix 배포기 — 10초마다
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=10s
+AccuracySec=5s
+
+[Install]
+WantedBy=timers.target

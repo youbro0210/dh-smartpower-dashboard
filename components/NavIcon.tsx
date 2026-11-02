@@ -23,7 +23,9 @@ export type IconName =
   | "flask"
   | "thermo"
   | "wrench"
-  | "report";
+  | "report"
+  | "request"
+  | "check";
 
 const PATHS: Record<IconName, JSX.Element> = {
   // 집
@@ -145,6 +147,20 @@ const PATHS: Record<IconName, JSX.Element> = {
     </>
   ),
   // 보고서 (문서)
+  // 요청 접수 (말풍선)
+  request: (
+    <>
+      <path d="M4 4h16v13H9l-5 4z" />
+      <path d="M8 9h8M8 13h5" />
+    </>
+  ),
+  // 반영 확인 (체크 목록)
+  check: (
+    <>
+      <path d="M4 6l2 2 3-3M4 13l2 2 3-3M4 20l2 2 3-3" />
+      <path d="M13 7h8M13 14h8M13 21h8" />
+    </>
+  ),
   report: (
     <>
       <path d="M14 3H6v18h12V7z" />

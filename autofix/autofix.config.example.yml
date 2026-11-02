@@ -1,0 +1,18 @@
+# .autofix.yml — 저장소 맨 위에 둔다. autofix 워크플로가 고치기 전에 읽는다(그 뒤 바뀐 것은 쓰지 않는다)
+node_version: "20"                 # setup-node 버전
+install: npm ci                    # 고치기 전에 한 번
+max_turns: 40                      # Claude Code 최대 턴
+# model: claude-opus-5-5           # 비우면 claude-code-action 기본
+verify:                            # 고친 뒤 차례로 돌린다. 하나라도 실패하면 PR 은 열되 «검사 실패» 로 알린다
+  - name: 타입검사
+    run: npx tsc --noEmit
+  - name: 테스트
+    run: npm test
+allowed_bash:                      # Claude 가 고치는 동안 쓸 수 있는 명령(claude --allowedTools 의 Bash(...) 모양)
+  - "npx tsc:*"
+forbidden:                         # 바꾸면 PR 을 열지 않고 실패(셸 case 패턴 — * 는 / 도 넘는다)
+  - ".github/*"
+  - ".env*"
+  - ".autofix.yml"
+rules: |                           # 프로젝트 규칙 — 프롬프트에 그대로 들어간다
+  - 예: 화면 문구는 업무 용어 그대로

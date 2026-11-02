@@ -9,6 +9,7 @@ interface AdminUser {
   email: string | undefined;
   full_name: string | null;
   tier: string;
+  approval: "approved" | "pending";
   created_at: string;
   last_login_at: string | null;
 }
@@ -106,6 +107,26 @@ export default function AdminClient() {
     setSavingId(null);
   }
 
+  async function decideSignup(u: AdminUser, approve: boolean) {
+    setSavingId(u.id);
+    setNotice(null);
+    const res = approve
+      ? await fetch("/api/admin/users", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ user_id: u.id, approve: true }),
+        })
+      : await fetch(`/api/admin/users?user_id=${encodeURIComponent(u.id)}`, { method: "DELETE" });
+    const json = await res.json().catch(() => ({}));
+    setSavingId(null);
+    if (!res.ok) {
+      setNotice({ ok: false, text: json.error ?? "처리하지 못했습니다." });
+      return;
+    }
+    setNotice({ ok: true, text: `${u.email} 가입을 ${approve ? "승인" : "거절"}했습니다.` });
+    await loadUsers(userPage);
+  }
+
   async function addUser(e: React.FormEvent) {
     e.preventDefault();
     setAddBusy(true);
@@ -154,7 +175,7 @@ export default function AdminClient() {
       <PageHeader
         title="회원 관리"
         breadcrumb="홈 › 회원관리"
-        subtitle="회원 등록 · 등급 · 비밀번호 변경 · 로그인 이력 조회"
+        subtitle="가입 승인 · 회원 등록 · 등급 · 비밀번호 변경 · 로그인 이력 조회"
       />
 
       <div className="card">
@@ -248,13 +269,13 @@ export default function AdminClient() {
         <div className="table-wrap">
           <table className="grid">
             <thead>
-              <tr><th>이메일</th><th style={{ width: 160 }}>이름</th><th style={{ width: 110 }}>가입일</th><th style={{ width: 150 }}>최근 로그인</th><th style={{ width: 110 }}>등급</th><th style={{ width: 230 }}>비밀번호</th></tr>
+              <tr><th>이메일</th><th style={{ width: 160 }}>이름</th><th style={{ width: 110 }}>가입일</th><th style={{ width: 150 }}>최근 로그인</th><th style={{ width: 150 }}>가입 승인</th><th style={{ width: 110 }}>등급</th><th style={{ width: 230 }}>비밀번호</th></tr>
             </thead>
             <tbody>
               {userLoading ? (
-                <tr><td className="empty" colSpan={6}>불러오는 중...</td></tr>
+                <tr><td className="empty" colSpan={7}>불러오는 중...</td></tr>
               ) : users.length === 0 && !userError ? (
-                <tr><td className="empty" colSpan={6}>조회된 데이터가 없습니다.</td></tr>
+                <tr><td className="empty" colSpan={7}>조회된 데이터가 없습니다.</td></tr>
               ) : (
                 users.map((u) => (
                   <tr key={u.id}>
@@ -262,6 +283,20 @@ export default function AdminClient() {
                     <td>{u.full_name ?? "-"}</td>
                     <td className="center">{fmtDate(u.created_at)}</td>
                     <td className="center">{fmtDateTime(u.last_login_at)}</td>
+                    <td className="center">
+                      {u.approval === "pending" ? (
+                        <span className="pw-edit">
+                          <button className="btn sm primary" disabled={savingId === u.id} onClick={() => void decideSignup(u, true)}>
+                            승인
+                          </button>
+                          <button className="btn sm" disabled={savingId === u.id} onClick={() => void decideSignup(u, false)}>
+                            거절
+                          </button>
+                        </span>
+                      ) : (
+                        "승인"
+                      )}
+                    </td>
                     <td className="center">
                       <select value={u.tier} disabled={savingId === u.id} onChange={(e) => changeTier(u.id, e.target.value)}>
                         <option value="viewer">뷰어</option>

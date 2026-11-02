@@ -7,6 +7,7 @@ import { useSession } from "@/lib/useSession";
 import { NAV, labelFor } from "@/lib/nav";
 import NavIcon from "./NavIcon";
 import Chatbot from "./Chatbot";
+import { isAdminScreen } from "@/lib/cs/catalog";
 
 const TABS_KEY = "dh-open-tabs";
 
@@ -23,6 +24,9 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [menuQuery, setMenuQuery] = useState("");
   const [collapsed, setCollapsed] = useState<string[]>([]);
+  // 반영 확인 메뉴 건수. 관리자는 처리할 요청, 그 밖의 계정은 답할 보완 요청입니다.
+  const [csCount, setCsCount] = useState(0);
+  const [signupCount, setSignupCount] = useState(0);
 
   const query = menuQuery.trim().toLowerCase();
 
@@ -70,7 +74,26 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     if (href === pathname) router.push(list[list.length - 1].href);
   }
 
+  useEffect(() => {
+    if (isAuthPage || !email) return;
+    let cancelled = false;
+    fetch("/api/cs", { cache: "no-store" })
+      .then((r) => r.json())
+      .then((j) => {
+        if (cancelled) return;
+        setCsCount(Number(j?.count) || 0);
+        setSignupCount(Number(j?.pendingSignups) || 0);
+      })
+      .catch(() => {
+        /* 건수를 못 읽어도 메뉴는 그대로 둡니다. */
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [pathname, email, isAuthPage]);
+
   const isAdmin = tier === "admin";
+  const canRequestFix = !pathname.startsWith("/cs") && !isAdminScreen(pathname);
 
   // 로그인·회원가입 화면은 셸 없이 그대로 보여줍니다.
   if (isAuthPage) {
@@ -93,6 +116,11 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         <span className="topbar-brand">DH 스마트파워 · 변압기 통합 모니터링</span>
 
         <div className="topbar-right">
+          {email && canRequestFix && (
+            <Link href={`/cs/new?page=${encodeURIComponent(pathname)}`} className="topbar-link">
+              수정 요청
+            </Link>
+          )}
           <Link
             href="/alarms"
             className="topbar-icon-btn"
@@ -169,6 +197,8 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                       >
                         <NavIcon name={item.icon} size={17} />
                         <span className="nav-label">{item.label}</span>
+                        {item.href === "/cs" && csCount > 0 && <span className="nav-count">{csCount}</span>}
+                        {item.href === "/admin" && signupCount > 0 && <span className="nav-count">{signupCount}</span>}
                       </Link>
                     );
                   })}

@@ -1,0 +1,8 @@
+[Unit]
+Description=autofix 배포기 — 배포 대기 작업 확인
+After=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/autofix-deployer.sh
+TimeoutStartSec=1800

@@ -34,13 +34,15 @@ export async function POST(request: Request) {
   }
 
   // 사용자가 한 명도 없으면 최초 가입자를 관리자로 지정합니다.
-  // 운영 중에는 create-admin 스크립트로 관리자를 만들고, 이후 가입자는 모두 viewer 입니다.
+  // 운영 중에는 create-admin 스크립트로 관리자를 만들고, 이후 가입자는 viewer 로 넣되
+  // 관리자가 회원관리에서 승인해야 로그인할 수 있습니다.
   const existing = await one<{ count: number }>(`SELECT count(*)::int AS count FROM users`);
   const tier = (existing?.count ?? 0) === 0 ? "admin" : "viewer";
 
   try {
-    const user = await createUser({ email, password, fullName, tier });
-    return NextResponse.json({ user, tier }, { status: 201 });
+    const approval = tier === "admin" ? "approved" : "pending";
+    const user = await createUser({ email, password, fullName, tier, approval });
+    return NextResponse.json({ user, tier, approval }, { status: 201 });
   } catch (err) {
     // 동시 가입으로 유니크 제약에 걸린 경우
     if ((err as { code?: string }).code === "23505") {

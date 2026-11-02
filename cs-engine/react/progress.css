@@ -1,0 +1,13 @@
+/* cs-engine 진행률 막대 — 엔진 색 이름을 DH 화면 변수에 잇습니다. */
+.cs-pb { --indigo: var(--primary); --celadon: var(--success); --ink-3: var(--offline); --ink-2: var(--text-sub); --surface-2: var(--bg-head); }
+.cs-pb { margin: 0 0 8px; }
+.cs-pb .row { display: flex; justify-content: space-between; align-items: baseline; font-size: 14px; margin-bottom: 4px; }
+.cs-pb .pct { font-variant-numeric: tabular-nums; font-weight: 600; color: var(--indigo); }
+.cs-pb .pbar { display: block; height: 8px; background: var(--surface-2); border: 1px solid var(--line); overflow: hidden; }
+.cs-pb .pbar i { display: block; height: 100%; background: var(--indigo); transition: width .9s linear; }
+.cs-pb.done .pbar i { background: var(--celadon); } .cs-pb.done .pct { color: var(--celadon); }
+.cs-pb.bad .pbar i { background: var(--ink-3); } .cs-pb.bad .pct { color: var(--ink-3); }
+.cs-pb .eta { font-size: 13px; color: var(--ink-2); margin-top: 4px; }
+.cs-pb.sm { display: inline-flex; align-items: center; gap: 6px; margin: 0; width: 100%; }
+.cs-pb.sm .pbar { flex: 1 1 auto; height: 6px; min-width: 40px; }
+.cs-pb.sm .pct { font-size: 13px; min-width: 34px; text-align: right; }

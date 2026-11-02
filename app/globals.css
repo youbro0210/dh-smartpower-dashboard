@@ -3876,3 +3876,148 @@ td.picked {
     width: 72px !important;
   }
 }
+
+/* ============================================================================
+   CS 요청 (요청 접수 · 반영 확인)
+   ============================================================================ */
+.nav-count {
+  margin-left: auto;
+  min-width: 20px;
+  text-align: right;
+  font-size: var(--fs-xs);
+  font-variant-numeric: tabular-nums;
+}
+.cs-sttabs {
+  display: flex;
+  flex-wrap: wrap;
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 12px;
+}
+.cs-sttab {
+  padding: 8px 14px;
+  font-size: var(--fs-sm);
+  color: var(--text-sub);
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  text-decoration: none;
+}
+.cs-sttab.on {
+  color: var(--primary);
+  font-weight: 600;
+  border-bottom-color: var(--primary);
+}
+.cs-sttab.alert { color: var(--danger); }
+.cs-sttab .cnt { margin-left: 6px; font-variant-numeric: tabular-nums; }
+.cs-auto {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  font-size: var(--fs-sm);
+}
+.cs-auto { margin-right: 12px; }
+.cs-auto b { font-weight: 600; }
+.cs-auto label { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
+.cs-list td:nth-child(2) { min-width: 200px; }
+.cs-list td.center { white-space: nowrap; }
+/* 상세를 함께 열면 목록 폭이 줄어드므로 상세에도 나오는 화면·요청자 칸을 접습니다. */
+.cs-split.has-cur .cs-list td:nth-child(2) { min-width: 110px; }
+.cs-split.has-cur .cs-pbcell { min-width: 84px; }
+.cs-split.has-cur .cs-list th:nth-child(3),
+.cs-split.has-cur .cs-list td:nth-child(3),
+.cs-split.has-cur .cs-list th:nth-child(8),
+.cs-split.has-cur .cs-list td:nth-child(8) { display: none; }
+.cs-split { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; align-items: start; }
+.cs-split.has-cur { grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); }
+.cs-back { display: none; }
+.cs-list td a, .cs-mine td a { color: var(--primary); }
+.cs-cur { border: 1px solid var(--line); padding: 12px; min-width: 0; }
+.cs-nav { display: flex; gap: 8px; margin-bottom: 8px; }
+.cs-nav:empty { display: none; }
+.cs-h { display: flex; justify-content: space-between; gap: 12px; margin-bottom: 8px; font-size: var(--fs-base); }
+.cs-h b { font-weight: 600; overflow-wrap: anywhere; }
+.cs-h .cs-st { white-space: nowrap; font-size: var(--fs-sm); }
+.cs-steps { display: flex; list-style: none; margin: 8px 0 12px; padding: 0; border: 1px solid var(--line); }
+.cs-steps li {
+  flex: 1;
+  padding: 6px 8px;
+  text-align: center;
+  font-size: var(--fs-xs);
+  color: var(--text-muted);
+  border-left: 1px solid var(--line);
+}
+.cs-steps li:first-child { border-left: 0; }
+.cs-steps li.done { color: var(--text-sub); }
+.cs-steps li.on { color: var(--primary); font-weight: 600; background: var(--primary-soft); }
+.cs-steps li.bad { color: var(--danger); background: var(--bg); }
+.cs-kv { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: var(--fs-sm); }
+.cs-kv th {
+  width: 96px;
+  text-align: left;
+  padding: 6px 8px;
+  font-weight: 600;
+  background: var(--bg-head);
+  border: 1px solid var(--line);
+  vertical-align: top;
+}
+.cs-kv td { padding: 6px 8px; height: auto; border: 1px solid var(--line); vertical-align: top; overflow-wrap: anywhere; }
+.cs-kv tr:hover td { background: var(--bg); }
+.cs-kv .field { width: 100%; }
+.cs-kv textarea.field { height: auto; padding: 6px 8px; display: block; }
+.cs-body { white-space: pre-wrap; overflow-wrap: anywhere; }
+.cs-ol { margin: 0; padding-left: 18px; }
+.cs-sub {
+  margin: 16px 0 6px;
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--line);
+}
+.cs-imgs { display: flex; flex-wrap: wrap; gap: 8px; }
+.cs-imgs img, .cs-thumb img { width: 96px; height: 72px; object-fit: cover; border: 1px solid var(--line); display: block; }
+.cs-muted { color: var(--text-sub); font-size: var(--fs-xs); }
+.cs-ok { color: var(--success); }
+.cs-bad { color: var(--danger); }
+.cs-RECEIVED, .cs-APPROVED { color: var(--primary); }
+.cs-ANALYZED { color: var(--caution); font-weight: 600; }
+.cs-NEEDS_INFO { color: var(--warning); font-weight: 600; }
+.cs-DONE { color: var(--success); }
+.cs-REJECTED { color: var(--offline); }
+.cs-risk-MEDIUM { color: var(--warning); }
+.cs-risk-HIGH { color: var(--danger); font-weight: 600; }
+.cs-tl { list-style: none; margin: 0; padding: 0; font-size: var(--fs-sm); }
+.cs-tl li { padding: 4px 0; border-bottom: 1px solid var(--line-soft); }
+.cs-tl .at { color: var(--text-sub); font-variant-numeric: tabular-nums; }
+.cs-tl b { font-weight: 600; }
+.cs-act { margin-top: 12px; display: flex; flex-direction: column; gap: 6px; font-size: var(--fs-sm); }
+.cs-act textarea.field { width: 100%; height: auto; padding: 6px 8px; }
+.cs-btns { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 8px; }
+.cs-pbcell { min-width: 96px; }
+.cs-fixes td { height: auto; padding: 6px 8px; }
+.cs-form-acts { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 12px; font-size: var(--fs-sm); }
+.cs-form.drag { outline: 1px dashed var(--primary); outline-offset: 4px; }
+.cs-count { display: block; text-align: right; margin-top: 2px; }
+.cs-quick { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.cs-files { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.cs-thumb { position: relative; display: inline-block; }
+.cs-thumb button {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 22px;
+  height: 22px;
+  border: 1px solid var(--line);
+  background: var(--bg);
+  cursor: pointer;
+}
+.cs-section-title { font-size: var(--fs-title); font-weight: 600; margin: 20px 0 8px; }
+@media (max-width: 900px) {
+  .page-head:has(.cs-auto) { flex-wrap: wrap; }
+  .page-head:has(.cs-auto) .page-actions { flex-wrap: wrap; max-width: 100%; min-width: 0; }
+  .cs-auto { margin-right: 0; }
+}
+@media (max-width: 1100px) {
+  .cs-split.has-cur { grid-template-columns: minmax(0, 1fr); }
+  .cs-split.has-cur .cs-list { display: none; }
+  .cs-back { display: inline-flex; }
+}

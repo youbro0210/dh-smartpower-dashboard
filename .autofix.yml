@@ -1,0 +1,84 @@
+# DH 스마트파워 — autofix 설정(autofix/README.md). 이 파일은 autofix 가 고치지 못합니다(forbidden).
+node_version: "20"
+install: npm ci --no-audit --no-fund
+max_turns: 30
+model: claude-sonnet-5-5
+skills: true
+cache:
+  deps: [node_modules]
+  deps_key: package-lock.json
+  build: [.next/cache]
+# next build 가 타입검사를 함께 합니다.
+verify:
+  - name: 엔진 시험
+    run: npm test
+  - name: 타입검사·빌드
+    run: DATABASE_URL=postgres://x:x@127.0.0.1:5/x AUTH_SECRET=autofix-build-only-0123456789abcdef npm run build
+allowed_bash:
+  - "npx tsc:*"
+forbidden:
+  - "db/*"
+  - "deploy/*"
+  - "scripts/*"
+  - ".github/*"
+  - ".env*"
+  - "autofix/*"
+  - ".autofix.yml"
+  - ".claude/*"
+  - "package.json"
+  - "package-lock.json"
+  - "tests/*"
+  # CS 처리 자체
+  - "cs-engine/*"
+  - "lib/cs/*"
+  - "app/api/cs/*"
+  - "app/api/autofix/*"
+  # 감시 판정·수집·장비 제어 — 변압기 이상을 놓치면 안 되므로 자동 수정 대상에서 뺍니다.
+  - "collector/*"
+  - "lib/alarmEngine*"
+  - "lib/thresholds*"
+  - "lib/commands*"
+  - "lib/types*"
+  - "lib/configStore*"
+  - "lib/notify/*"
+  - "app/api/alarms/*"
+  - "app/api/commands/*"
+  - "app/api/config/*"
+  - "app/api/devices/*"
+  - "app/api/ingest/*"
+  - "app/api/mqtt/*"
+  - "app/api/notify/*"
+  - "app/api/stream/*"
+  - "app/api/chat/*"
+  # 로그인·권한·관리 메뉴와 메뉴 구성
+  - "middleware.ts"
+  - "lib/auth*"
+  - "lib/cookieSign*"
+  - "lib/db*"
+  - "lib/nav*"
+  - "lib/useSession*"
+  - "app/api/auth/*"
+  - "app/api/admin/*"
+  - "app/api/me/*"
+  - "app/admin/*"
+  - "app/settings/*"
+  - "app/login-history/*"
+  - "app/login/*"
+  - "app/signup/*"
+  - "components/AppShell*"
+  - "components/AdminClient*"
+  - "components/CommandClient*"
+  - "components/IngestClient*"
+  - "components/LoginHistoryClient*"
+  - "components/MqttClient*"
+  - "components/NotifyClient*"
+  - "components/SettingsClient*"
+  - "components/SettingsTabs*"
+rules: |
+  - 이 저장소는 변압기 감시 시스템이다. 임계치·알람 판정·계측값 처리·장비 제어·수집기·권한·로그인·DB 구조·배포는 바꾸지 않는다. 그런 요청이면 고치지 말고 까닭만 쓴다.
+  - 화면 문구는 업무 용어 그대로(설비·호기·수소·메탄·유면·임계치·주의·경고·위험·통신단절). 쉬운 말로 바꾸지 않는다.
+  - 화면에 조작 안내·설명 문장을 넣지 않는다. 빈 표는 «조회된 데이터가 없습니다.» 한 줄.
+  - 글자는 13px 아래로 내리지 않는다. 흰 바탕·남색, 둥근 카드·그림자·그라데이션·이모지 금지. 상태색은 글자에만.
+  - 숫자는 오른쪽 정렬·천 단위 콤마, 날짜는 YYYY-MM-DD.
+  - Next.js 14 규칙을 따른다(route 의 params 는 Promise 가 아니다).
+  - 주석은 둘레 코드처럼 한국어로, 왜 그렇게 했는지를 짧게.

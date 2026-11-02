@@ -80,9 +80,9 @@ export async function GET(request: Request) {
   );
 
   const users = await query(
-    `SELECT id, email, full_name, tier, is_active, created_at, last_login_at
+    `SELECT id, email, full_name, tier, is_active, approval, created_at, last_login_at
        FROM users ${whereSql}
-      ORDER BY created_at DESC
+      ORDER BY (approval = 'pending') DESC, created_at DESC
       LIMIT $${values.length + 1} OFFSET $${values.length + 2}`,
     [...values, pageSize, (page - 1) * pageSize]
   );
@@ -124,6 +124,17 @@ export async function PATCH(request: Request) {
     return NextResponse.json({ ok: true });
   }
 
+  // 가입 승인
+  if (body?.approve === true) {
+    if (!userId) return NextResponse.json({ error: "요청 값이 올바르지 않습니다." }, { status: 400 });
+    const approved = await execute(
+      `UPDATE users SET approval = 'approved' WHERE id = $1 AND approval = 'pending'`,
+      [userId]
+    );
+    if (!approved) return NextResponse.json({ error: "승인 대기 중인 회원이 아닙니다." }, { status: 404 });
+    return NextResponse.json({ ok: true });
+  }
+
   if (!userId || !["viewer", "admin"].includes(tier)) {
     return NextResponse.json({ error: "요청 값이 올바르지 않습니다." }, { status: 400 });
   }
@@ -148,5 +159,17 @@ export async function PATCH(request: Request) {
   // 등급이 바뀌면 기존 세션의 권한 캐시가 남지 않도록 세션을 끊습니다.
   await execute(`DELETE FROM sessions WHERE user_id = $1`, [userId]);
 
+  return NextResponse.json({ ok: true });
+}
+
+/** 가입 거절입니다. 승인 대기 계정만 지웁니다. 쓰던 계정이 이 경로로 지워지지 않게 조건을 겁니다. */
+export async function DELETE(request: Request) {
+  const admin = await requireAdmin();
+  if (!admin) return NextResponse.json({ error: "관리자 권한이 필요합니다." }, { status: 403 });
+
+  const userId = new URL(request.url).searchParams.get("user_id") ?? "";
+  if (!userId) return NextResponse.json({ error: "요청 값이 올바르지 않습니다." }, { status: 400 });
+  const removed = await execute(`DELETE FROM users WHERE id = $1 AND approval = 'pending'`, [userId]);
+  if (!removed) return NextResponse.json({ error: "승인 대기 중인 회원이 아닙니다." }, { status: 404 });
   return NextResponse.json({ ok: true });
 }

@@ -79,11 +79,12 @@ export interface SessionUser {
 interface UserRow extends SessionUser {
   password_hash: string;
   is_active: boolean;
+  approval: "approved" | "pending";
 }
 
 export async function findUserByEmail(email: string): Promise<UserRow | null> {
   return one<UserRow>(
-    `SELECT id, email, full_name, tier, password_hash, is_active
+    `SELECT id, email, full_name, tier, password_hash, is_active, approval
        FROM users
       WHERE lower(email) = lower($1)`,
     [email.trim()]
@@ -95,13 +96,14 @@ export async function createUser(input: {
   password: string;
   fullName?: string | null;
   tier?: "viewer" | "admin";
+  approval?: "approved" | "pending";
 }): Promise<SessionUser> {
   const passwordHash = await hashPassword(input.password);
   const rows = await query<SessionUser>(
-    `INSERT INTO users (email, full_name, password_hash, tier)
-     VALUES ($1, $2, $3, $4)
+    `INSERT INTO users (email, full_name, password_hash, tier, approval)
+     VALUES ($1, $2, $3, $4, $5)
      RETURNING id, email, full_name, tier`,
-    [input.email.trim(), input.fullName ?? null, passwordHash, input.tier ?? "viewer"]
+    [input.email.trim(), input.fullName ?? null, passwordHash, input.tier ?? "viewer", input.approval ?? "approved"]
   );
   return rows[0];
 }
@@ -149,7 +151,8 @@ export async function getSessionUser(): Promise<SessionUser | null> {
        JOIN users u ON u.id = s.user_id
       WHERE s.id = $1
         AND s.expires_at > now()
-        AND u.is_active`,
+        AND u.is_active
+        AND u.approval = 'approved'`,
     [sessionId]
   );
 }

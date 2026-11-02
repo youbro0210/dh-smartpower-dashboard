@@ -1,0 +1,132 @@
+/* 업무용 화면 전역 스타일 — app/globals.css 상단에 넣는다 */
+@import url("https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css");
+
+:root {
+  /* 바탕·선 */
+  --bg: #ffffff;
+  --bg-head: #f2f4f7;      /* 표 헤더, 폼 라벨 칸 */
+  --bg-sum: #f9fafb;       /* 합계 행 */
+  --bg-hover: #f5f8fc;
+  --bg-selected: #e8f0fa;
+  --line: #d0d5dd;         /* 기본 실선 */
+  --line-strong: #98a2b3;  /* 합계 위 선, 강조 구분 */
+
+  /* 글자 */
+  --text: #1d2939;
+  --text-sub: #475467;
+  --text-muted: #98a2b3;
+
+  /* 주색상: 진한 남색 1개 */
+  --primary: #1f3a5f;
+  --primary-hover: #17304f;
+  --primary-soft: #e8f0fa;
+
+  /* 상태색: 글자에만 사용 */
+  --danger: #c4320a;
+  --success: #067647;
+  --warning: #b54708;
+
+  /* 크기 */
+  --fs-xs: 12px;
+  --fs-sm: 13px;
+  --fs-base: 14px;
+  --fs-title: 16px;
+  --h-row: 32px;
+  --h-head: 34px;
+  --h-input: 30px;
+  --h-btn: 30px;
+  --radius: 2px;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: "Pretendard Variable", Pretendard, -apple-system, "Malgun Gothic", sans-serif;
+  font-size: var(--fs-base);
+  line-height: 1.5;
+  letter-spacing: -0.01em;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* 버튼 */
+.btn {
+  height: var(--h-btn);
+  padding: 0 12px;
+  font-size: var(--fs-sm);
+  font-weight: 500;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: #fff;
+  color: var(--text);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.btn:hover { background: var(--bg-head); }
+.btn-primary { background: var(--primary); border-color: var(--primary); color: #fff; }
+.btn-primary:hover { background: var(--primary-hover); }
+.btn-danger { color: var(--danger); }
+.btn:disabled { color: var(--text-muted); background: var(--bg-sum); cursor: default; }
+
+/* 입력 */
+.input, .select {
+  height: var(--h-input);
+  padding: 0 8px;
+  font-size: var(--fs-sm);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: #fff;
+  color: var(--text);
+}
+.input:focus, .select:focus { outline: none; border-color: var(--primary); }
+.input.num { text-align: right; font-variant-numeric: tabular-nums; }
+
+/* 데이터 표 */
+.grid {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--fs-sm);
+  font-variant-numeric: tabular-nums;
+}
+.grid th, .grid td {
+  border: 1px solid var(--line);
+  padding: 0 8px;
+  height: var(--h-row);
+  white-space: nowrap;
+}
+.grid thead th {
+  height: var(--h-head);
+  background: var(--bg-head);
+  font-weight: 600;
+  text-align: center;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+.grid tbody tr:hover td { background: var(--bg-hover); }
+.grid tbody tr.selected td { background: var(--bg-selected); }
+.grid .num { text-align: right; }
+.grid .center { text-align: center; }
+.grid tfoot td { background: var(--bg-sum); font-weight: 600; border-top: 1px solid var(--line-strong); }
+.grid .empty { text-align: center; color: var(--text-muted); height: 80px; }
+
+/* 입력폼 격자 */
+.form-grid { width: 100%; border-collapse: collapse; font-size: var(--fs-sm); }
+.form-grid th, .form-grid td { border: 1px solid var(--line); padding: 4px 8px; height: 38px; }
+.form-grid th { width: 120px; background: var(--bg-head); font-weight: 500; text-align: left; white-space: nowrap; }
+.form-grid .req::before { content: "*"; color: var(--danger); margin-right: 2px; }
+
+/* 화면 제목 행 */
+.page-head {
+  display: flex; align-items: center; justify-content: space-between;
+  height: 44px; border-bottom: 1px solid var(--line); margin-bottom: 12px;
+}
+.page-head h1 { font-size: var(--fs-title); font-weight: 600; margin: 0; }
+.toolbar { display: flex; gap: 4px; }
+
+/* 상태 글자 */
+.t-danger { color: var(--danger); }
+.t-success { color: var(--success); }
+.t-warning { color: var(--warning); }
+.t-muted { color: var(--text-muted); }

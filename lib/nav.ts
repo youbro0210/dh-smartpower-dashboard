@@ -33,6 +33,13 @@ export const NAV: NavGroup[] = [
     ],
   },
   {
+    label: "CS 요청",
+    items: [
+      { href: "/cs/new", label: "요청 접수", icon: "request" },
+      { href: "/cs", label: "반영 확인", icon: "check" },
+    ],
+  },
+  {
     label: "관리",
     items: [
       { href: "/settings", label: "설정", icon: "settings", adminOnly: true },
