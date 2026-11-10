@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { kstParts } from "@/lib/kst";
 import { getSessionUser, requireAdmin } from "@/lib/auth";
 import { query, one, execute } from "@/lib/db";
 import {
@@ -66,12 +67,25 @@ export async function GET() {
     string,
     { labels: string[]; temperature: (number | null)[]; h2: (number | null)[]; ch4: (number | null)[] }
   > = {};
+  // 최근 24시간을 1시간 칸 24개로 고정합니다. 값이 없는 시간은 null 로 두어 선을 끊습니다.
+  // 시각 표기는 한국 시각입니다 (서버 시계는 UTC).
+  const HOUR = 3_600_000;
+  const lastSlot = Math.floor(Date.now() / HOUR) * HOUR;
+  const slots = Array.from({ length: 24 }, (_, i) => lastSlot - (23 - i) * HOUR);
+  const slotLabels = slots.map((t) => `${kstParts(new Date(t)).hour}시`);
+  const byDevice = new Map<string, Map<number, TrendRow>>();
   for (const row of trendRows) {
-    const bucket = (trends[row.device_id] ??= { labels: [], temperature: [], h2: [], ch4: [] });
-    bucket.labels.push(`${new Date(row.bucket).getHours()}시`);
-    bucket.temperature.push(round1(row.temperature));
-    bucket.h2.push(round1(row.h2));
-    bucket.ch4.push(round1(row.ch4));
+    const map = byDevice.get(row.device_id) ?? new Map<number, TrendRow>();
+    map.set(new Date(row.bucket).getTime(), row);
+    byDevice.set(row.device_id, map);
+  }
+  for (const [deviceId, map] of byDevice) {
+    trends[deviceId] = {
+      labels: slotLabels,
+      temperature: slots.map((t) => round1(map.get(t)?.temperature ?? null)),
+      h2: slots.map((t) => round1(map.get(t)?.h2 ?? null)),
+      ch4: slots.map((t) => round1(map.get(t)?.ch4 ?? null)),
+    };
   }
 
   const alarms24h = await one<{ count: number }>(

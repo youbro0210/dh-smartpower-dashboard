@@ -1,4 +1,5 @@
 import { query, one, execute } from "@/lib/db";
+import { kstParts } from "@/lib/kst";
 import { sendVia } from "./providers";
 import {
   AlarmPayload,
@@ -20,7 +21,8 @@ const LEVEL_LABEL: Record<Severity, string> = {
 export function renderAlarm(alarm: AlarmPayload): { subject: string; text: string } {
   const when = alarm.created_at ? new Date(alarm.created_at) : new Date();
   const pad = (n: number) => String(n).padStart(2, "0");
-  const stamp = `${pad(when.getMonth() + 1)}-${pad(when.getDate())} ${pad(when.getHours())}:${pad(when.getMinutes())}`;
+  const k = kstParts(when);
+  const stamp = `${pad(k.month)}-${pad(k.day)} ${pad(k.hour)}:${pad(k.minute)}`;
   const label = LEVEL_LABEL[alarm.level];
 
   const lines = [
@@ -48,7 +50,7 @@ export function inQuietHours(
   const { quiet_from: from, quiet_to: to } = recipient;
   if (from === null || to === null || from === undefined || to === undefined) return false;
   if (from === to) return false;
-  const hour = at.getHours();
+  const hour = kstParts(at).hour; // 야간 구간은 한국 시각 기준
   return from < to ? hour >= from && hour < to : hour >= from || hour < to;
 }
 
