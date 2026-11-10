@@ -11,7 +11,9 @@ export async function GET(request: Request) {
   if (!admin) return NextResponse.json({ error: "관리자 권한이 필요합니다." }, { status: 403 });
 
   const url = new URL(request.url);
-  const limit = Math.min(200, Math.max(1, Number(url.searchParams.get("limit") ?? 50)));
+  // pageSize(없으면 예전 limit) 단위로 나눠 돌려줍니다.
+  const pageSize = Math.min(200, Math.max(1, Number(url.searchParams.get("pageSize") ?? url.searchParams.get("limit") ?? 50)));
+  const page = Math.max(1, Number(url.searchParams.get("page") ?? 1));
   const status = url.searchParams.get("status");
   const kind = url.searchParams.get("kind");
   const keyword = (url.searchParams.get("q") ?? "").trim();
@@ -34,17 +36,19 @@ export async function GET(request: Request) {
   }
 
   const whereSql = where.length ? `WHERE ${where.join(" AND ")}` : "";
-  args.push(limit);
+  const countArgs = [...args];
+  args.push(pageSize, (page - 1) * pageSize);
 
-  const [rows, summary] = await Promise.all([
+  const [rows, counted, summary] = await Promise.all([
     query(
       `SELECT id, topic, src_type, src_id, kind, device_ids, item_count,
               stored_count, replay, status, message, payload, received_at
          FROM ingest_log ${whereSql}
         ORDER BY received_at DESC
-        LIMIT $${args.length}`,
+        LIMIT $${args.length - 1} OFFSET $${args.length}`,
       args
     ),
+    one<{ total: number }>(`SELECT count(*)::int AS total FROM ingest_log ${whereSql}`, countArgs),
     one(
       `SELECT count(*)::int AS total,
               count(*) FILTER (WHERE status = 'ok')::int    AS ok,
@@ -56,5 +60,5 @@ export async function GET(request: Request) {
     ),
   ]);
 
-  return NextResponse.json({ log: rows, summary });
+  return NextResponse.json({ log: rows, total: counted?.total ?? 0, page, pageSize, summary });
 }

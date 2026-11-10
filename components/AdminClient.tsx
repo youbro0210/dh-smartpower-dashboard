@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import Pager from "./Pager";
 import PageHeader from "./PageHeader";
 import { fmtDate, fmtDateTime } from "@/lib/format";
 
@@ -28,7 +29,8 @@ export default function AdminClient() {
   const [userPage, setUserPage] = useState(1);
   const [userFrom, setUserFrom] = useState("");
   const [userTo, setUserTo] = useState("");
-  const [userLoading, setUserLoading] = useState(true);
+  const [userLoading, setUserLoading] = useState(false);
+  const [userSearched, setUserSearched] = useState(false);
   const [userError, setUserError] = useState<string | null>(null);
   const [savingId, setSavingId] = useState<string | null>(null);
   const [notice, setNotice] = useState<{ ok: boolean; text: string } | null>(null);
@@ -47,7 +49,8 @@ export default function AdminClient() {
   const [loginPage, setLoginPage] = useState(1);
   const [loginFrom, setLoginFrom] = useState("");
   const [loginTo, setLoginTo] = useState("");
-  const [loginLoading, setLoginLoading] = useState(true);
+  const [loginLoading, setLoginLoading] = useState(false);
+  const [loginSearched, setLoginSearched] = useState(false);
   const [loginError, setLoginError] = useState<string | null>(null);
 
   async function loadUsers(page = userPage) {
@@ -67,6 +70,7 @@ export default function AdminClient() {
       setUserTotal(json.total ?? 0);
       setUserPage(page);
     }
+    setUserSearched(true);
     setUserLoading(false);
   }
 
@@ -87,14 +91,10 @@ export default function AdminClient() {
       setLoginTotal(json.total ?? 0);
       setLoginPage(page);
     }
+    setLoginSearched(true);
     setLoginLoading(false);
   }
 
-  useEffect(() => {
-    loadUsers(1);
-    loadLogins(1);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   async function changeTier(id: string, tier: string) {
     setSavingId(id);
@@ -167,8 +167,6 @@ export default function AdminClient() {
     setPwValue("");
   }
 
-  const userPages = Math.max(1, Math.ceil(userTotal / PAGE_SIZE));
-  const loginPages = Math.max(1, Math.ceil(loginTotal / PAGE_SIZE));
 
   return (
     <>
@@ -274,6 +272,8 @@ export default function AdminClient() {
             <tbody>
               {userLoading ? (
                 <tr><td className="empty" colSpan={7}>불러오는 중...</td></tr>
+              ) : !userSearched ? (
+                <tr><td className="empty" colSpan={7}></td></tr>
               ) : users.length === 0 && !userError ? (
                 <tr><td className="empty" colSpan={7}>조회된 데이터가 없습니다.</td></tr>
               ) : (
@@ -350,12 +350,8 @@ export default function AdminClient() {
           </table>
         </div>
 
-        {userTotal > 0 && (
-          <div className="save-bar" style={{ justifyContent: "center" }}>
-            <button className="btn" disabled={userPage <= 1} onClick={() => loadUsers(userPage - 1)}>이전</button>
-            <span className="card-note">{userPage} / {userPages}</span>
-            <button className="btn" disabled={userPage >= userPages} onClick={() => loadUsers(userPage + 1)}>다음</button>
-          </div>
+        {userSearched && (
+          <Pager page={userPage} total={userTotal} pageSize={PAGE_SIZE} loading={userLoading} onPage={(n) => void loadUsers(n)} />
         )}
       </div>
 
@@ -391,6 +387,8 @@ export default function AdminClient() {
             <tbody>
               {loginLoading ? (
                 <tr><td className="empty" colSpan={3}>불러오는 중...</td></tr>
+              ) : !loginSearched ? (
+                <tr><td className="empty" colSpan={3}></td></tr>
               ) : logins.length === 0 && !loginError ? (
                 <tr><td className="empty" colSpan={3}>조회된 데이터가 없습니다.</td></tr>
               ) : (
@@ -406,12 +404,8 @@ export default function AdminClient() {
           </table>
         </div>
 
-        {loginTotal > 0 && (
-          <div className="save-bar" style={{ justifyContent: "center" }}>
-            <button className="btn" disabled={loginPage <= 1} onClick={() => loadLogins(loginPage - 1)}>이전</button>
-            <span className="card-note">{loginPage} / {loginPages}</span>
-            <button className="btn" disabled={loginPage >= loginPages} onClick={() => loadLogins(loginPage + 1)}>다음</button>
-          </div>
+        {loginSearched && (
+          <Pager page={loginPage} total={loginTotal} pageSize={PAGE_SIZE} loading={loginLoading} onPage={(n) => void loadLogins(n)} />
         )}
       </div>
     </>

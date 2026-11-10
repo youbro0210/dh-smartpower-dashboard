@@ -1,8 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import PageHeader from "./PageHeader";
 import SettingsTabs from "./SettingsTabs";
+import Pager from "./Pager";
 
 interface Row {
   id: number;
@@ -62,38 +63,35 @@ export default function IngestClient() {
   const [status, setStatus] = useState("");
   const [kind, setKind] = useState("");
   const [keyword, setKeyword] = useState("");
-  const [limit, setLimit] = useState(50);
+  const [pageSize, setPageSize] = useState(50);
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
   const [openId, setOpenId] = useState<number | null>(null);
-  const [auto, setAuto] = useState(true);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [searched, setSearched] = useState(false);
 
-  const load = useCallback(async () => {
-    const params = new URLSearchParams({ limit: String(limit) });
+  const load = useCallback(async (targetPage = 1) => {
+    const params = new URLSearchParams({ page: String(targetPage), pageSize: String(pageSize) });
     if (status) params.set("status", status);
     if (kind) params.set("kind", kind);
     if (keyword.trim()) params.set("q", keyword.trim());
 
+    setLoading(true);
     try {
       const res = await fetch(`/api/ingest?${params}`, { cache: "no-store" });
       const body = await res.json();
       if (res.ok) {
         setRows(body.log ?? []);
+        setTotal(body.total ?? 0);
         setSummary(body.summary ?? null);
+        setPage(targetPage);
+        setOpenId(null);
+        setSearched(true);
       }
     } finally {
       setLoading(false);
     }
-  }, [status, kind, keyword, limit]);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
-
-  useEffect(() => {
-    if (!auto) return;
-    const timer = setInterval(() => void load(), 5000);
-    return () => clearInterval(timer);
-  }, [auto, load]);
+  }, [status, kind, keyword, pageSize]);
 
   return (
     <>
@@ -101,11 +99,6 @@ export default function IngestClient() {
         title="수집 내역"
         breadcrumb="홈 › 설정 › 수집 내역"
         subtitle="수신 메시지 원문"
-        actions={
-          <button className="btn" onClick={() => void load()} disabled={loading}>
-            새로고침
-          </button>
-        }
       />
 
       <SettingsTabs active="ingest" />
@@ -158,18 +151,27 @@ export default function IngestClient() {
           placeholder="토픽 · 장치 · 설비 id"
         />
 
-        <span className="filter-label">건수</span>
-        <select className="field" value={limit} onChange={(e) => setLimit(Number(e.target.value))}>
+        <span className="filter-label">페이지당</span>
+        <select className="field" value={pageSize} onChange={(e) => setPageSize(Number(e.target.value))}>
           {[50, 100, 200].map((n) => (
             <option key={n} value={n}>{n}건</option>
           ))}
         </select>
 
         <div className="filterbar-right">
-          <label style={{ display: "flex", alignItems: "center", gap: 6 }}>
-            <input type="checkbox" checked={auto} onChange={(e) => setAuto(e.target.checked)} />
-            5초마다 갱신
-          </label>
+          <button
+            className="btn"
+            onClick={() => {
+              setStatus("");
+              setKind("");
+              setKeyword("");
+            }}
+          >
+            초기화
+          </button>
+          <button className="btn primary" onClick={() => void load(1)} disabled={loading}>
+            조회
+          </button>
         </div>
       </div>
 
@@ -179,7 +181,7 @@ export default function IngestClient() {
             <span className="accent-bar" />
             수신 내역
           </div>
-          <span className="card-note">{rows.length}건</span>
+          <span className="card-note">{searched ? `${total.toLocaleString()}건` : ""}</span>
         </div>
 
         <div className="table-wrap">
@@ -207,7 +209,7 @@ export default function IngestClient() {
               </tr>
             </thead>
             <tbody>
-              {rows.length === 0 && (
+              {searched && !loading && rows.length === 0 && (
                 <tr>
                   <td className="empty" colSpan={8}>
                     조회된 데이터가 없습니다.
@@ -251,6 +253,9 @@ export default function IngestClient() {
             </tbody>
           </table>
         </div>
+        {searched && (
+          <Pager page={page} total={total} pageSize={pageSize} loading={loading} onPage={(n) => void load(n)} />
+        )}
 
         {openId !== null && (
           <div style={{ paddingTop: 12 }}>

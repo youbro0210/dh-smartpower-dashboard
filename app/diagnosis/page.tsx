@@ -1,7 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import PageHeader from "@/components/PageHeader";
+import Pager from "@/components/Pager";
+import { usePaged } from "@/lib/usePaged";
 import { downloadCsv, fmtDate, fmtShort } from "@/lib/format";
 
 type Row = {
@@ -77,7 +79,8 @@ function interpret(r: Row, highH2: boolean, highCh4: boolean): { text: string; c
 
 export default function DiagnosisPage() {
   const [rows, setRows] = useState<Row[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [searched, setSearched] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [crit, setCrit] = useState(DEFAULT_CRITERIA);
 
@@ -93,6 +96,7 @@ export default function DiagnosisPage() {
         return;
       }
       setRows(json.devices ?? []);
+      setSearched(true);
     } catch {
       setError("서버에 연결할 수 없습니다.");
     } finally {
@@ -100,9 +104,6 @@ export default function DiagnosisPage() {
     }
   }, []);
 
-  useEffect(() => {
-    void load();
-  }, [load]);
 
   const judged = useMemo(
     () =>
@@ -134,6 +135,7 @@ export default function DiagnosisPage() {
       }),
     [rows, crit]
   );
+  const pg = usePaged(judged, 20);
 
   const count = (s: 1 | 2 | 3) => judged.filter((j) => j.status === s).length;
   const lacking = judged.filter((j) => !j.enough).length;
@@ -268,14 +270,14 @@ export default function DiagnosisPage() {
               </tr>
             </thead>
             <tbody>
-              {!loading && rows.length === 0 && (
+              {searched && !loading && rows.length === 0 && (
                 <tr>
                   <td className="empty" colSpan={14}>
                     조회된 데이터가 없습니다.
                   </td>
                 </tr>
               )}
-              {judged.map((j) => (
+              {pg.slice.map((j) => (
                 <tr key={j.r.device_id}>
                   <td>
                     <b>{j.r.name}</b> <span className="t-muted">{j.r.building}</span>
@@ -304,6 +306,9 @@ export default function DiagnosisPage() {
             </tbody>
           </table>
         </div>
+        {searched && pg.total > 20 && (
+          <Pager page={pg.page} total={pg.total} pageSize={20} onPage={pg.setPage} />
+        )}
       </div>
 
       <table className="form-grid note-grid">

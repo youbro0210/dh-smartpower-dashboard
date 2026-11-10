@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import PageHeader from "./PageHeader";
 import SettingsTabs from "./SettingsTabs";
+import Pager from "./Pager";
+import { usePaged } from "@/lib/usePaged";
 import { COMMANDS, COMMAND_KEYS, COMMAND_STATUS_LABEL } from "@/lib/commands";
 
 interface CommandRow {
@@ -100,6 +102,8 @@ export default function CommandClient() {
     const timer = setInterval(() => void load(), 3000);
     return () => clearInterval(timer);
   }, [commands, load]);
+
+  const pg = usePaged(commands, 20);
 
   const deviceChoices = useMemo(
     () =>
@@ -288,7 +292,7 @@ export default function CommandClient() {
                   </td>
                 </tr>
               )}
-              {commands.map((row) => (
+              {pg.slice.map((row) => (
                 <tr key={row.id} className={`clickable${openId === row.id ? " selected" : ""}`}
                   onClick={() => setOpenId(openId === row.id ? null : row.id)}>
                   <td className="num">{row.id}</td>
@@ -328,6 +332,7 @@ export default function CommandClient() {
             </tbody>
           </table>
         </div>
+        {pg.total > 20 && <Pager page={pg.page} total={pg.total} pageSize={20} onPage={pg.setPage} />}
 
         {openId !== null && (
           <div style={{ paddingTop: 12 }}>

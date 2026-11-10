@@ -10,6 +10,8 @@ import {
   SeverityLevel,
 } from "@/lib/types";
 import { downloadCsv, fmtDateTime, fmtShort } from "@/lib/format";
+import Pager from "./Pager";
+import { usePaged } from "@/lib/usePaged";
 import Sparkline from "./Sparkline";
 
 /** 상태 정렬 순서 — 손봐야 할 설비가 위로 옵니다. */
@@ -78,10 +80,16 @@ export default function DeviceTable({
   devices,
   alarms,
   total,
+  pageSize = 20,
+  searched = true,
 }: {
   devices: DeviceEvaluated[];
   alarms: AlarmEvent[];
   total?: number;
+  /** 한 페이지에 보일 설비 수 */
+  pageSize?: number;
+  /** 조회 전이면 빈 표만 보입니다. */
+  searched?: boolean;
 }) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   // 기본은 상태순 — 이상이 난 설비가 맨 위로 옵니다.
@@ -115,6 +123,8 @@ export default function DeviceTable({
       return (va - vb) * dir || a.no - b.no;
     });
   }, [numbered, sort]);
+
+  const pg = usePaged(rows, pageSize);
 
   const toggleSort = (key: SortKey) =>
     setSort((s) =>
@@ -200,7 +210,7 @@ export default function DeviceTable({
             </tr>
           </thead>
           <tbody>
-            {devices.length === 0 && (
+            {searched && devices.length === 0 && (
               <tr>
                 <td className="empty" colSpan={COLUMNS.length}>
                   조회된 데이터가 없습니다.
@@ -208,7 +218,7 @@ export default function DeviceTable({
               </tr>
             )}
 
-            {rows.map(({ d: u, no }) => {
+            {pg.slice.map(({ d: u, no }) => {
               const open = expandedId === u.device_id;
               const related = alarms.filter(
                 (a) => a.device_id === u.device_id || a.unit === u.name
@@ -369,6 +379,9 @@ export default function DeviceTable({
           </tbody>
         </table>
       </div>
+      {searched && pg.total > pageSize && (
+        <Pager page={pg.page} total={pg.total} pageSize={pageSize} onPage={pg.setPage} />
+      )}
     </div>
   );
 }

@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import Pager from "@/components/Pager";
+import { useCallback, useState } from "react";
 import PageHeader from "./PageHeader";
 import { fmtDateTime } from "@/lib/format";
 
@@ -21,7 +22,8 @@ export default function LoginHistoryClient() {
   const [page, setPage] = useState(1);
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [searched, setSearched] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(
@@ -47,6 +49,7 @@ export default function LoginHistoryClient() {
         setRows(json.events ?? []);
         setTotal(json.total ?? 0);
         setPage(targetPage);
+        setSearched(true);
       } catch {
         setError("서버에 연결할 수 없습니다.");
       } finally {
@@ -56,10 +59,6 @@ export default function LoginHistoryClient() {
     [from, to]
   );
 
-  useEffect(() => {
-    void load(1);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   const lastPage = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const failures = rows.filter((r) => !r.success).length;
@@ -118,7 +117,7 @@ export default function LoginHistoryClient() {
               </tr>
             </thead>
             <tbody>
-              {!loading && rows.length === 0 && !error && (
+              {searched && !loading && rows.length === 0 && !error && (
                 <tr>
                   <td className="empty" colSpan={5}>
                     조회된 데이터가 없습니다.
@@ -144,19 +143,9 @@ export default function LoginHistoryClient() {
           </table>
         </div>
 
-        <div className="save-bar" style={{ justifyContent: "center" }}>
-          <button className="btn" disabled={page <= 1 || loading} onClick={() => void load(page - 1)}>
-            이전
-          </button>
-          <button
-            className="btn"
-            disabled={page >= lastPage || loading}
-            onClick={() => void load(page + 1)}
-          >
-            다음
-          </button>
-          <span className="card-note">{loading ? "불러오는 중..." : `${rows.length}건 표시`}</span>
-        </div>
+        {searched && (
+          <Pager page={page} total={total} pageSize={PAGE_SIZE} loading={loading} onPage={(n) => void load(n)} />
+        )}
       </div>
     </>
   );

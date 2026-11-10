@@ -1,7 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import PageHeader from "@/components/PageHeader";
+import Pager from "@/components/Pager";
+import { usePaged } from "@/lib/usePaged";
 import { useDashboard } from "@/lib/configStore";
 import { downloadCsv, fmtDate, fmtDateTime } from "@/lib/format";
 
@@ -83,7 +85,8 @@ export default function ReportPage() {
   const { thresholds } = useDashboard();
   const [[from, to], setRange] = useState<[string, string]>(() => preset("week"));
   const [report, setReport] = useState<Report | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [searched, setSearched] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async (f: string, t: string) => {
@@ -98,6 +101,7 @@ export default function ReportPage() {
         return;
       }
       setReport(json);
+      setSearched(true);
     } catch {
       setError("서버에 연결할 수 없습니다.");
     } finally {
@@ -105,11 +109,6 @@ export default function ReportPage() {
     }
   }, []);
 
-  useEffect(() => {
-    void load(from, to);
-    // 최초 1회만 조회합니다.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   const pick = (kind: Parameters<typeof preset>[0]) => {
     const [f, t] = preset(kind);
@@ -128,7 +127,10 @@ export default function ReportPage() {
     return map;
   }, [report]);
 
-  const rows = report?.devices ?? [];
+  const rows = useMemo(() => report?.devices ?? [], [report]);
+  const devPg = usePaged(rows, 20);
+  const maintRows = useMemo(() => report?.maintenance ?? [], [report]);
+  const maintPg = usePaged(maintRows, 20);
   const exp = report?.expectedSamples ?? 0;
   const rate = (n: number) => (exp ? Math.min(100, (n / exp) * 100) : 0);
 
@@ -289,14 +291,14 @@ export default function ReportPage() {
               </tr>
             </thead>
             <tbody>
-              {!loading && rows.length === 0 && (
+              {searched && !loading && rows.length === 0 && (
                 <tr>
                   <td className="empty" colSpan={16}>
                     조회된 데이터가 없습니다.
                   </td>
                 </tr>
               )}
-              {rows.map((r) => {
+              {devPg.slice.map((r) => {
                 const a = alarmBy.get(r.device_id) ?? { caution: 0, warning: 0, danger: 0 };
                 const rr = rate(r.samples);
                 return (
@@ -326,6 +328,9 @@ export default function ReportPage() {
             </tbody>
           </table>
         </div>
+        {searched && devPg.total > 20 && (
+          <Pager page={devPg.page} total={devPg.total} pageSize={20} onPage={devPg.setPage} />
+        )}
       </div>
 
       <div className="card flush">
@@ -353,14 +358,14 @@ export default function ReportPage() {
               </tr>
             </thead>
             <tbody>
-              {(report?.maintenance.length ?? 0) === 0 && (
+              {searched && maintRows.length === 0 && (
                 <tr>
                   <td className="empty" colSpan={4}>
                     조회된 데이터가 없습니다.
                   </td>
                 </tr>
               )}
-              {report?.maintenance.map((m, i) => (
+              {maintPg.slice.map((m, i) => (
                 <tr key={i}>
                   <td className="center">{m.work_date}</td>
                   <td>
@@ -373,6 +378,9 @@ export default function ReportPage() {
             </tbody>
           </table>
         </div>
+        {searched && maintPg.total > 20 && (
+          <Pager page={maintPg.page} total={maintPg.total} pageSize={20} onPage={maintPg.setPage} />
+        )}
       </div>
     </>
   );

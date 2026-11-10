@@ -1,7 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import PageHeader from "@/components/PageHeader";
+import Pager from "@/components/Pager";
 import { useDashboard } from "@/lib/configStore";
 import { useSession } from "@/lib/useSession";
 import { downloadCsv, fmtDate } from "@/lib/format";
@@ -59,7 +60,8 @@ export default function MaintenancePage() {
   const [to, setTo] = useState("");
   const [device, setDevice] = useState("");
   const [kind, setKind] = useState("");
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [searched, setSearched] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const [adding, setAdding] = useState(false);
@@ -89,6 +91,7 @@ export default function MaintenancePage() {
         setDue(json.due ?? []);
         setTotal(json.total ?? 0);
         setPage(targetPage);
+        setSearched(true);
       } catch {
         setError("서버에 연결할 수 없습니다.");
       } finally {
@@ -98,11 +101,6 @@ export default function MaintenancePage() {
     [from, to, device, kind]
   );
 
-  useEffect(() => {
-    void load(1);
-    // 최초 1회만 조회합니다. 이후는 조회 버튼으로 실행합니다.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -122,7 +120,7 @@ export default function MaintenancePage() {
     setNotice({ ok: true, text: "점검 이력을 등록했습니다." });
     setForm({ ...EMPTY_FORM, work_date: form.work_date });
     setAdding(false);
-    await load(1);
+    if (searched) await load(1);
   }
 
   async function remove(r: LogRow) {
@@ -418,7 +416,7 @@ export default function MaintenancePage() {
               </tr>
             </thead>
             <tbody>
-              {!loading && rows.length === 0 && !error && (
+              {searched && !loading && rows.length === 0 && !error && (
                 <tr>
                   <td className="empty" colSpan={isAdmin ? 7 : 6}>
                     조회된 데이터가 없습니다.
@@ -451,14 +449,9 @@ export default function MaintenancePage() {
           </table>
         </div>
 
-        <div className="save-bar" style={{ justifyContent: "center" }}>
-          <button className="btn" disabled={page <= 1 || loading} onClick={() => void load(page - 1)}>
-            이전
-          </button>
-          <button className="btn" disabled={page >= lastPage || loading} onClick={() => void load(page + 1)}>
-            다음
-          </button>
-        </div>
+        {searched && (
+          <Pager page={page} total={total} pageSize={PAGE_SIZE} loading={loading} onPage={(n) => void load(n)} />
+        )}
       </div>
     </>
   );

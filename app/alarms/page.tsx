@@ -1,7 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import PageHeader from "@/components/PageHeader";
+import Pager from "@/components/Pager";
 import { useDashboard } from "@/lib/configStore";
 import { downloadCsv, fmtDateTime } from "@/lib/format";
 import { STATUS_LABEL } from "@/lib/types";
@@ -35,7 +36,8 @@ export default function AlarmsPage() {
   const [to, setTo] = useState("");
   const [level, setLevel] = useState("");
   const [device, setDevice] = useState("");
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [searched, setSearched] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(
@@ -65,6 +67,7 @@ export default function AlarmsPage() {
         setTotal(json.total ?? 0);
         setByLevel(json.byLevel ?? {});
         setPage(targetPage);
+        setSearched(true);
       } catch {
         setError("서버에 연결할 수 없습니다.");
       } finally {
@@ -73,12 +76,6 @@ export default function AlarmsPage() {
     },
     [from, to, level, device]
   );
-
-  useEffect(() => {
-    void load(1);
-    // 최초 1회만 조회합니다. 이후는 조회 버튼으로 실행합니다.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   const lastPage = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const allCount = Object.values(byLevel).reduce((a, b) => a + b, 0);
@@ -222,7 +219,7 @@ export default function AlarmsPage() {
               </tr>
             </thead>
             <tbody>
-              {!loading && rows.length === 0 && !error && (
+              {searched && !loading && rows.length === 0 && !error && (
                 <tr>
                   <td className="empty" colSpan={6}>
                     조회된 데이터가 없습니다.
@@ -255,19 +252,9 @@ export default function AlarmsPage() {
           </table>
         </div>
 
-        <div className="save-bar" style={{ justifyContent: "center" }}>
-          <button className="btn" disabled={page <= 1 || loading} onClick={() => void load(page - 1)}>
-            이전
-          </button>
-          <button
-            className="btn"
-            disabled={page >= lastPage || loading}
-            onClick={() => void load(page + 1)}
-          >
-            다음
-          </button>
-          <span className="card-note">{loading ? "불러오는 중..." : `${total.toLocaleString()}건 중 ${rows.length.toLocaleString()}건 표시`}</span>
-        </div>
+        {searched && (
+          <Pager page={page} total={total} pageSize={PAGE_SIZE} loading={loading} onPage={(n) => void load(n)} />
+        )}
       </div>
     </>
   );

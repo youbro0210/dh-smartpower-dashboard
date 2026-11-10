@@ -71,6 +71,8 @@ export default async function CsPage({ searchParams }: { searchParams: Record<st
   const st = rawSt === null ? (admin ? "OPEN" : "") : rawSt;
   const id = Number(text("id")) || null;
   const kw = text("q") || null;
+  const PAGE_SIZE = 20;
+  const pg = Math.max(1, Number(text("pg")) || 1);
 
   const rows = await query<ListRow>(
     `SELECT c.id, COALESCE(NULLIF(c.analysis->>'title', ''), c.title) AS title, c.status, c.kind, c.analysis->>'risk' AS risk,
@@ -87,9 +89,23 @@ export default async function CsPage({ searchParams }: { searchParams: Record<st
         AND ($3::text = '' OR ($3 = 'OPEN' AND c.status IN ('RECEIVED', 'ANALYZED', 'NEEDS_INFO', 'APPROVED')) OR c.status = $3)
         AND ($4::text IS NULL OR concat_ws(' ', '#' || c.id, c.title, c.analysis->>'title', c.body, u.full_name, u.email) ILIKE '%' || $4 || '%')
       ORDER BY CASE WHEN $1 THEN c.status IN ('RECEIVED', 'ANALYZED', 'APPROVED') ELSE c.status = 'NEEDS_INFO' END DESC, c.id DESC
-      LIMIT 200`,
-    [admin, user.id, st, kw]
+      LIMIT $5 OFFSET $6`,
+    [admin, user.id, st, kw, PAGE_SIZE, (pg - 1) * PAGE_SIZE]
   );
+  const listTotal =
+    (
+      await one<{ n: number }>(
+        `SELECT count(*)::int AS n
+           FROM cs_requests c
+           LEFT JOIN users u ON u.id = c.created_by
+          WHERE ($1::boolean OR c.created_by = $2)
+            AND ($3::text = '' OR ($3 = 'OPEN' AND c.status IN ('RECEIVED', 'ANALYZED', 'NEEDS_INFO', 'APPROVED')) OR c.status = $3)
+            AND ($4::text IS NULL OR concat_ws(' ', '#' || c.id, c.title, c.analysis->>'title', c.body, u.full_name, u.email) ILIKE '%' || $4 || '%')
+`,
+        [admin, user.id, st, kw]
+      )
+    )?.n ?? 0;
+  const lastPg = Math.max(1, Math.ceil(listTotal / PAGE_SIZE));
   const cnt = await one<{ open: number; ask: number; all: number; done: number; rej: number }>(
     `SELECT count(*) FILTER (WHERE status IN ('RECEIVED', 'ANALYZED', 'NEEDS_INFO', 'APPROVED'))::int AS open,
             count(*) FILTER (WHERE status = 'NEEDS_INFO')::int AS ask, count(*)::int AS all,
@@ -141,7 +157,7 @@ export default async function CsPage({ searchParams }: { searchParams: Record<st
     ["REJECTED", "반려", cnt?.rej ?? 0, false],
   ];
   const href = (p: Record<string, string | number | null>) => {
-    const v = { st, q: kw, ...p };
+    const v = { st, q: kw, pg: pg > 1 ? pg : null, ...p };
     const u = new URLSearchParams();
     for (const [k, x] of Object.entries(v)) if (x != null && x !== "") u.set(k, String(x));
     if (v.st === "") u.set("st", "");
@@ -189,7 +205,7 @@ export default async function CsPage({ searchParams }: { searchParams: Record<st
 
       <nav className="cs-sttabs" aria-label="상태">
         {tabs.map(([k, label, n, alert]) => (
-          <Link key={k || "all"} href={href({ st: k, id: null })} className={`cs-sttab${st === k ? " on" : ""}${alert ? " alert" : ""}`}>
+          <Link key={k || "all"} href={href({ st: k, id: null, pg: null })} className={`cs-sttab${st === k ? " on" : ""}${alert ? " alert" : ""}`}>
             {label}
             {n ? <span className="cnt">{n}</span> : null}
           </Link>
@@ -205,7 +221,7 @@ export default async function CsPage({ searchParams }: { searchParams: Record<st
             조회
           </button>
           {kw ? (
-            <Link className="btn" href={href({ q: null, id: null })}>
+            <Link className="btn" href={href({ q: null, id: null, pg: null })}>
               초기화
             </Link>
           ) : null}
@@ -255,6 +271,34 @@ export default async function CsPage({ searchParams }: { searchParams: Record<st
               ) : null}
             </tbody>
           </table>
+          {lastPg > 1 ? (
+            <nav className="pager" aria-label="페이지">
+              {[
+                ["처음", 1],
+                ["이전", Math.max(1, pg - 1)],
+              ].map(([label, n]) => (
+                <Link key={label} className={`btn sm${pg <= 1 ? " disabled" : ""}`} href={href({ pg: n, id: null })} aria-disabled={pg <= 1}>
+                  {label}
+                </Link>
+              ))}
+              {Array.from({ length: Math.min(10, lastPg - Math.floor((pg - 1) / 10) * 10) }, (_, i) => Math.floor((pg - 1) / 10) * 10 + i + 1).map((n) => (
+                <Link key={n} className={`btn sm pager-num${n === pg ? " on" : ""}`} href={href({ pg: n, id: null })}>
+                  {n}
+                </Link>
+              ))}
+              {[
+                ["다음", Math.min(lastPg, pg + 1)],
+                ["끝", lastPg],
+              ].map(([label, n]) => (
+                <Link key={label} className={`btn sm${pg >= lastPg ? " disabled" : ""}`} href={href({ pg: n, id: null })} aria-disabled={pg >= lastPg}>
+                  {label}
+                </Link>
+              ))}
+              <span className="pager-total">
+                총 {listTotal.toLocaleString()}건 · {pg} / {lastPg}
+              </span>
+            </nav>
+          ) : null}
         </div>
 
         {cur ? (

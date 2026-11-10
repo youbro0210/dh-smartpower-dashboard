@@ -1,7 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import PageHeader from "@/components/PageHeader";
+import Pager from "@/components/Pager";
+import { usePaged } from "@/lib/usePaged";
 import { downloadCsv, fmtDate } from "@/lib/format";
 
 interface AgingRow {
@@ -46,7 +48,9 @@ export default function AgingPage() {
   const [days, setDays] = useState(30);
   const [gradient, setGradient] = useState(20);
   const [rows, setRows] = useState<AgingRow[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [searched, setSearched] = useState(false);
+  const pg = usePaged(rows, 20);
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async (d: number, g: number) => {
@@ -61,6 +65,7 @@ export default function AgingPage() {
         return;
       }
       setRows(json.devices ?? []);
+      setSearched(true);
     } catch {
       setError("서버에 연결할 수 없습니다.");
     } finally {
@@ -68,10 +73,6 @@ export default function AgingPage() {
     }
   }, []);
 
-  useEffect(() => {
-    void load(days, gradient);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   const worst = rows.reduce<AgingRow | null>(
     (b, r) => (r.faa_avg !== null && (!b || (b.faa_avg ?? 0) < r.faa_avg) ? r : b),
@@ -196,14 +197,14 @@ export default function AgingPage() {
               </tr>
             </thead>
             <tbody>
-              {!loading && rows.length === 0 && (
+              {searched && !loading && rows.length === 0 && (
                 <tr>
                   <td className="empty" colSpan={12}>
                     조회된 데이터가 없습니다.
                   </td>
                 </tr>
               )}
-              {rows.map((r) => (
+              {pg.slice.map((r) => (
                 <tr key={r.device_id}>
                   <td>
                     <b>{r.name}</b> <span className="t-muted">{r.building}</span>
@@ -230,6 +231,9 @@ export default function AgingPage() {
             </tbody>
           </table>
         </div>
+        {searched && pg.total > 20 && (
+          <Pager page={pg.page} total={pg.total} pageSize={20} onPage={pg.setPage} />
+        )}
       </div>
 
       <table className="form-grid note-grid">
