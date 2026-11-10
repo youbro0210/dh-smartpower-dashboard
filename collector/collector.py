@@ -182,6 +182,14 @@ def to_int(value: Any) -> int | None:
     return int(f) if f is not None else None
 
 
+def to_text(value: Any) -> str | None:
+    """펌웨어 버전처럼 문자 컬럼에 넣을 값. 장비가 0.1 처럼 숫자로 보내도 받습니다."""
+    if value is None:
+        return None
+    text = str(value).strip()
+    return text or None
+
+
 def to_oil(value: Any) -> str | None:
     """
     유면은 아직 규격 협의 중입니다.
@@ -750,7 +758,7 @@ class Collector:
                            last_seen_at = now()
                      WHERE bridge_id = %s
                     """,
-                    (online, src_type, payload.get("fw"), payload.get("rssi"), src_id),
+                    (online, src_type, to_text(payload.get("fw")), to_int(payload.get("rssi")), src_id),
                 )
             label = "브릿지" if src_type == "bridge" else "게이트웨이"
             log.info("%s %s 상태 — %s", label, src_id, note)
@@ -769,7 +777,7 @@ class Collector:
                            last_seen_at = now()
                      WHERE device_id = %s
                     """,
-                    (online, payload.get("fw"), payload.get("rssi"),
+                    (online, to_text(payload.get("fw")), to_int(payload.get("rssi")),
                      to_int(payload.get("interval")), device_id),
                 )
             note = f"설비 {device_id} {note}"
@@ -1006,8 +1014,17 @@ def main() -> None:
                 )
         except psycopg.Error as err:
             log.error("DB 오류 (%s): %s", msg.topic, err)
+            # 처리에 실패한 메시지도 수집내역에 남겨야 화면에서 원인을 볼 수 있습니다.
+            with collector.lock:
+                collector.stats["errors"] += 1
+                collector.write_ingest(msg.topic, src_type, src_id, kind, payload,
+                                       "error", f"DB 처리 실패: {str(err).splitlines()[0][:200]}")
         except Exception as err:  # 한 건의 오류로 수집이 멈추면 안 됩니다.
             log.exception("처리 실패 (%s): %s", msg.topic, err)
+            with collector.lock:
+                collector.stats["errors"] += 1
+                collector.write_ingest(msg.topic, src_type, src_id, kind, payload,
+                                       "error", f"처리 실패: {str(err)[:200]}")
 
     # ---- DB 통지 구독 (명령 · 설정 변경) ----
 
