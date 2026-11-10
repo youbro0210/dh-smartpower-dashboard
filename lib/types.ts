@@ -53,7 +53,7 @@ export interface DeviceReading {
   device_id: string;
   h2: number;
   ch4: number;
-  oil_level: "정상" | "낮음";
+  oil_level: "정상" | "낮음" | "높음" | "미확인";
   temperature: number;
   updated_at: string;
 }

@@ -192,21 +192,27 @@ def to_text(value: Any) -> str | None:
 
 def to_oil(value: Any) -> str | None:
     """
-    유면은 아직 규격 협의 중입니다.
-    지금은 2치(정상/낮음)로 저장하며, 접점(0/1) · 문자열 · 숫자를 모두 받습니다.
-    아날로그(%)로 확정되면 이 함수와 DB 컬럼을 함께 바꿉니다.
+    유면 접점 값 (헤디 측정모듈 규격, 2026-11-10 확정)
+      0 = 낮음, 1 = 정상, 2 = 높음, -1 = 미확인(센서 값을 읽지 못함)
+    숫자 · 숫자 문자열 · 영문/한글 표기를 모두 받습니다.
+    경보는 '낮음'만 판정합니다. '높음' · '미확인'은 표시만 합니다.
     """
     if value is None:
         return None
     if isinstance(value, bool):
         return "정상" if value else "낮음"
     if isinstance(value, (int, float)):
-        return "정상" if value >= 1 else "낮음"
+        code = int(value)
+        return {0: "낮음", 1: "정상", 2: "높음", -1: "미확인"}.get(code)
     text = str(value).strip().lower()
-    if text in ("정상", "normal", "ok", "1", "true", "high"):
+    if text in ("정상", "normal", "ok", "1", "true"):
         return "정상"
     if text in ("낮음", "low", "0", "false", "alarm"):
         return "낮음"
+    if text in ("높음", "high", "2"):
+        return "높음"
+    if text in ("미확인", "unknown", "-1"):
+        return "미확인"
     return None
 
 
