@@ -40,8 +40,8 @@ export default function DashboardPage() {
 
   const online = devices.filter((d) => d.status !== "offline");
   const temps = online.map((d) => d.temperature);
-  const avgTemp = temps.length ? temps.reduce((a, b) => a + b, 0) / temps.length : 0;
-  const maxTemp = temps.length ? Math.max(...temps) : 0;
+  const avgTemp = temps.length ? temps.reduce((a, b) => a + b, 0) / temps.length : null;
+  const maxTemp = temps.length ? Math.max(...temps) : null;
   const bridgesOnline = bridges.filter((b) => b.online).length;
 
   const normalDevices = devices.filter((d) => d.status === "normal");
@@ -109,12 +109,12 @@ export default function DashboardPage() {
         <dl className="now-facts">
           <div>
             <dt>평균 절연유 온도</dt>
-            <dd>{avgTemp.toFixed(1)}℃</dd>
+            <dd>{avgTemp === null ? "-" : `${avgTemp.toFixed(1)}℃`}</dd>
           </div>
           <div>
             <dt>최고 절연유 온도</dt>
-            <dd className={maxTemp >= thresholds.temperature.warning ? "t-danger" : undefined}>
-              {maxTemp.toFixed(1)}℃
+            <dd className={maxTemp !== null && maxTemp >= thresholds.temperature.warning ? "t-danger" : undefined}>
+              {maxTemp === null ? "-" : `${maxTemp.toFixed(1)}℃`}
             </dd>
           </div>
           <div>

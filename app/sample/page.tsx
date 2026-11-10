@@ -39,8 +39,8 @@ export default function SamplePage() {
 
   const online = devices.filter((d) => d.status !== "offline");
   const temps = online.map((d) => d.temperature);
-  const avgTemp = temps.length ? temps.reduce((a, b) => a + b, 0) / temps.length : 0;
-  const maxTemp = temps.length ? Math.max(...temps) : 0;
+  const avgTemp = temps.length ? temps.reduce((a, b) => a + b, 0) / temps.length : null;
+  const maxTemp = temps.length ? Math.max(...temps) : null;
   const gasExceed = online.filter(
     (d) => d.h2 >= SAMPLE_THRESHOLDS.h2.warning || d.ch4 >= SAMPLE_THRESHOLDS.ch4.warning
   ).length;
@@ -122,8 +122,8 @@ export default function SamplePage() {
         <tbody>
           <tr>
             <td className="num" data-label="24시간 알람">{alarms.length.toLocaleString()}건</td>
-            <td className="num" data-label="평균 절연유 온도">{avgTemp.toFixed(1)}℃</td>
-            <td className="num" data-label="최고 절연유 온도">{maxTemp.toFixed(1)}℃</td>
+            <td className="num" data-label="평균 절연유 온도">{avgTemp === null ? "-" : `${avgTemp.toFixed(1)}℃`}</td>
+            <td className="num" data-label="최고 절연유 온도">{maxTemp === null ? "-" : `${maxTemp.toFixed(1)}℃`}</td>
             <td className={`num${gasExceed ? " t-warning" : ""}`} data-label="가스 기준 초과">
               {gasExceed}대
             </td>
