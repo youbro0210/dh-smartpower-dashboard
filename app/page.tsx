@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useDashboard } from "@/lib/configStore";
 import PageHeader from "@/components/PageHeader";
 import AttentionPanel from "@/components/AttentionPanel";
+import LinkSignal from "@/components/LinkSignal";
 import { DeviceStatus, STATUS_LABEL } from "@/lib/types";
 import { fmtDateTime } from "@/lib/format";
 
@@ -28,9 +29,13 @@ export default function DashboardPage() {
     useDashboard();
 
   const [now, setNow] = useState("");
+  const [nowMs, setNowMs] = useState(() => Date.now());
 
   useEffect(() => {
-    const update = () => setNow(fmtDateTime(new Date(), true));
+    const update = () => {
+      setNow(fmtDateTime(new Date(), true));
+      setNowMs(Date.now());
+    };
     update();
     const t = setInterval(update, 1000);
     return () => clearInterval(t);
@@ -88,46 +93,49 @@ export default function DashboardPage() {
       )}
 
       {/* ① 지금 상태 ------------------------------------------------------- */}
-      <section className="now">
-        <p className={`now-line ${worst}`}>{headline}</p>
+      <section className="now now-with-signal">
+        <div className="now-main">
+          <p className={`now-line ${worst}`}>{headline}</p>
 
-        {devices.length > 0 && (
-          <div className="now-bar" role="img" aria-label="상태별 비율">
-            {ORDER.map((s) =>
-              count(s) ? (
-                <span
-                  key={s}
-                  className={s}
-                  style={{ width: `${(count(s) / devices.length) * 100}%` }}
-                  title={`${STATUS_LABEL[s]} ${count(s)}대`}
-                />
-              ) : null
-            )}
-          </div>
-        )}
+          {devices.length > 0 && (
+            <div className="now-bar" role="img" aria-label="상태별 비율">
+              {ORDER.map((s) =>
+                count(s) ? (
+                  <span
+                    key={s}
+                    className={s}
+                    style={{ width: `${(count(s) / devices.length) * 100}%` }}
+                    title={`${STATUS_LABEL[s]} ${count(s)}대`}
+                  />
+                ) : null
+              )}
+            </div>
+          )}
 
-        <dl className="now-facts">
-          <div>
-            <dt>평균 절연유 온도</dt>
-            <dd>{avgTemp === null ? "-" : `${avgTemp.toFixed(1)}℃`}</dd>
-          </div>
-          <div>
-            <dt>최고 절연유 온도</dt>
-            <dd className={maxTemp !== null && maxTemp >= thresholds.temperature.warning ? "t-danger" : undefined}>
-              {maxTemp === null ? "-" : `${maxTemp.toFixed(1)}℃`}
-            </dd>
-          </div>
-          <div>
-            <dt>24시간 알람</dt>
-            <dd>{alarms24h.toLocaleString()}건</dd>
-          </div>
-          <div>
-            <dt>브릿지·게이트웨이</dt>
-            <dd className={bridgesOnline < bridges.length ? "t-danger" : undefined}>
-              {bridgesOnline} / {bridges.length} 접속
-            </dd>
-          </div>
-        </dl>
+          <dl className="now-facts">
+            <div>
+              <dt>평균 절연유 온도</dt>
+              <dd>{avgTemp === null ? "-" : `${avgTemp.toFixed(1)}℃`}</dd>
+            </div>
+            <div>
+              <dt>최고 절연유 온도</dt>
+              <dd className={maxTemp !== null && maxTemp >= thresholds.temperature.warning ? "t-danger" : undefined}>
+                {maxTemp === null ? "-" : `${maxTemp.toFixed(1)}℃`}
+              </dd>
+            </div>
+            <div>
+              <dt>24시간 알람</dt>
+              <dd>{alarms24h.toLocaleString()}건</dd>
+            </div>
+            <div>
+              <dt>브릿지·게이트웨이</dt>
+              <dd className={bridgesOnline < bridges.length ? "t-danger" : undefined}>
+                {bridgesOnline} / {bridges.length} 접속
+              </dd>
+            </div>
+          </dl>
+        </div>
+        <LinkSignal devices={devices} bridges={bridges} now={nowMs} />
       </section>
 
       {/* ② 확인할 설비 ----------------------------------------------------- */}

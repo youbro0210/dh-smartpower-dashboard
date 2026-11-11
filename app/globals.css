@@ -4046,3 +4046,92 @@ td.picked {
   font-size: 12px;
 }
 .pager a.btn.disabled { pointer-events: none; opacity: 0.45; }
+
+/* ── 홈: 설비 연결 신호등 ───────────────────────────── */
+.now.now-with-signal {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 210px;
+  gap: 22px;
+}
+.now-main { min-width: 0; }
+
+.signal {
+  display: flex;
+  flex-direction: column;
+  padding-left: 22px;
+  border-left: 1px solid var(--line);
+}
+.signal-title {
+  margin-bottom: 12px;
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  color: var(--text-sub);
+}
+.signal-body {
+  display: flex;
+  align-items: stretch;
+  gap: 14px;
+}
+.signal-housing {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 9px;
+  background: #1d2939;
+  border-radius: 8px;
+  box-shadow: inset 0 0 0 1px #101828;
+}
+.signal-lamp {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: #344054;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.45);
+  transition: background 0.3s, box-shadow 0.3s;
+}
+.signal-lamp.ok.on {
+  background: #17b26a;
+  box-shadow: 0 0 10px 2px rgba(23, 178, 106, 0.55), inset 0 -2px 4px rgba(0, 0, 0, 0.25);
+}
+.signal-lamp.unstable.on {
+  background: #f5b800;
+  box-shadow: 0 0 10px 2px rgba(245, 184, 0, 0.55), inset 0 -2px 4px rgba(0, 0, 0, 0.25);
+}
+.signal-lamp.fail.on {
+  background: #e5322d;
+  box-shadow: 0 0 10px 2px rgba(229, 50, 45, 0.55), inset 0 -2px 4px rgba(0, 0, 0, 0.25);
+}
+.signal-legend {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  margin: 0;
+  padding: 10px 0;
+  list-style: none;
+}
+.signal-legend li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 26px;
+  font-size: var(--fs-sm, 13px);
+  color: var(--text-muted);
+}
+.signal-legend li.on { color: var(--text); }
+.signal-legend li.on .signal-count { font-weight: 700; }
+.signal-legend li.ok.on .signal-count { color: var(--normal); }
+.signal-legend li.unstable.on .signal-count { color: var(--caution); }
+.signal-legend li.fail.on .signal-count { color: var(--danger); }
+
+@media (max-width: 900px) {
+  .now.now-with-signal { grid-template-columns: 1fr; }
+  .signal {
+    padding-left: 0;
+    padding-top: 16px;
+    border-left: 0;
+    border-top: 1px solid var(--line);
+  }
+  .signal-body { max-width: 220px; }
+}
