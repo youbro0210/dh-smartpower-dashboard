@@ -73,7 +73,7 @@ export default function DashboardPage() {
       <PageHeader
         title="변압기 통합 모니터링"
         breadcrumb="홈"
-        subtitle={`${loading ? "불러오는 중" : connected ? "실시간 연결됨" : "재연결 중"} · ${now || "-"}`}
+        subtitle={`${loading ? "불러오는 중" : connected ? "서버 연결됨" : "서버 재연결 중"} · ${now || "-"}`}
         actions={
           <>
             <Link href="/devices" className="btn">
