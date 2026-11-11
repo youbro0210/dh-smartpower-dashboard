@@ -25,7 +25,7 @@ import { fmtDateTime } from "@/lib/format";
 const ORDER: DeviceStatus[] = ["danger", "warning", "caution", "offline", "normal"];
 
 export default function DashboardPage() {
-  const { devices, bridges, thresholds, alarms, alarms24h, connected, loading, error, refresh } =
+  const { devices, bridges, thresholds, alarms, alarms24h, loading, error, refresh } =
     useDashboard();
 
   const [now, setNow] = useState("");
@@ -73,7 +73,7 @@ export default function DashboardPage() {
       <PageHeader
         title="변압기 통합 모니터링"
         breadcrumb="홈"
-        subtitle={`${loading ? "불러오는 중" : connected ? "서버 연결됨" : "서버 재연결 중"} · ${now || "-"}`}
+        subtitle={now || "-"}
         actions={
           <>
             <Link href="/devices" className="btn">
