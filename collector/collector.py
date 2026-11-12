@@ -485,6 +485,7 @@ class Collector:
             return
 
         notes: list[str] = []
+        infos: list[str] = []
         received = len(items)  # 장비가 실제로 보낸 항목 수 (수신 내역에 그대로 남깁니다)
         limit = int(self.broker.get("max_replay_items") or 500)
         if len(items) > limit:
@@ -542,14 +543,16 @@ class Collector:
         else:
             # 재전송분은 이력만 채웁니다.
             # 지금 상태를 과거 값으로 덮어쓰거나, 지난 이상으로 알람을 울리면 안 됩니다.
-            notes.append(f"재전송 {len(rows)}건 — 이력만 적용(현재값·알람 제외)")
+            infos.append(f"재전송 {len(rows)}건 — 이력만 적용(현재값·알람 제외)")
 
         self.stats["rows"] += stored
         self.stats["messages"] += 1
+        # 재전송은 정상 동작입니다. 실제 경고가 있을 때만 '주의'로 남깁니다.
+        message = " / ".join(notes + infos) or None
         self.write_ingest(
             topic, src_type, src_id, "tele", self.log_payload(payload, received),
             "warn" if notes else "ok",
-            " / ".join(notes) if notes else None,
+            message,
             device_ids=seen, item_count=received, stored_count=stored, replay=replay,
         )
 

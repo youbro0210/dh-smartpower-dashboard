@@ -2,7 +2,12 @@ import { DeviceTrend } from "@/lib/types";
 
 function buildPath(raw: (number | null)[], width: number, height: number): string | null {
   const points = raw.filter((v): v is number => v !== null && Number.isFinite(v));
-  if (points.length < 2) return null;
+  if (points.length === 0) return null;
+  if (points.length === 1) {
+    // 한 시간대만 있으면 끝에 짧은 표시로 남깁니다.
+    const y = (height / 2).toFixed(1);
+    return `M${(width - 6).toFixed(1)},${y} L${width.toFixed(1)},${y}`;
+  }
 
   const max = Math.max(...points);
   const min = Math.min(...points);

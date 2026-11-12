@@ -26,6 +26,7 @@ export const NAV: NavGroup[] = [
     label: "분석",
     items: [
       { href: "/trend", label: "추세 분석", icon: "chart" },
+      { href: "/readings", label: "계측 이력", icon: "history" },
       { href: "/diagnosis", label: "가스 진단", icon: "flask" },
       { href: "/aging", label: "열화·수명", icon: "thermo" },
       { href: "/report", label: "운영 보고서", icon: "report" },
