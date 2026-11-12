@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { Fragment, useCallback, useState } from "react";
 import PageHeader from "./PageHeader";
 import SettingsTabs from "./SettingsTabs";
 import Pager from "./Pager";
@@ -47,6 +47,18 @@ const KIND_LABEL: Record<string, string> = {
   "cmd/ack": "명령 응답",
 };
 
+interface Item {
+  device_id: string;
+  measured_at: string;
+  received_at: string;
+  h2: number | null;
+  ch4: number | null;
+  temperature: number | null;
+  oil_level: string | null;
+}
+
+const num = (v: number | null) => (v === null || v === undefined ? "-" : Number(v).toFixed(1));
+
 function timeText(iso: string): string {
   const d = new Date(iso);
   const pad = (n: number) => String(n).padStart(2, "0");
@@ -69,6 +81,22 @@ export default function IngestClient() {
   const [openId, setOpenId] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
+  const [items, setItems] = useState<Item[] | null>(null);
+  const [showRaw, setShowRaw] = useState(false);
+
+  const toggle = async (row: Row) => {
+    if (openId === row.id) {
+      setOpenId(null);
+      return;
+    }
+    setOpenId(row.id);
+    setShowRaw(false);
+    setItems(null);
+    if (row.kind !== "tele") return;
+    const res = await fetch(`/api/ingest/items?id=${row.id}`, { cache: "no-store" });
+    const body = await res.json().catch(() => ({}));
+    setItems(res.ok ? body.items ?? [] : []);
+  };
 
   const load = useCallback(async (targetPage = 1) => {
     const params = new URLSearchParams({ page: String(targetPage), pageSize: String(pageSize) });
@@ -220,7 +248,8 @@ export default function IngestClient() {
                 const open = openId === row.id;
                 const devices = row.device_ids ?? [];
                 return (
-                  <tr key={row.id} className={`clickable${open ? " selected" : ""}`} onClick={() => setOpenId(open ? null : row.id)}>
+                  <Fragment key={row.id}>
+                  <tr className={`clickable${open ? " selected" : ""}`} onClick={() => void toggle(row)}>
                     <td className="center">{timeText(row.received_at)}</td>
                     <td style={{ whiteSpace: "nowrap" }}>
                       {KIND_LABEL[row.kind ?? ""] ?? row.kind ?? "-"}
@@ -248,6 +277,62 @@ export default function IngestClient() {
                       {row.message ?? "-"}
                     </td>
                   </tr>
+                  {open && (
+                    <tr className="detail-row">
+                      <td colSpan={8} style={{ padding: 12, background: "var(--surface-2, #f7f8fa)" }}>
+                        {row.kind === "tele" && (
+                          <>
+                            <div className="spark-title">
+                              담긴 계측값 {items ? `${items.length.toLocaleString()}건` : ""}
+                            </div>
+                            <table className="grid compact fixed" style={{ marginBottom: 8 }}>
+                              <thead>
+                                <tr>
+                                  <th style={{ width: 56 }}>No</th>
+                                  <th>측정 시각</th>
+                                  <th>설비</th>
+                                  <th>H2(ppm)</th>
+                                  <th>CH4(ppm)</th>
+                                  <th>온도(℃)</th>
+                                  <th>유면</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {items === null && (
+                                  <tr><td className="empty" colSpan={7}>불러오는 중</td></tr>
+                                )}
+                                {items?.length === 0 && (
+                                  <tr><td className="empty" colSpan={7}>조회된 데이터가 없습니다.</td></tr>
+                                )}
+                                {items?.map((it, i) => (
+                                  <tr key={`${it.device_id}-${it.measured_at}`}>
+                                    <td className="center">{i + 1}</td>
+                                    <td className="center">{timeText(it.measured_at)}</td>
+                                    <td className="center">{it.device_id}</td>
+                                    <td className="num">{num(it.h2)}</td>
+                                    <td className="num">{num(it.ch4)}</td>
+                                    <td className="num">{num(it.temperature)}</td>
+                                    <td className="center">{it.oil_level ?? "-"}</td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </>
+                        )}
+                        {row.kind === "tele" ? (
+                          <button type="button" className="btn sm" onClick={(e) => { e.stopPropagation(); setShowRaw(!showRaw); }}>
+                            원문 {showRaw ? "닫기" : "보기"}
+                          </button>
+                        ) : null}
+                        {(row.kind !== "tele" || showRaw) && (
+                          <pre className="codeblock" style={{ marginTop: 8 }}>
+                            {JSON.stringify(row.payload ?? {}, null, 2)}
+                          </pre>
+                        )}
+                      </td>
+                    </tr>
+                  )}
+                  </Fragment>
                 );
               })}
             </tbody>
@@ -255,15 +340,6 @@ export default function IngestClient() {
         </div>
         {searched && (
           <Pager page={page} total={total} pageSize={pageSize} loading={loading} onPage={(n) => void load(n)} />
-        )}
-
-        {openId !== null && (
-          <div style={{ paddingTop: 12 }}>
-            <div className="spark-title">받은 원문</div>
-            <pre className="codeblock">
-              {JSON.stringify(rows.find((r) => r.id === openId)?.payload ?? {}, null, 2)}
-            </pre>
-          </div>
         )}
       </div>
     </>
