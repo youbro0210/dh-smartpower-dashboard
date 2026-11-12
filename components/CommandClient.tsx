@@ -85,11 +85,17 @@ export default function CommandClient() {
       setBridges(body.bridges ?? []);
       setDevices(body.devices ?? []);
       if (body.ackTimeoutSec) setAckTimeout(body.ackTimeoutSec);
-      if (!targetId && body.bridges?.length) setTargetId(body.bridges[0].id);
     } catch {
       setMessage({ kind: "error", text: "목록을 불러오지 못했습니다." });
     }
-  }, [targetId]);
+  }, []);
+
+  // 브릿지는 목록에서 고르므로 처음 한 번만 첫 항목을 골라 둡니다.
+  // 측정모듈·PC 는 직접 입력하는 칸이라 비워도 다시 채우지 않습니다.
+  useEffect(() => {
+    if (targetType !== "bridge") return;
+    if (bridges.length && !bridges.some((b) => b.id === targetId)) setTargetId(bridges[0].id);
+  }, [bridges, targetType, targetId]);
 
   useEffect(() => {
     void load();
@@ -184,7 +190,7 @@ export default function CommandClient() {
           <label className="field-row">
             <span>대상 종류</span>
             <select className="field" value={targetType}
-              onChange={(e) => { setTargetType(e.target.value); setDeviceId(""); }}>
+              onChange={(e) => { setTargetType(e.target.value); setTargetId(""); setDeviceId(""); }}>
               {Object.entries(TARGET_LABEL).map(([key, label]) => (
                 <option key={key} value={key}>{label}</option>
               ))}
@@ -203,9 +209,18 @@ export default function CommandClient() {
                 ))}
               </select>
             ) : (
-              <input className="field" value={targetId}
-                onChange={(e) => setTargetId(e.target.value)}
-                placeholder={targetType === "module" ? "모듈 식별자" : "PC 식별자"} />
+              <>
+                <input className="field" value={targetId} list="cmd-target-list"
+                  onChange={(e) => setTargetId(e.target.value.trim())}
+                  placeholder={targetType === "module" ? "모듈 식별자" : "PC 식별자"} />
+                {targetType === "module" && (
+                  <datalist id="cmd-target-list">
+                    {devices.map((d) => (
+                      <option key={d.device_id} value={d.device_id}>{d.name}</option>
+                    ))}
+                  </datalist>
+                )}
+              </>
             )}
           </label>
 
