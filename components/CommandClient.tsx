@@ -158,7 +158,7 @@ export default function CommandClient() {
       body: JSON.stringify({
         target_type: targetType,
         target_id: targetId,
-        device_id: spec?.perDevice && deviceId ? deviceId : null,
+        device_id: spec?.perDevice && targetType === "bridge" && deviceId ? deviceId : null,
         command,
         params,
       }),
@@ -258,7 +258,7 @@ export default function CommandClient() {
             <small className="hint" style={{ margin: 0 }}>{spec?.description}</small>
           </label>
 
-          {spec?.perDevice && (
+          {spec?.perDevice && targetType === "bridge" && (
             <label className="field-row wide">
               <span>설비 지정 (선택)</span>
               <select className="field" value={deviceId} onChange={(e) => setDeviceId(e.target.value)}>
