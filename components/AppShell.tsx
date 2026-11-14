@@ -175,9 +175,10 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         </div>
 
         <nav>
-          {NAV.map((group) => {
+          {NAV.map((group, gi) => {
             // 관리자 전용 항목은 등급에 따라 감춥니다.
             // 검색어가 있으면 이름이 맞는 항목만 남깁니다.
+            if (group.staffOnly && (tier === null || isCustomer)) return null;
             const items = group.items
               .filter(visible)
               .filter((i) => !query || i.label.toLowerCase().includes(query));
@@ -186,7 +187,12 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
             const folded = collapsed.includes(group.label) && !query;
 
             return (
-              <div className="nav-group-block" key={group.label}>
+              <div
+                className={`nav-group-block${group.staffOnly ? " staff" : ""}${
+                  group.staffOnly && !NAV[gi - 1]?.staffOnly ? " staff-first" : ""
+                }`}
+                key={group.label}
+              >
                 <button
                   type="button"
                   className={`nav-group${folded ? " folded" : ""}`}

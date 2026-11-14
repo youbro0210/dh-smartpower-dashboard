@@ -4184,3 +4184,11 @@ table.fixed.fit { width: auto; }
 }
 .attn-nodata b { white-space: nowrap; color: var(--offline); }
 .attn-nodata .names { flex: 1; color: var(--text-sub); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* 메뉴: DH 직원 전용 묶음을 공통 메뉴와 선으로 나눕니다. */
+.nav-group-block.staff-first {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--side-line);
+}
+.nav-group-block.staff .nav-group span { color: var(--side-accent); }

@@ -57,7 +57,6 @@ export default function AdminClient() {
 
   // 고객사
   const [companies, setCompanies] = useState<Company[]>([]);
-  const [newCompany, setNewCompany] = useState({ name: "", memo: "" });
 
   async function loadCompanies() {
     const res = await fetch("/api/admin/companies", { cache: "no-store" });
@@ -69,29 +68,7 @@ export default function AdminClient() {
     void loadCompanies();
   }, []);
 
-  async function addCompany(e: React.FormEvent) {
-    e.preventDefault();
-    setNotice(null);
-    const res = await fetch("/api/admin/companies", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(newCompany),
-    });
-    const json = await res.json().catch(() => ({}));
-    if (!res.ok) return setNotice({ ok: false, text: json.error ?? "고객사를 등록하지 못했습니다." });
-    setNotice({ ok: true, text: `${newCompany.name} 고객사를 등록했습니다.` });
-    setNewCompany({ name: "", memo: "" });
-    await loadCompanies();
-  }
 
-  async function removeCompany(c: Company) {
-    setNotice(null);
-    const res = await fetch(`/api/admin/companies?id=${c.id}`, { method: "DELETE" });
-    const json = await res.json().catch(() => ({}));
-    if (!res.ok) return setNotice({ ok: false, text: json.error ?? "삭제하지 못했습니다." });
-    setNotice({ ok: true, text: `${c.name} 고객사를 삭제했습니다.` });
-    await loadCompanies();
-  }
   const [addBusy, setAddBusy] = useState(false);
 
   // 비밀번호 변경 — 한 번에 한 사람만 엽니다.
@@ -236,84 +213,8 @@ export default function AdminClient() {
       <PageHeader
         title="회원 관리"
         breadcrumb="홈 › 회원관리"
-        subtitle="고객사 · 가입 승인 · 회원 등록 · 등급 · 비밀번호 변경 · 로그인 이력 조회"
+        subtitle="가입 승인 · 회원 등록 · 등급·소속 · 비밀번호 변경 · 로그인 이력 조회"
       />
-
-      <div className="card">
-        <div className="card-head">
-          <div className="card-title">
-            <span className="accent-bar" />
-            고객사
-          </div>
-          <span className="card-note">{companies.length}곳</span>
-        </div>
-        <form className="filterbar" onSubmit={addCompany}>
-          <span className="filter-label">고객사명</span>
-          <input
-            className="field"
-            value={newCompany.name}
-            onChange={(e) => setNewCompany({ ...newCompany, name: e.target.value })}
-          />
-          <span className="filter-label">메모</span>
-          <input
-            className="field"
-            style={{ minWidth: 260 }}
-            value={newCompany.memo}
-            onChange={(e) => setNewCompany({ ...newCompany, memo: e.target.value })}
-          />
-          <div className="filterbar-right">
-            <button className="btn primary" type="submit" disabled={!newCompany.name.trim()}>
-              고객사 추가
-            </button>
-          </div>
-        </form>
-        <div className="table-wrap">
-          <table className="fixed fit">
-            <colgroup>
-              <col style={{ width: 220 }} />
-              <col style={{ width: 320 }} />
-              <col style={{ width: 90 }} />
-              <col style={{ width: 90 }} />
-              <col style={{ width: 80 }} />
-            </colgroup>
-            <thead>
-              <tr>
-                <th>고객사</th>
-                <th>메모</th>
-                <th>설비</th>
-                <th>담당자</th>
-                <th>삭제</th>
-              </tr>
-            </thead>
-            <tbody>
-              {companies.length === 0 && (
-                <tr>
-                  <td className="empty" colSpan={5}>조회된 데이터가 없습니다.</td>
-                </tr>
-              )}
-              {companies.map((c) => (
-                <tr key={c.id}>
-                  <td><b>{c.name}</b></td>
-                  <td>{c.memo ?? "-"}</td>
-                  <td className="num">{c.devices}대</td>
-                  <td className="num">{c.users}명</td>
-                  <td className="center">
-                    <button
-                      className="btn sm"
-                      type="button"
-                      disabled={c.devices > 0 || c.users > 0}
-                      title={c.devices > 0 || c.users > 0 ? "연결된 설비·담당자가 있습니다" : undefined}
-                      onClick={() => void removeCompany(c)}
-                    >
-                      삭제
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
 
       <div className="card">
         <div className="card-head">

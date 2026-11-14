@@ -25,9 +25,19 @@ export type IconName =
   | "wrench"
   | "report"
   | "request"
-  | "check";
+  | "check"
+  | "building";
 
 const PATHS: Record<IconName, JSX.Element> = {
+  // 고객사 (건물)
+  building: (
+    <>
+      <path d="M4 21V4h10v17" />
+      <path d="M14 9h6v12" />
+      <path d="M2 21h20" />
+      <path d="M7 8h1M10 8h1M7 12h1M10 12h1M7 16h1M10 16h1M17 13h0.5M17 17h0.5" />
+    </>
+  ),
   // 집
   home: (
     <>

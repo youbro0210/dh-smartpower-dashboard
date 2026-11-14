@@ -11,12 +11,15 @@ export interface NavItem {
 
 export interface NavGroup {
   label: string;
+  /** DH 직원 전용 묶음. 메뉴에서 공통 메뉴와 구분해 표시합니다. */
+  staffOnly?: boolean;
   items: NavItem[];
 }
 
 export const NAV: NavGroup[] = [
+  // ── 고객사 담당자와 DH 직원이 함께 보는 메뉴 ──
   {
-    label: "업무",
+    label: "모니터링",
     items: [
       { href: "/", label: "홈", icon: "home" },
       { href: "/devices", label: "설비 현황", icon: "device" },
@@ -28,11 +31,9 @@ export const NAV: NavGroup[] = [
     label: "분석",
     items: [
       { href: "/trend", label: "추세 분석", icon: "chart" },
-      { href: "/readings", label: "계측 이력", icon: "history", staffOnly: true },
       { href: "/diagnosis", label: "가스 진단", icon: "flask" },
       { href: "/aging", label: "열화·수명", icon: "thermo" },
       { href: "/report", label: "운영 보고서", icon: "report" },
-      { href: "/sample", label: "샘플 대시보드", icon: "sample", staffOnly: true },
     ],
   },
   {
@@ -42,8 +43,19 @@ export const NAV: NavGroup[] = [
       { href: "/cs", label: "반영 확인", icon: "check" },
     ],
   },
+  // ── DH스마트파워 직원 전용 ──
   {
-    label: "관리",
+    label: "DH 운영",
+    staffOnly: true,
+    items: [
+      { href: "/companies", label: "고객사 관리", icon: "building", staffOnly: true },
+      { href: "/readings", label: "계측 이력", icon: "history", staffOnly: true },
+      { href: "/sample", label: "샘플 대시보드", icon: "sample", staffOnly: true },
+    ],
+  },
+  {
+    label: "시스템 관리",
+    staffOnly: true,
     items: [
       { href: "/settings", label: "설정", icon: "settings", adminOnly: true },
       { href: "/admin", label: "회원관리", icon: "users", adminOnly: true },
