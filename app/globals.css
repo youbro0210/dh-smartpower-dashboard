@@ -4164,3 +4164,6 @@ tbody tr.detail-row:hover > td {
 .settings-block .threshold-table input { width: 140px; }
 .settings-block table.form-grid th { width: 140px; }
 .settings-block table.form-grid td { width: calc(50% - 140px); }
+
+/* 열 폭 합만큼만 차지하는 표. 숫자 열이 화면 끝까지 늘어나 값과 머리글이 멀어지는 것을 막습니다. */
+table.fixed.fit { width: auto; }

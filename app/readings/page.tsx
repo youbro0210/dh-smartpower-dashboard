@@ -289,10 +289,10 @@ export default function ReadingsPage() {
         {error && <div className="banner error">{error}</div>}
 
         <div className="table-wrap">
-          <table className="fixed">
+          <table className="fixed fit">
             <colgroup>
               <col style={{ width: 64 }} />
-              <col />
+              <col style={{ width: 130 }} />
               <col style={{ width: 168 }} />
               <col style={{ width: 168 }} />
               <col style={{ width: 104 }} />

@@ -285,11 +285,11 @@ export default function IngestClient() {
                             <div className="spark-title">
                               담긴 계측값 {items ? `${items.length.toLocaleString()}건` : ""}
                             </div>
-                            <table className="fixed sub-table">
+                            <table className="fixed fit sub-table">
                               <colgroup>
                                 <col style={{ width: 56 }} />
                                 <col style={{ width: 150 }} />
-                                <col />
+                                <col style={{ width: 130 }} />
                                 <col style={{ width: 120 }} />
                                 <col style={{ width: 120 }} />
                                 <col style={{ width: 110 }} />
