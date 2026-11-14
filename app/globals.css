@@ -4235,3 +4235,23 @@ table.fixed.fit { width: auto; }
   .readings-table td { padding: 0 6px; font-size: var(--fs-xs); }
   .readings-table td.num { padding-right: 8px; }
 }
+
+/* 메뉴 전체 접기·펼치기 */
+.side-fold {
+  display: flex;
+  justify-content: flex-end;
+  padding: 0 14px 6px;
+}
+.side-fold button {
+  appearance: none;
+  border: 1px solid var(--side-line);
+  background: transparent;
+  color: var(--side-muted);
+  font: inherit;
+  font-size: var(--fs-xs);
+  height: 26px;
+  padding: 0 10px;
+  border-radius: 3px;
+  cursor: pointer;
+}
+.side-fold button:hover { color: var(--side-text); border-color: var(--side-muted); }

@@ -30,10 +30,27 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
   const query = menuQuery.trim().toLowerCase();
 
+  // 접은 묶음은 다음 방문에도 그대로 둡니다.
+  useEffect(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem("dh.nav.collapsed") ?? "[]");
+      if (Array.isArray(saved)) setCollapsed(saved.filter((x) => typeof x === "string"));
+    } catch {
+      /* 저장소를 못 쓰는 환경 */
+    }
+  }, []);
+
+  function saveCollapsed(next: string[]) {
+    setCollapsed(next);
+    try {
+      localStorage.setItem("dh.nav.collapsed", JSON.stringify(next));
+    } catch {
+      /* 저장소를 못 쓰는 환경 */
+    }
+  }
+
   function toggleGroup(label: string) {
-    setCollapsed((list) =>
-      list.includes(label) ? list.filter((l) => l !== label) : [...list, label]
-    );
+    saveCollapsed(collapsed.includes(label) ? collapsed.filter((l) => l !== label) : [...collapsed, label]);
   }
 
   const isAuthPage = pathname === "/login" || pathname === "/signup";
@@ -173,6 +190,17 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
             aria-label="메뉴 검색"
           />
         </div>
+        {(() => {
+          const labels = NAV.filter((g) => !g.staffOnly || (tier !== null && !isCustomer)).map((g) => g.label);
+          const allFolded = labels.every((l) => collapsed.includes(l));
+          return (
+            <div className="side-fold">
+              <button type="button" onClick={() => saveCollapsed(allFolded ? [] : labels)}>
+                {allFolded ? "전체 펼치기" : "전체 접기"}
+              </button>
+            </div>
+          );
+        })()}
 
         <nav>
           {NAV.map((group, gi) => {
