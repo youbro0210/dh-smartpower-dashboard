@@ -11,7 +11,7 @@ import {
 } from "@/lib/types";
 import TrendChart, { MetricKey } from "./TrendChart";
 import Link from "next/link";
-import { fmtDateTime, fmtValue } from "@/lib/format";
+import { fmtDateTime, fmtDetail, fmtValue } from "@/lib/format";
 
 const GUIDANCE: Record<string, string> = {
   danger: "즉시 현장 점검과 절연유 상태 확인이 필요합니다. 필요 시 부하를 낮추고 담당자에게 보고하세요.",
@@ -274,7 +274,7 @@ export default function AttentionPanel({
                               <span className="feed-time">{a.time}</span>
                               <span className="feed-body">
                                 <span className="feed-item">{a.item}</span>
-                                {a.detail && <span className="feed-detail">{a.detail}</span>}
+                                {a.detail && <span className="feed-detail">{fmtDetail(a.detail)}</span>}
                               </span>
                               <span className={`badge ${a.level}`}>{STATUS_LABEL[a.level]}</span>
                             </li>
