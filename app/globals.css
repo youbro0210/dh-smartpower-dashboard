@@ -4272,3 +4272,13 @@ table.fixed.fit { width: auto; }
 /* 앱 다운로드 */
 .app-table tbody td { height: auto; padding-top: 10px; padding-bottom: 10px; white-space: normal; }
 .app-qr img { width: 120px; height: 120px; display: block; margin: 0 auto; }
+@media (max-width: 720px) {
+  /* 휴대폰에서는 크기·배포일·QR 을 접고 버튼을 바로 누르게 합니다. */
+  .app-table col:nth-child(3), .app-table col:nth-child(4), .app-table col:nth-child(6),
+  .app-table th:nth-child(3), .app-table th:nth-child(4), .app-table th:nth-child(6),
+  .app-table td:nth-child(3), .app-table td:nth-child(4), .app-table td:nth-child(6) { display: none; }
+  .table-wrap .app-table { min-width: 0; }
+  .app-table col:nth-child(1) { width: 40% !important; }
+  .app-table col:nth-child(2) { width: 22% !important; }
+  .app-table col:nth-child(5) { width: 38% !important; }
+}
