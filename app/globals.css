@@ -8,13 +8,13 @@
 :root {
   /* 바탕·선 */
   --bg: #ffffff;
-  --bg-head: #f2f4f7;      /* 표 헤더, 폼 라벨 칸 */
+  --bg-head: #eceff3;      /* 표 헤더, 폼 라벨 칸 — 본문 흰 바탕과 구분되도록 한 단계 진하게 */
   --bg-sum: #f9fafb;       /* 합계 행 */
   --bg-hover: #f5f8fc;
   --bg-selected: #e8f0fa;
-  --line: #d0d5dd;         /* 기본 실선 */
+  --line: #bcc3cd;         /* 기본 실선 — 현장 모니터에서도 칸이 보이도록 #d0d5dd 에서 진하게 */
   --line-soft: #eaecf0;    /* 차트 격자선 등 옅은 선 */
-  --line-strong: #98a2b3;  /* 합계 위 선, 강조 구분 */
+  --line-strong: #7d8899;  /* 머리글 아래·합계 위 선 */
 
   /* 글자 */
   --text: #1d2939;
