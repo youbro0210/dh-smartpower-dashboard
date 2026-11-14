@@ -7,7 +7,7 @@ import PageHeader from "@/components/PageHeader";
 import AttentionPanel from "@/components/AttentionPanel";
 import LinkSignal from "@/components/LinkSignal";
 import { DeviceStatus, STATUS_LABEL } from "@/lib/types";
-import { fmtDateTime } from "@/lib/format";
+import { fmtDateTime, fmtDetail } from "@/lib/format";
 
 /**
  * 홈 화면.
@@ -171,8 +171,8 @@ export default function DashboardPage() {
           <table className="fixed">
             <colgroup>
               <col style={{ width: 150 }} />
-              <col style={{ width: 96 }} />
-              <col style={{ width: 128 }} />
+              <col style={{ width: 110 }} />
+              <col style={{ width: 220 }} />
               <col style={{ width: 72 }} />
               <col />
             </colgroup>
@@ -204,7 +204,7 @@ export default function DashboardPage() {
                     <span className={`badge ${a.level}`}>{STATUS_LABEL[a.level]}</span>
                   </td>
                   <td className="a-detail" data-empty={a.detail ? undefined : "true"} title={a.detail ?? undefined}>
-                    {a.detail ?? "-"}
+                    {fmtDetail(a.detail)}
                   </td>
                 </tr>
               ))}

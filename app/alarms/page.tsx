@@ -4,7 +4,7 @@ import { useCallback, useState } from "react";
 import PageHeader from "@/components/PageHeader";
 import Pager from "@/components/Pager";
 import { useDashboard } from "@/lib/configStore";
-import { downloadCsv, fmtDateTime } from "@/lib/format";
+import { downloadCsv, fmtDateTime, fmtDetail } from "@/lib/format";
 import { STATUS_LABEL } from "@/lib/types";
 
 interface AlarmRow {
@@ -244,7 +244,7 @@ export default function AlarmsPage() {
                     data-empty={r.detail ? undefined : "true"}
                     title={r.detail ?? undefined}
                   >
-                    {r.detail ?? "-"}
+                    {fmtDetail(r.detail)}
                   </td>
                 </tr>
               ))}

@@ -70,3 +70,14 @@ export function fmtValue(value: number | string | null | undefined, digits?: num
     maximumFractionDigits: digits ?? 1,
   });
 }
+
+/** 예전에 저장된 알람 문구의 숫자(1370.0)를 화면 표기(1,370)로 바꿉니다. */
+export function fmtDetail(text: string | null | undefined): string {
+  if (!text) return "-";
+  // 측정값(단위가 붙은 숫자)과 '기준 N' 만 바꿉니다. 날짜·건수 등은 그대로 둡니다.
+  return text.replace(
+    /(기준\s*)?(\d+(?:\.\d+)?)(\s*(?:ppm|℃|°C))?/g,
+    (m, pre: string | undefined, num: string, unit: string | undefined) =>
+      pre || unit ? `${pre ?? ""}${fmtValue(Number(num))}${unit ?? ""}` : m
+  );
+}

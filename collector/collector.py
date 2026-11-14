@@ -235,6 +235,15 @@ def parse_time(value: Any) -> datetime:
         return now
 
 
+def fmt_num(value: Any) -> str:
+    """알람 문구용 숫자. 정수면 1,370 처럼, 아니면 소수 1자리."""
+    try:
+        n = float(value)
+    except (TypeError, ValueError):
+        return str(value)
+    return f"{n:,.0f}" if n.is_integer() else f"{n:,.1f}"
+
+
 MEASURE_KEYS = ("h2", "ch4", "temp", "temperature", "oil", "oil_level")
 
 
@@ -742,7 +751,7 @@ class Collector:
             item = f"{label} {level_word} 임계치 초과"
             unit = SENSOR_UNIT.get(sensor, "")
             limit = thresholds[sensor][level]
-            detail = f"{value:.1f} {unit} / 기준 {limit}" if value is not None else f"기준 {limit}"
+            detail = f"{fmt_num(value)} {unit} / 기준 {fmt_num(limit)}" if value is not None else f"기준 {fmt_num(limit)}"
 
         with self.conn.cursor() as cur:
             cur.execute(

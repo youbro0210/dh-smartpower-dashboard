@@ -10,13 +10,14 @@ import {
   ThresholdConfig,
 } from "@/lib/types";
 import TrendChart, { MetricKey } from "./TrendChart";
-import { fmtDateTime } from "@/lib/format";
+import Link from "next/link";
+import { fmtDateTime, fmtValue } from "@/lib/format";
 
 const GUIDANCE: Record<string, string> = {
   danger: "즉시 현장 점검과 절연유 상태 확인이 필요합니다. 필요 시 부하를 낮추고 담당자에게 보고하세요.",
   warning: "현장 점검을 권장합니다. 30분 간격으로 추이를 재확인하세요.",
   caution: "아직 조치 단계는 아니며, 추이를 지속 관찰하세요.",
-  offline: "계측값이 들어오지 않고 있습니다. 브릿지 전원과 통신 상태를 확인하세요.",
+  offline: "계측값 미수신",
   normal: "",
 };
 
@@ -73,11 +74,27 @@ export default function AttentionPanel({
   alarms: AlarmEvent[];
   thresholds: ThresholdConfig;
 }) {
-  const ranked = useMemo(() => {
+  // 값이 한 번도 들어오지 않은 설비는 카드로 늘어놓지 않고 한 줄로 묶습니다.
+  const hasData = (d: DeviceEvaluated) =>
+    !!d.since && d.since !== "-" && !Number.isNaN(new Date(d.since).getTime());
+  const sinceMs = (d: DeviceEvaluated) => (hasData(d) ? new Date(d.since).getTime() : 0);
+
+  const { ranked, noData } = useMemo(() => {
     const order: Record<string, number> = { danger: 0, warning: 1, caution: 2, offline: 3 };
-    return devices
-      .filter((d) => d.status !== "normal")
-      .sort((a, b) => (order[a.status] ?? 9) - (order[b.status] ?? 9) || a.name.localeCompare(b.name));
+    const abnormal = devices.filter((d) => d.status !== "normal");
+    return {
+      // 심각도 순, 같은 등급이면 최근에 값이 들어온 설비가 위로
+      ranked: abnormal
+        .filter(hasData)
+        .sort(
+          (a, b) =>
+            (order[a.status] ?? 9) - (order[b.status] ?? 9) ||
+            sinceMs(b) - sinceMs(a) ||
+            a.name.localeCompare(b.name)
+        ),
+      noData: abnormal.filter((d) => !hasData(d)).sort((a, b) => a.name.localeCompare(b.name, "ko", { numeric: true })),
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [devices]);
 
   // 기본은 모두 펼침. 대상이 많으면 가장 심각한 2대만 펼쳐 화면이 길어지지 않게 합니다.
@@ -94,7 +111,7 @@ export default function AttentionPanel({
     setCollapsed(next);
   }
 
-  if (ranked.length === 0) {
+  if (ranked.length === 0 && noData.length === 0) {
     return (
       <div className="card">
         <div className="card-head">
@@ -116,7 +133,7 @@ export default function AttentionPanel({
           확인할 설비
         </div>
         <span className="card-note">
-          {ranked.length}대 · 심각도 순
+          {ranked.length + noData.length}대 · 심각도 순
         </span>
       </div>
 
@@ -215,7 +232,7 @@ export default function AttentionPanel({
                             <span className={`mini-badge ${level}`}>{STATUS_LABEL[level]}</span>
                           </div>
                           <div className="gauge-val" style={{ color: level === "normal" ? undefined : color }}>
-                            {value.toFixed(1)}
+                            {fmtValue(value, s.key === "temperature" ? 1 : undefined)}
                             <small>{s.unit}</small>
                           </div>
                           <div className="gauge-bar">
@@ -224,7 +241,7 @@ export default function AttentionPanel({
                             <i className="tick warning" style={{ left: `${ratio(rule.warning, rule.danger) * 100}%` }} />
                           </div>
                           <div className="gauge-foot">
-                            기준 주의 {rule.caution} · 경고 {rule.warning} · 위험 {rule.danger} {s.unit}
+                            기준 주의 {fmtValue(rule.caution)} · 경고 {fmtValue(rule.warning)} · 위험 {fmtValue(rule.danger)} {s.unit}
                           </div>
                           <div className="gauge-delta">{deltaText(value, base)}</div>
                         </div>
@@ -271,6 +288,17 @@ export default function AttentionPanel({
             </section>
           );
         })}
+        {noData.length > 0 && (
+          <div className="attn-nodata">
+            <b>데이터 미수신 {noData.length}대</b>
+            <span className="names" title={noData.map((d) => d.name).join(", ")}>
+              {noData.map((d) => d.name).join(" · ")}
+            </span>
+            <Link href="/devices" className="btn sm">
+              설비 현황
+            </Link>
+          </div>
+        )}
       </div>
     </div>
   );

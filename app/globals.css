@@ -4167,3 +4167,20 @@ tbody tr.detail-row:hover > td {
 
 /* 열 폭 합만큼만 차지하는 표. 숫자 열이 화면 끝까지 늘어나 값과 머리글이 멀어지는 것을 막습니다. */
 table.fixed.fit { width: auto; }
+
+/* 홈 상단 요약 값: 머리글과 같은 가운데 정렬 */
+.now-facts dd { justify-content: center; }
+
+/* 홈: 값이 한 번도 들어오지 않은 설비를 한 줄로 */
+.attn-nodata {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--offline);
+  background: var(--surface);
+  font-size: var(--fs-sm);
+}
+.attn-nodata b { white-space: nowrap; color: var(--offline); }
+.attn-nodata .names { flex: 1; color: var(--text-sub); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
