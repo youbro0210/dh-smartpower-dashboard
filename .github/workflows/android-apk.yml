@@ -29,9 +29,11 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "22"
 
-      - uses: android-actions/setup-android@v3
+      # ubuntu-latest 에는 Android SDK 가 이미 깔려 있습니다(ANDROID_HOME).
+      - name: Android SDK 확인
+        run: echo "ANDROID_HOME=$ANDROID_HOME" && ls "$ANDROID_HOME/platforms" | tail -3
 
       - name: Capacitor 동기화
         working-directory: mobile
