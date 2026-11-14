@@ -71,7 +71,12 @@ export function evaluateDevice(
       config.hysteresisMarginPct
     ),
     // 유면 저하 등급은 설정값입니다. 수집 서버(collector.py)와 같은 값을 씁니다.
-    oil_level: reading.oil_level === "낮음" ? config.oilLowLevel ?? "warning" : "normal",
+    oil_level:
+      reading.oil_level === "낮음"
+        ? config.oilLowLevel ?? "warning"
+        : reading.oil_level === "높음" && config.oilHighLevel && config.oilHighLevel !== "none"
+          ? config.oilHighLevel
+          : "normal",
   };
 
   const entries = Object.entries(sensorLevels) as [keyof SensorLevels, SeverityLevel][];
@@ -85,7 +90,7 @@ export function evaluateDevice(
   }
 
   const causes = abnormal.map(([key, level]) => {
-    if (key === "oil_level") return "유면 낮음";
+    if (key === "oil_level") return reading.oil_level === "높음" ? "유면 높음" : "유면 낮음";
     return `${SENSOR_LABEL[key]} ${level === "danger" ? "급증/급상승" : "상승"}`;
   });
 

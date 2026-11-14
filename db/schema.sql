@@ -595,3 +595,7 @@ CREATE INDEX IF NOT EXISTS autofix_jobs_queue_idx   ON autofix_jobs (status, dec
 ALTER TABLE users ADD COLUMN IF NOT EXISTS approval text NOT NULL DEFAULT 'approved';
 ALTER TABLE users DROP CONSTRAINT IF EXISTS users_approval_check;
 ALTER TABLE users ADD CONSTRAINT users_approval_check CHECK (approval IN ('approved', 'pending'));
+
+-- 장비 센서 구성값 (set_config 응답으로 받은 값). 경고(LED) 임계값 등.
+ALTER TABLE devices ADD COLUMN IF NOT EXISTS sensor_config    jsonb;
+ALTER TABLE devices ADD COLUMN IF NOT EXISTS sensor_config_at timestamptz;

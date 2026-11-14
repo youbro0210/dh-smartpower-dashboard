@@ -35,7 +35,15 @@ interface Device {
   device_id: string;
   name: string;
   bridge_id: string | null;
+  sensor_config: Record<string, unknown> | null;
+  sensor_config_at: string | null;
 }
+
+const CONFIG_LABEL: [string, string][] = [
+  ["h2_thres", "H2 경고 임계값"],
+  ["ch4_thres", "CH4 경고 임계값"],
+  ["temp_thres", "온도 경고 기준값(℃)"],
+];
 
 const STATUS_BADGE: Record<string, string> = {
   pending: "caution",
@@ -296,6 +304,46 @@ export default function CommandClient() {
           ))}
         </div>
       </div>
+
+      {devices.some((d) => d.sensor_config) && (
+        <div className="card flush">
+          <div className="card-head">
+            <div className="card-title">
+              <span className="accent-bar" />
+              장비 구성값
+            </div>
+          </div>
+          <div className="table-wrap">
+            <table className="fixed">
+              <thead>
+                <tr>
+                  <th>설비</th>
+                  {CONFIG_LABEL.map(([, label]) => <th key={label}>{label}</th>)}
+                  <th>기타</th>
+                  <th>확인 시각</th>
+                </tr>
+              </thead>
+              <tbody>
+                {devices.filter((d) => d.sensor_config).map((d) => {
+                  const cfg = d.sensor_config ?? {};
+                  const known = new Set(CONFIG_LABEL.map(([k]) => k));
+                  const extra = Object.entries(cfg).filter(([k]) => !known.has(k));
+                  return (
+                    <tr key={d.device_id}>
+                      <td><b>{d.name}</b><span className="cell-sub">{d.device_id}</span></td>
+                      {CONFIG_LABEL.map(([k]) => (
+                        <td key={k} className="num">{cfg[k] === undefined ? "-" : String(cfg[k])}</td>
+                      ))}
+                      <td>{extra.length ? extra.map(([k, v]) => `${k}=${typeof v === "object" ? JSON.stringify(v) : String(v)}`).join(", ") : "-"}</td>
+                      <td className="center">{timeText(d.sensor_config_at)}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
 
       {/* ── 발행 이력 ───────────────────────────────────────── */}
       <div className="card flush">

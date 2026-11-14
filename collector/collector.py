@@ -515,8 +515,8 @@ class Collector:
                 seen.append(device_id)
 
             measured_at = parse_time(item.get("ts") or payload.get("ts"))
-            h2 = to_float(item.get("h2"))
-            ch4 = to_float(item.get("ch4"))
+            h2 = self.convert("h2", to_float(item.get("h2")))
+            ch4 = self.convert("ch4", to_float(item.get("ch4")))
             temp = to_float(item.get("temp", item.get("temperature")))
             oil = to_oil(item.get("oil", item.get("oil_level")))
 
@@ -662,7 +662,7 @@ class Collector:
         prev = self.levels.get(device_id, {k: "normal" for k in SENSOR_LABEL})
 
         current: dict[str, str] = {}
-        values: dict[str, float | None] = {"h2": h2, "ch4": ch4, "temperature": temp}
+        values: dict[str, Any] = {"h2": h2, "ch4": ch4, "temperature": temp}
 
         for key in ("h2", "ch4", "temperature"):
             value = values[key]
@@ -673,10 +673,17 @@ class Collector:
             current[key] = classify(value, t[key], prev.get(key, "normal"), margin)
 
         # 유면 저하를 몇 등급으로 볼지는 설정값입니다. 웹 화면과 같은 값을 씁니다.
-        oil_level = str(t.get("oilLowLevel", "warning"))
-        if oil_level not in SEVERITY_ORDER:
-            oil_level = "warning"
-        current["oil_level"] = oil_level if oil == "낮음" else "normal"
+        low_level = str(t.get("oilLowLevel", "warning"))
+        if low_level not in SEVERITY_ORDER:
+            low_level = "warning"
+        high_level = str(t.get("oilHighLevel", "none"))
+        if oil == "낮음":
+            current["oil_level"] = low_level
+        elif oil == "높음" and high_level in SEVERITY_ORDER:
+            current["oil_level"] = high_level
+        else:
+            current["oil_level"] = "normal"
+        values["oil_level"] = oil  # 알람 문구용
 
         name = self.device_name(device_id)
         for key, level in current.items():
@@ -700,6 +707,20 @@ class Collector:
             self.write_composite_alarm(device_id, name, overall, len(abnormal), labels)
         self.composite[device_id] = overall
 
+    def convert(self, gas: str, value: float | None) -> float | None:
+        """장비 원시값을 설정된 환산식(값 × 배율 + 보정)으로 바꿉니다. 기본은 그대로입니다."""
+        if value is None:
+            return None
+        conv = ((self.thresholds.get("conversion") or {}).get(gas)) or {}
+        try:
+            scale = float(conv.get("scale", 1))
+            offset = float(conv.get("offset", 0))
+        except (TypeError, ValueError):
+            return value
+        if scale == 1 and offset == 0:
+            return value
+        return round(value * scale + offset, 3)
+
     def device_name(self, device_id: str) -> str:
         with self.conn.cursor() as cur:
             cur.execute("SELECT name FROM devices WHERE device_id = %s", (device_id,))
@@ -714,8 +735,9 @@ class Collector:
         level_word = {"caution": "주의", "warning": "경고", "danger": "위험"}[level]
 
         if sensor == "oil_level":
-            item = "절연유 유면 저하"
-            detail = "유면 낮음 감지"
+            high = value == "높음"
+            item = "절연유 유면 상승" if high else "절연유 유면 저하"
+            detail = "유면 높음 감지" if high else "유면 낮음 감지"
         else:
             item = f"{label} {level_word} 임계치 초과"
             unit = SENSOR_UNIT.get(sensor, "")
@@ -746,13 +768,26 @@ class Collector:
 
     # ---- 장치 상태 ----
 
-    def handle_stat(self, topic: str, src_type: str, src_id: str, payload: dict[str, Any]) -> None:
+    def handle_stat(
+        self, topic: str, src_type: str, src_id: str, payload: dict[str, Any], retained: bool = False,
+    ) -> None:
         """
         접속 상태를 받습니다. 브릿지(3안) · 사용자 PC(2안) · 모듈 직결(1안)
         모두 자기 자신의 상태를 올릴 수 있습니다.
+
+        retained: 브로커가 보관해 둔 마지막 상태를 접속 직후 다시 준 것입니다.
+        수집기를 재시작할 때마다 오므로, 이미 아는 상태면 기록하지 않고
+        새로 받은 것처럼 마지막 수신 시각을 갱신하지도 않습니다.
         """
         online = bool(payload.get("online", True))
         note = "온라인" if online else "오프라인"
+
+        if retained:
+            known = self.known_online(src_type, src_id, payload)
+            if known is not None and known == online:
+                log.info("%s/%s 보관 상태(%s) — 변경 없음, 기록 생략", src_type, src_id, note)
+                return
+        seen_sql = "last_seen_at" if retained else "now()"
 
         if src_type in PARENT_TYPES:
             self.ensure_bridge(src_id, src_type)
@@ -764,9 +799,9 @@ class Collector:
                            kind = %s,
                            fw_version = COALESCE(%s, fw_version),
                            rssi = COALESCE(%s, rssi),
-                           last_seen_at = now()
+                           last_seen_at = {seen}
                      WHERE bridge_id = %s
-                    """,
+                    """.format(seen=seen_sql),
                     (online, src_type, to_text(payload.get("fw")), to_int(payload.get("rssi")), src_id),
                 )
             label = "브릿지" if src_type == "bridge" else "게이트웨이"
@@ -783,9 +818,9 @@ class Collector:
                            fw_version = COALESCE(%s, fw_version),
                            rssi = COALESCE(%s, rssi),
                            interval_sec = COALESCE(%s, interval_sec),
-                           last_seen_at = now()
+                           last_seen_at = {seen}
                      WHERE device_id = %s
-                    """,
+                    """.format(seen=seen_sql),
                     (online, to_text(payload.get("fw")), to_int(payload.get("rssi")),
                      to_int(payload.get("interval")), device_id),
                 )
@@ -793,7 +828,20 @@ class Collector:
             log.info("측정모듈 %s 상태 — %s", device_id, "온라인" if online else "오프라인")
 
         self.stats["messages"] += 1
+        if retained:
+            note = f"{note} (브로커 보관 상태)"
         self.write_ingest(topic, src_type, src_id, "stat", payload, "ok", note)
+
+    def known_online(self, src_type: str, src_id: str, payload: dict[str, Any]) -> bool | None:
+        """DB 에 적혀 있는 마지막 접속 상태. 처음 보는 장치면 None."""
+        with self.conn.cursor() as cur:
+            if src_type in PARENT_TYPES:
+                cur.execute("SELECT online FROM bridges WHERE bridge_id = %s", (src_id,))
+            else:
+                device_id = str(payload.get("deviceId") or payload.get("device_id") or src_id).strip()
+                cur.execute("SELECT online FROM devices WHERE device_id = %s", (device_id,))
+            row = cur.fetchone()
+        return None if not row or row["online"] is None else bool(row["online"])
 
     # ---- 명령 응답 ----
 
@@ -831,6 +879,21 @@ class Collector:
                     cur.execute(
                         "UPDATE devices SET interval_sec = %s WHERE device_id = %s",
                         (seconds, target),
+                    )
+
+        # 센서 구성값 응답은 설비에 적어 둡니다. 조회(get)와 변경 모두 result 에 현재값이 옵니다.
+        if row and ok and row["command"] == "set_config" and isinstance(payload.get("result"), dict):
+            target = row["device_id"] or (row["target_id"] if row["target_type"] == "module" else None)
+            if target:
+                with self.conn.cursor() as cur:
+                    cur.execute(
+                        """
+                        UPDATE devices
+                           SET sensor_config = COALESCE(sensor_config, '{}'::jsonb) || %s::jsonb,
+                               sensor_config_at = now()
+                         WHERE device_id = %s
+                        """,
+                        (json.dumps(payload["result"]), target),
                     )
 
         self.write_ingest(topic, src_type, src_id, "cmd/ack", payload,
@@ -1015,7 +1078,7 @@ def main() -> None:
                 if kind == "tele":
                     collector.handle_tele(msg.topic, src_type, src_id, payload)
                 elif kind == "stat":
-                    collector.handle_stat(msg.topic, src_type, src_id, payload)
+                    collector.handle_stat(msg.topic, src_type, src_id, payload, retained=bool(msg.retain))
                 elif kind == "cmd/ack":
                     collector.handle_ack(msg.topic, src_type, src_id, payload)
                 else:

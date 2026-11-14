@@ -34,7 +34,8 @@ export async function GET(request: Request) {
   ]);
 
   const devices = await query(
-    `SELECT device_id, name, bridge_id FROM devices ORDER BY sort_order, device_id`
+    `SELECT device_id, name, bridge_id, sensor_config, sensor_config_at
+       FROM devices ORDER BY sort_order, device_id`
   );
 
   return NextResponse.json({

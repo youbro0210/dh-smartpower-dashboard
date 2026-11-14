@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useDashboard } from "@/lib/configStore";
 import {
   BRIDGE_KIND_LABEL,
+  DEFAULT_CONVERSION,
   LINK_TYPE_LABEL,
   RS485_MAX_DEVICES,
   SeverityLevel,
@@ -228,13 +229,68 @@ export default function SettingsClient() {
                     </option>
                   ))}
                 </select>
-                <span className="t-muted" style={{ marginLeft: 6 }}>
-                  유면 낮음 감지 시 적용 (규격 협의 중)
-                </span>
               </td>
-              <th />
-              <td />
+              <th>유면 높음 등급</th>
+              <td>
+                <select
+                  className="select"
+                  style={{ width: 120 }}
+                  value={form.oilHighLevel ?? "none"}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, oilHighLevel: e.target.value as SeverityLevel | "none" }))
+                  }
+                >
+                  <option value="none">알람 없음</option>
+                  {(["caution", "warning", "danger"] as const).map((level) => (
+                    <option key={level} value={level}>
+                      {STATUS_LABEL[level]}
+                    </option>
+                  ))}
+                </select>
+              </td>
             </tr>
+            {(
+              [
+                ["h2", "수소 측정값 환산"],
+                ["ch4", "메탄 측정값 환산"],
+              ] as const
+            ).map(([gas, label]) => {
+              const conv = form.conversion?.[gas] ?? DEFAULT_CONVERSION[gas];
+              const setConv = (patch: Partial<typeof conv>) =>
+                setForm((f) => ({
+                  ...f,
+                  conversion: {
+                    ...(f.conversion ?? DEFAULT_CONVERSION),
+                    [gas]: { ...conv, ...patch },
+                  },
+                }));
+              return (
+                <tr key={gas}>
+                  <th>{label}</th>
+                  <td colSpan={3}>
+                    <span>수신값 ×</span>
+                    <input
+                      className="input num"
+                      type="number"
+                      step="any"
+                      style={{ width: 110, margin: "0 6px" }}
+                      value={conv.scale}
+                      onChange={(e) => setConv({ scale: Number(e.target.value) })}
+                    />
+                    <span>+</span>
+                    <input
+                      className="input num"
+                      type="number"
+                      step="any"
+                      style={{ width: 110, margin: "0 6px" }}
+                      value={conv.offset}
+                      onChange={(e) => setConv({ offset: Number(e.target.value) })}
+                    />
+                    <span>= 저장값(ppm)</span>
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>

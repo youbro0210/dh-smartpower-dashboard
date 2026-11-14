@@ -141,7 +141,29 @@ export interface ThresholdConfig {
    * 유면 규격(접점/아날로그)이 확정되면 임계치 방식으로 바뀝니다.
    */
   oilLowLevel?: SeverityLevel;
+  /** 유면 높음을 몇 등급으로 볼지. "none" 이면 알람으로 처리하지 않습니다. */
+  oilHighLevel?: SeverityLevel | "none";
+  /**
+   * 가스 측정값 환산. 저장값 = 수신값 × scale + offset.
+   * 장비가 원시값을 보낼 때 단위(ppm)를 맞추는 용도이며, 기본은 그대로(1, 0)입니다.
+   */
+  conversion?: GasConversion;
 }
+
+export interface LinearConversion {
+  scale: number;
+  offset: number;
+}
+
+export interface GasConversion {
+  h2: LinearConversion;
+  ch4: LinearConversion;
+}
+
+export const DEFAULT_CONVERSION: GasConversion = {
+  h2: { scale: 1, offset: 0 },
+  ch4: { scale: 1, offset: 0 },
+};
 
 export interface AppConfig {
   thresholds: ThresholdConfig;
@@ -159,4 +181,6 @@ export const DEFAULT_THRESHOLDS: ThresholdConfig = {
   compositeMinSensors: 2,
   offlineMinutes: 15,
   oilLowLevel: "warning",
+  oilHighLevel: "none",
+  conversion: DEFAULT_CONVERSION,
 };

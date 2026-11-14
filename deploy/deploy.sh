@@ -35,6 +35,10 @@ for app in dh-notify dh-collector; do
   fi
 done
 
+echo "==> 백업·상태 점검 예약"
+chmod +x deploy/backup.sh deploy/healthcheck.sh deploy/install-cron.sh
+./deploy/install-cron.sh
+
 echo "==> 상태 확인"
 sleep 3
 curl -fsS -o /dev/null -w "  로컬 응답: %{http_code}\n" http://127.0.0.1:3000/login

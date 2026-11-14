@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSessionUser, requireAdmin } from "@/lib/auth";
 import { one, query } from "@/lib/db";
-import { DEFAULT_THRESHOLDS, ThresholdConfig, ThresholdRule } from "@/lib/types";
+import { DEFAULT_THRESHOLDS, LinearConversion, ThresholdConfig, ThresholdRule } from "@/lib/types";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -73,6 +73,23 @@ export async function PUT(request: Request) {
     return NextResponse.json({ error: "통신단절 판정 시간은 1분 이상이어야 합니다." }, { status: 400 });
   }
 
+  const levels = ["caution", "warning", "danger"];
+  const oilLowLevel = levels.includes(body.oilLowLevel) ? body.oilLowLevel : "warning";
+  const oilHighLevel = [...levels, "none"].includes(body.oilHighLevel) ? body.oilHighLevel : "none";
+
+  const readConv = (v: unknown, label: string): LinearConversion | string => {
+    const o = (v ?? {}) as { scale?: unknown; offset?: unknown };
+    const scale = Number(o.scale ?? 1);
+    const offset = Number(o.offset ?? 0);
+    if (!Number.isFinite(scale) || scale <= 0) return `${label} 환산 배율은 0보다 커야 합니다.`;
+    if (!Number.isFinite(offset)) return `${label} 환산 보정값은 숫자여야 합니다.`;
+    return { scale, offset };
+  };
+  const convH2 = readConv(body.conversion?.h2, "수소");
+  const convCh4 = readConv(body.conversion?.ch4, "메탄");
+  if (typeof convH2 === "string") return NextResponse.json({ error: convH2 }, { status: 400 });
+  if (typeof convCh4 === "string") return NextResponse.json({ error: convCh4 }, { status: 400 });
+
   const thresholds: ThresholdConfig = {
     h2,
     ch4,
@@ -81,6 +98,9 @@ export async function PUT(request: Request) {
     compositeEnabled: Boolean(body.compositeEnabled),
     compositeMinSensors: minSensors,
     offlineMinutes,
+    oilLowLevel,
+    oilHighLevel,
+    conversion: { h2: convH2, ch4: convCh4 },
   };
 
   const rows = await query<{ version: number }>(
