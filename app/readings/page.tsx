@@ -289,26 +289,26 @@ export default function ReadingsPage() {
         {error && <div className="banner error">{error}</div>}
 
         <div className="table-wrap">
-          <table className="fixed fit">
+          <table className="fixed readings-table">
             <colgroup>
-              <col style={{ width: 64 }} />
-              <col style={{ width: 130 }} />
-              <col style={{ width: 168 }} />
-              <col style={{ width: 168 }} />
-              <col style={{ width: 104 }} />
-              <col style={{ width: 80 }} />
-              <col style={{ width: 120 }} />
-              <col style={{ width: 120 }} />
-              <col style={{ width: 110 }} />
-              <col style={{ width: 80 }} />
+              <col className="r-no" />
+              <col className="r-dev" />
+              <col className="r-time" />
+              <col className="r-time r-recv" />
+              <col className="r-delay" />
+              <col className="r-kind" />
+              <col className="r-val" />
+              <col className="r-val" />
+              <col className="r-temp" />
+              <col className="r-oil" />
             </colgroup>
             <thead>
               <tr>
                 <th>No</th>
                 <th>설비</th>
                 <th>측정 시각</th>
-                <th>수신 시각</th>
-                <th>지연</th>
+                <th className="r-recv">수신 시각</th>
+                <th className="r-delay">지연</th>
                 <th>구분</th>
                 <th>H2(ppm)</th>
                 <th>CH4(ppm)</th>
@@ -330,9 +330,12 @@ export default function ReadingsPage() {
                   <td>
                     <b>{r.name}</b>
                   </td>
-                  <td className="center">{fmtDateTime(r.measured_at, true)}</td>
-                  <td className="center">{fmtDateTime(r.received_at, true)}</td>
-                  <td className="num">{fmtDelay(r.delay_sec)}</td>
+                  <td className="center">
+                    <span className="d-full">{fmtDateTime(r.measured_at, true)}</span>
+                    <span className="d-short">{fmtDateTime(r.measured_at, true).slice(5)}</span>
+                  </td>
+                  <td className="center r-recv">{fmtDateTime(r.received_at, true)}</td>
+                  <td className="num r-delay">{fmtDelay(r.delay_sec)}</td>
                   <td className="center">
                     <span className={`badge ${r.replay ? "caution" : "normal"}`}>
                       {r.replay ? "재전송" : "실시간"}
