@@ -9,10 +9,16 @@ import {
   AlarmEvent,
   SeverityLevel,
 } from "@/lib/types";
-import { downloadCsv, fmtDateTime, fmtShort } from "@/lib/format";
+import { downloadCsv, fmtDateTime, fmtShort, fmtValue } from "@/lib/format";
 import Pager from "./Pager";
 import { usePaged } from "@/lib/usePaged";
 import Sparkline from "./Sparkline";
+
+/** 측정값이 한 번도 들어오지 않은 설비는 0 대신 '-' 로 보여 줍니다. */
+const hasData = (d: { since?: string | null }) =>
+  !!d.since && d.since !== "-" && !Number.isNaN(new Date(d.since).getTime());
+const val = (d: { since?: string | null }, v: number, digits?: number) =>
+  hasData(d) ? fmtValue(v, digits) : "-";
 
 /** 상태 정렬 순서 — 손봐야 할 설비가 위로 옵니다. */
 const STATUS_RANK: Record<DeviceStatus, number> = {
@@ -145,10 +151,10 @@ export default function DeviceTable({
         d.building,
         d.capacity,
         STATUS_LABEL[d.status],
-        d.temperature.toFixed(1),
-        d.h2.toFixed(1),
-        d.ch4.toFixed(1),
-        d.oil_level,
+        val(d, d.temperature, 1),
+        val(d, d.h2),
+        val(d, d.ch4),
+        hasData(d) ? d.oil_level : "-",
         d.causes.join(", "),
         fmtDateTime(d.since),
       ])
@@ -247,16 +253,16 @@ export default function DeviceTable({
                       <span className={`badge ${u.status}`}>{STATUS_LABEL[u.status]}</span>
                     </td>
                     <td className={`num${levelClass(u.sensorLevels?.temperature)}`} data-label="온도(℃)">
-                      {u.temperature.toFixed(1)}
+                      {val(u, u.temperature, 1)}
                     </td>
                     <td className={`num${levelClass(u.sensorLevels?.h2)}`} data-label="수소(ppm)">
-                      {u.h2.toFixed(1)}
+                      {val(u, u.h2)}
                     </td>
                     <td className={`num${levelClass(u.sensorLevels?.ch4)}`} data-label="메탄(ppm)">
-                      {u.ch4.toFixed(1)}
+                      {val(u, u.ch4)}
                     </td>
                     <td className={`center${levelClass(u.sensorLevels?.oil_level)}`} data-label="유면">
-                      {u.oil_level}
+                      {hasData(u) ? u.oil_level : "-"}
                     </td>
                     <td className="c-spark opt">
                       <Sparkline trend={u.trend} compact />
@@ -289,7 +295,7 @@ export default function DeviceTable({
                           <div className="sensor">
                             <div className="s-lbl">수소가스 (H₂)</div>
                             <div className="s-val">
-                              {u.h2.toFixed(1)}
+                              {val(u, u.h2)}
                               <span style={{ fontSize: 12, fontWeight: 400, color: "var(--muted)" }}> ppm</span>
                             </div>
                             <div className="s-delta">{delta(u.h2, u.baseline?.h2)}</div>
@@ -297,7 +303,7 @@ export default function DeviceTable({
                           <div className="sensor">
                             <div className="s-lbl">메탄가스 (CH₄)</div>
                             <div className="s-val">
-                              {u.ch4.toFixed(1)}
+                              {val(u, u.ch4)}
                               <span style={{ fontSize: 12, fontWeight: 400, color: "var(--muted)" }}> ppm</span>
                             </div>
                             <div className="s-delta">{delta(u.ch4, u.baseline?.ch4)}</div>
@@ -305,7 +311,7 @@ export default function DeviceTable({
                           <div className="sensor">
                             <div className="s-lbl">절연유 온도</div>
                             <div className="s-val">
-                              {u.temperature.toFixed(1)}
+                              {val(u, u.temperature, 1)}
                               <span style={{ fontSize: 12, fontWeight: 400, color: "var(--muted)" }}> ℃</span>
                             </div>
                             <div className="s-delta">
