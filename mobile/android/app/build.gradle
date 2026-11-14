@@ -5,6 +5,9 @@ def ksProps = new Properties()
 def ksFile = rootProject.file('keystore/keystore.properties')
 if (ksFile.exists()) ksFile.withInputStream { ksProps.load(it) }
 
+// CI 실행 번호를 버전 코드로 씁니다(올라갈수록 새 버전).
+def appVersionCode = (System.getenv("VERSION_CODE") ?: "1").toInteger()
+
 android {
     namespace "kr.co.dhsp.monitor"
     compileSdk rootProject.ext.compileSdkVersion
@@ -12,9 +15,8 @@ android {
         applicationId "kr.co.dhsp.monitor"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        // CI 실행 번호를 버전 코드로 씁니다(올라갈수록 새 버전).
-        versionCode (System.getenv("VERSION_CODE") ?: "1") as int
-        versionName "1.0." + (System.getenv("VERSION_CODE") ?: "1")
+        versionCode appVersionCode
+        versionName "1.0.${appVersionCode}"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
