@@ -1,0 +1,75 @@
+# 안드로이드 앱(APK) 빌드.
+# mobile/ 이 바뀌면 빌드해서 public/downloads 에 올리고 main 에 커밋합니다.
+# 서버는 다음 배포 때 git pull 로 받아 [앱 다운로드] 화면에서 내려줍니다.
+name: android-apk
+
+on:
+  push:
+    branches: [main]
+    paths: ["mobile/**", ".github/workflows/android-apk.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: android-apk
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - uses: android-actions/setup-android@v3
+
+      - name: Capacitor 동기화
+        working-directory: mobile
+        run: |
+          npm ci --no-audit --no-fund
+          npx cap sync android
+
+      - name: APK 빌드 (release 서명)
+        working-directory: mobile/android
+        env:
+          VERSION_CODE: ${{ github.run_number }}
+        run: |
+          chmod +x gradlew
+          ./gradlew --no-daemon assembleRelease
+
+      - name: 다운로드 폴더로 복사
+        run: |
+          APK=mobile/android/app/build/outputs/apk/release/app-release.apk
+          cp "$APK" public/downloads/dhsp-android.apk
+          SIZE=$(stat -c %s public/downloads/dhsp-android.apk)
+          SHA=$(sha256sum public/downloads/dhsp-android.apk | cut -d' ' -f1)
+          cat > public/downloads/android.json <<JSON
+          {
+            "version": "1.0.${{ github.run_number }}",
+            "versionCode": ${{ github.run_number }},
+            "size": $SIZE,
+            "sha256": "$SHA",
+            "builtAt": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+            "commit": "${GITHUB_SHA::7}"
+          }
+          JSON
+          sed -i 's/^          //' public/downloads/android.json
+
+      - name: 커밋
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add public/downloads/dhsp-android.apk public/downloads/android.json
+          git commit -m "안드로이드 앱 1.0.${{ github.run_number }} 빌드 [skip ci]" || exit 0
+          git pull --rebase origin main
+          git push origin HEAD:main

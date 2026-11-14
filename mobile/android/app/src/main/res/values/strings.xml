@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">DH 스마트파워</string>
+    <string name="title_activity_main">DH 스마트파워</string>
+    <string name="package_name">kr.co.dhsp.monitor</string>
+    <string name="custom_url_scheme">kr.co.dhsp.monitor</string>
+</resources>

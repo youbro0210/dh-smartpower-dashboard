@@ -44,5 +44,6 @@ export async function middleware(request: NextRequest) {
 // api 는 제외합니다. 각 라우트 핸들러가 자체적으로 인증을 검증하며,
 // 미들웨어가 가로채면 API 가 JSON 대신 HTML 리다이렉트를 반환해 호출부가 깨집니다.
 export const config = {
-  matcher: ["/((?!api|_next/static|_next/image|favicon.ico).*)"],
+  // downloads: 앱 설치 파일. 휴대폰에서 QR 로 바로 받도록 로그인 없이 엽니다.
+  matcher: ["/((?!api|_next/static|_next/image|favicon.ico|downloads).*)"],
 };

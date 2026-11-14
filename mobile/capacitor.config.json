@@ -1,0 +1,13 @@
+{
+  "appId": "kr.co.dhsp.monitor",
+  "appName": "DH 스마트파워",
+  "webDir": "www",
+  "server": {
+    "url": "https://dhsp.co.kr",
+    "androidScheme": "https",
+    "allowNavigation": ["dhsp.co.kr", "*.dhsp.co.kr"]
+  },
+  "android": {
+    "allowMixedContent": false
+  }
+}

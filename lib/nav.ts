@@ -60,6 +60,7 @@ export const NAV: NavGroup[] = [
       { href: "/settings", label: "설정", icon: "settings", adminOnly: true },
       { href: "/admin", label: "회원관리", icon: "users", adminOnly: true },
       { href: "/login-history", label: "로그인 이력", icon: "history", adminOnly: true },
+      { href: "/app-download", label: "앱 다운로드", icon: "download", staffOnly: true },
     ],
   },
 ];

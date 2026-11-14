@@ -21,6 +21,7 @@ export const SCREENS: [string, string][] = [
   ["/settings/notify", "설정 › 알림 발송"],
   ["/admin", "회원관리"],
   ["/login-history", "로그인 이력"],
+  ["/app-download", "앱 다운로드"],
 ];
 
 /** 관리 메뉴는 여각과 같이 CS 요청 대상에서 뺍니다. .autofix.yml forbidden 과 맞춥니다. */

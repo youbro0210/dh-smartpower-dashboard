@@ -26,9 +26,17 @@ export type IconName =
   | "report"
   | "request"
   | "check"
-  | "building";
+  | "building"
+  | "download";
 
 const PATHS: Record<IconName, JSX.Element> = {
+  // 앱 다운로드 (휴대폰 + 아래 화살표)
+  download: (
+    <>
+      <rect x="6" y="2" width="12" height="20" rx="2" />
+      <path d="M12 7v7M9 11l3 3 3-3M10 19h4" />
+    </>
+  ),
   // 고객사 (건물)
   building: (
     <>

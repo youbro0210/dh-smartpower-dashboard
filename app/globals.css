@@ -4255,3 +4255,7 @@ table.fixed.fit { width: auto; }
   cursor: pointer;
 }
 .side-fold button:hover { color: var(--side-text); border-color: var(--side-muted); }
+
+/* 앱 다운로드 */
+.app-table tbody td { height: auto; padding-top: 10px; padding-bottom: 10px; white-space: normal; }
+.app-qr img { width: 120px; height: 120px; display: block; margin: 0 auto; }
