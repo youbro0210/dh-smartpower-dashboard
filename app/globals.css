@@ -3658,9 +3658,22 @@ td.picked {
 
   /* 단추 자리만큼 제목을 줄입니다. */
   .topbar-brand {
-    padding-right: 64px;
+    padding-right: 8px;
     font-size: 15px;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
+
+  /* 챗봇 단추가 알림 종 왼쪽에 떠 있으므로 종 앞에 그 자리를 비워 둡니다. */
+  .topbar-right a[href="/alarms"].topbar-icon-btn { margin-left: 56px; }
+  .topbar-right .topbar-link {
+    padding: 0 8px;
+    font-size: var(--fs-xs);
+    white-space: nowrap;
+  }
+  .topbar-right { flex-shrink: 0; }
 }
 
 /* 임계치 표 — 두 자리 숫자를 넓은 칸 끝에 두면 값과 이름이 멀어집니다.
