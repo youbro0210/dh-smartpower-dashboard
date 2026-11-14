@@ -1,8 +1,8 @@
 {
-  "version": "1.0.3",
-  "versionCode": 3,
-  "size": 2920320,
-  "sha256": "788f4148936da92d2ee89bdf7988ca52c4c7234eb4929ff5fa6459726854cf28",
-  "builtAt": "2026-11-14T09:13:20Z",
-  "commit": "e500372"
+  "version": "1.0.4",
+  "versionCode": 4,
+  "size": 2920616,
+  "sha256": "80bf51323e9e13a89714fe3de03bddecbfb7fe13eb49b2a4c1dc3344bd37831a",
+  "builtAt": "2026-11-14T09:20:40Z",
+  "commit": "17dc28d"
 }
