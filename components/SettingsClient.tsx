@@ -108,13 +108,14 @@ export default function SettingsClient() {
             {saving ? "저장 중..." : "저장"}
           </button>
         </div>
+        <div className="settings-block">
         <div className="table-wrap" style={{ marginBottom: 12 }}>
         <table className="grid threshold-table">
           <colgroup>
             <col style={{ width: 180 }} />
-            <col style={{ width: 150 }} />
-            <col style={{ width: 150 }} />
-            <col style={{ width: 150 }} />
+            <col />
+            <col />
+            <col />
           </colgroup>
           <thead>
             <tr>
@@ -293,6 +294,7 @@ export default function SettingsClient() {
             })}
           </tbody>
         </table>
+        </div>
       </div>
 
       <div className="card">

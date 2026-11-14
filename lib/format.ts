@@ -56,3 +56,17 @@ export function downloadCsv(filename: string, header: string[], rows: (string | 
   a.remove();
   URL.revokeObjectURL(url);
 }
+
+/**
+ * 측정값 표기. 정수는 천 단위 쉼표(1,023), 소수는 1자리까지.
+ * digits 를 주면 그 자릿수로 고정합니다(온도 23.2).
+ */
+export function fmtValue(value: number | string | null | undefined, digits?: number): string {
+  if (value === null || value === undefined || value === "") return "-";
+  const n = Number(value);
+  if (!Number.isFinite(n)) return "-";
+  return n.toLocaleString("ko-KR", {
+    minimumFractionDigits: digits ?? 0,
+    maximumFractionDigits: digits ?? 1,
+  });
+}

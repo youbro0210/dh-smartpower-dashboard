@@ -19,7 +19,7 @@
   /* 글자 */
   --text: #1d2939;
   --text-sub: #475467;
-  --text-muted: #98a2b3;
+  --text-muted: #667085;  /* 흰 바탕 대비 4.5:1 이상 (예전 #98a2b3 은 2.6:1) */
 
   /* 주색상: 진한 남색 1개 */
   --primary: #1f3a5f;
@@ -4135,3 +4135,32 @@ td.picked {
   }
   .signal-body { max-width: 220px; }
 }
+
+
+/* ---------------------------------------------------------------------------
+   가독성 보완 (2026-11-14)
+   --------------------------------------------------------------------------- */
+
+/* 건수 요약 띠: 가운데 머리글 아래 숫자도 가운데로 맞춥니다. */
+.grid.compact tbody td.num { text-align: center; }
+
+/* 펼친 상세: 흰 바탕에 왼쪽 굵은 선 하나로 어느 행의 상세인지 표시합니다. */
+tbody tr.detail-row > td,
+tbody tr.detail-row:hover > td {
+  background: var(--surface);
+  height: auto;
+  padding: 12px 12px 12px 16px;
+  box-shadow: inset 3px 0 0 var(--primary);
+}
+.detail-row .sub-table { margin-bottom: 8px; }
+.detail-row .sub-table th,
+.detail-row .sub-table td { font-size: var(--fs-xs); }
+.detail-row .codeblock { margin: 6px 0 0; }
+
+/* 설정 화면: 임계치 표와 아래 설정 표를 같은 폭으로 둡니다. */
+.settings-block { max-width: 1100px; }
+.settings-block .table-wrap .threshold-table { width: 100%; }
+.settings-block .threshold-table td.th-val { text-align: right; }
+.settings-block .threshold-table input { width: 140px; }
+.settings-block table.form-grid th { width: 140px; }
+.settings-block table.form-grid td { width: calc(50% - 140px); }

@@ -426,8 +426,8 @@ export default function CommandClient() {
                   </td>
                 </tr>
                 {openId === row.id && (
-                  <tr>
-                    <td colSpan={8} style={{ padding: 12, background: "#f7f8fa" }}>
+                  <tr className="detail-row">
+                    <td colSpan={8}>
                       <div className="spark-title">보낸 명령</div>
                       <pre className="codeblock">{JSON.stringify(sentBody(row), null, 2)}</pre>
                       <div className="spark-title" style={{ marginTop: 8 }}>장치 응답</div>

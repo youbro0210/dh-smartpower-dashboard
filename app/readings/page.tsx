@@ -5,7 +5,7 @@ import PageHeader from "@/components/PageHeader";
 import Pager from "@/components/Pager";
 import TrendChart from "@/components/TrendChart";
 import { useDashboard } from "@/lib/configStore";
-import { downloadCsv, fmtDate, fmtDateTime } from "@/lib/format";
+import { downloadCsv, fmtDate, fmtDateTime, fmtValue } from "@/lib/format";
 import type { DeviceTrend } from "@/lib/types";
 
 interface ReadingRow {
@@ -55,8 +55,6 @@ function fmtDelay(sec: number): string {
   return `${Math.floor(s / 86400)}일 ${Math.floor((s % 86400) / 3600)}시간`;
 }
 
-const num = (v: number | null, digits = 1) =>
-  v === null || v === undefined || !Number.isFinite(Number(v)) ? "-" : Number(v).toFixed(digits);
 
 export default function ReadingsPage() {
   const { devices } = useDashboard();
@@ -149,9 +147,9 @@ export default function ReadingsPage() {
         fmtDateTime(r.received_at, true),
         fmtDelay(r.delay_sec),
         r.replay ? "재전송" : "실시간",
-        num(r.h2),
-        num(r.ch4),
-        num(r.temperature),
+        r.h2 ?? "",
+        r.ch4 ?? "",
+        r.temperature ?? "",
         r.oil_level ?? "-",
       ])
     );
@@ -294,14 +292,14 @@ export default function ReadingsPage() {
           <table className="fixed">
             <colgroup>
               <col style={{ width: 64 }} />
-              <col style={{ width: 96 }} />
+              <col />
               <col style={{ width: 168 }} />
               <col style={{ width: 168 }} />
               <col style={{ width: 104 }} />
               <col style={{ width: 80 }} />
-              <col />
-              <col />
-              <col />
+              <col style={{ width: 120 }} />
+              <col style={{ width: 120 }} />
+              <col style={{ width: 110 }} />
               <col style={{ width: 80 }} />
             </colgroup>
             <thead>
@@ -340,9 +338,9 @@ export default function ReadingsPage() {
                       {r.replay ? "재전송" : "실시간"}
                     </span>
                   </td>
-                  <td className="num">{num(r.h2)}</td>
-                  <td className="num">{num(r.ch4)}</td>
-                  <td className="num">{num(r.temperature)}</td>
+                  <td className="num">{fmtValue(r.h2)}</td>
+                  <td className="num">{fmtValue(r.ch4)}</td>
+                  <td className="num">{fmtValue(r.temperature, 1)}</td>
                   <td className="center">{r.oil_level ?? "-"}</td>
                 </tr>
               ))}

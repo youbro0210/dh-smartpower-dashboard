@@ -4,6 +4,7 @@ import { Fragment, useCallback, useState } from "react";
 import PageHeader from "./PageHeader";
 import SettingsTabs from "./SettingsTabs";
 import Pager from "./Pager";
+import { fmtValue } from "@/lib/format";
 
 interface Row {
   id: number;
@@ -57,7 +58,6 @@ interface Item {
   oil_level: string | null;
 }
 
-const num = (v: number | null) => (v === null || v === undefined ? "-" : Number(v).toFixed(1));
 
 function timeText(iso: string): string {
   const d = new Date(iso);
@@ -279,16 +279,25 @@ export default function IngestClient() {
                   </tr>
                   {open && (
                     <tr className="detail-row">
-                      <td colSpan={8} style={{ padding: 12, background: "var(--surface-2, #f7f8fa)" }}>
+                      <td colSpan={8}>
                         {row.kind === "tele" && (
                           <>
                             <div className="spark-title">
                               담긴 계측값 {items ? `${items.length.toLocaleString()}건` : ""}
                             </div>
-                            <table className="grid compact fixed" style={{ marginBottom: 8 }}>
+                            <table className="fixed sub-table">
+                              <colgroup>
+                                <col style={{ width: 56 }} />
+                                <col style={{ width: 150 }} />
+                                <col />
+                                <col style={{ width: 120 }} />
+                                <col style={{ width: 120 }} />
+                                <col style={{ width: 110 }} />
+                                <col style={{ width: 80 }} />
+                              </colgroup>
                               <thead>
                                 <tr>
-                                  <th style={{ width: 56 }}>No</th>
+                                  <th>No</th>
                                   <th>측정 시각</th>
                                   <th>설비</th>
                                   <th>H2(ppm)</th>
@@ -309,9 +318,9 @@ export default function IngestClient() {
                                     <td className="center">{i + 1}</td>
                                     <td className="center">{timeText(it.measured_at)}</td>
                                     <td className="center">{it.device_id}</td>
-                                    <td className="num">{num(it.h2)}</td>
-                                    <td className="num">{num(it.ch4)}</td>
-                                    <td className="num">{num(it.temperature)}</td>
+                                    <td className="num">{fmtValue(it.h2)}</td>
+                                    <td className="num">{fmtValue(it.ch4)}</td>
+                                    <td className="num">{fmtValue(it.temperature, 1)}</td>
                                     <td className="center">{it.oil_level ?? "-"}</td>
                                   </tr>
                                 ))}
@@ -325,7 +334,7 @@ export default function IngestClient() {
                           </button>
                         ) : null}
                         {(row.kind !== "tele" || showRaw) && (
-                          <pre className="codeblock" style={{ marginTop: 8 }}>
+                          <pre className="codeblock">
                             {JSON.stringify(row.payload ?? {}, null, 2)}
                           </pre>
                         )}
