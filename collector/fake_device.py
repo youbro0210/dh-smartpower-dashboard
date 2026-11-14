@@ -56,9 +56,9 @@ def on_message(client, _userdata, msg):
         ack["error"] = "지원하지 않는 명령입니다."
     else:
         result = {"echo": body.get("command"), "rtt_ms": 12}
-        # 측정 주기 변경은 적용된 값을 돌려줍니다.
-        if body.get("command") == "set_interval":
-            result["interval"] = (body.get("params") or {}).get("seconds")
+        # 구성값 변경은 적용된 값을 돌려줍니다.
+        if body.get("command") == "set_config":
+            result = {k: v for k, v in (body.get("params") or {}).items() if k != "get"}
         ack["result"] = result
 
     client.publish(f"{BASE}/cmd/ack", json.dumps(ack), qos=1)

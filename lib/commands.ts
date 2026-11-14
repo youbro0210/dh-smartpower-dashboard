@@ -1,14 +1,17 @@
 /**
  * 장비로 보낼 수 있는 명령 목록.
  *
- * 주의: 이 명령 집합은 아직 장비 업체(㈜헤디)와 확정 전입니다.
- * 규격이 정해지면 여기만 고치면 화면과 검증이 함께 따라옵니다.
+ * ㈜헤디 구현 기준 (2026-11-14 장비 제어 테스트 회신).
+ * - resend: 모듈이 전송 완료분을 삭제하므로 불가 → 제외
+ * - set_interval: 이번 개발은 고정 주기로 협의(11/12) → 제외
+ * - sync_time: 모듈이 접속 시 NTP 동기 → 제외
+ * 여기만 고치면 화면과 서버 검증이 함께 따라옵니다.
  */
 
 export interface CommandField {
   key: string;
   label: string;
-  type: "text" | "number";
+  type: "text" | "number" | "boolean";
   hint?: string;
   required?: boolean;
   min?: number;
@@ -24,6 +27,8 @@ export interface CommandSpec {
   /** 되돌릴 수 없거나 운전에 영향을 주는 명령 — 화면에서 한 번 더 확인합니다. */
   risky?: boolean;
   fields?: CommandField[];
+  /** fields 중 하나 이상은 값이 있어야 하는 명령 */
+  needsAnyField?: boolean;
 }
 
 export const COMMANDS: Record<string, CommandSpec> = {
@@ -36,28 +41,22 @@ export const COMMANDS: Record<string, CommandSpec> = {
     description: "다음 주기를 기다리지 않고 지금 측정해 올리도록 요청합니다.",
     perDevice: true,
   },
-  resend: {
-    label: "구간 재전송",
-    description:
-      "지정한 구간의 계측값을 다시 보내도록 요청합니다. 중복은 서버가 걸러내므로 안전합니다.",
+  set_config: {
+    label: "센서 구성값 변경·조회 (set_config)",
+    description: "경고(LED) 임계값을 바꾸거나 현재 구성값 전체를 받아옵니다. 입력한 항목만 보냅니다.",
+    perDevice: true,
+    needsAnyField: true,
     fields: [
-      { key: "from", label: "시작 시각", type: "text", required: true,
-        placeholder: "2026-09-20T00:00:00Z", hint: "UTC ISO8601" },
-      { key: "to", label: "종료 시각", type: "text", required: true,
-        placeholder: "2026-09-20T06:00:00Z" },
+      { key: "h2_thres", label: "H2 경고 임계값", type: "number", min: 0, max: 4095, placeholder: "0~4095" },
+      { key: "ch4_thres", label: "CH4 경고 임계값", type: "number", min: 0, max: 4095, placeholder: "0~4095" },
+      { key: "temp_thres", label: "온도 경고 기준값(℃)", type: "number", max: 200, placeholder: "~200" },
+      { key: "get", label: "현재 구성값 조회", type: "boolean" },
     ],
   },
-  set_interval: {
-    label: "측정 주기 변경",
-    description: "장치의 측정·전송 주기를 바꿉니다. 통신단절 판정 시간보다 짧아야 합니다.",
-    fields: [
-      { key: "seconds", label: "주기(초)", type: "number", required: true,
-        min: 10, max: 3600, placeholder: "60" },
-    ],
-  },
-  sync_time: {
-    label: "시각 동기",
-    description: "장치 시계를 서버 기준으로 맞추도록 요청합니다.",
+  led_clear: {
+    label: "경고(LED) 상태 클리어",
+    description: "모듈의 경고(LED) 표시 상태를 해제합니다.",
+    perDevice: true,
   },
   reboot: {
     label: "재부팅",

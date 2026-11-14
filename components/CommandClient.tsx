@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
 import PageHeader from "./PageHeader";
 import SettingsTabs from "./SettingsTabs";
 import Pager from "./Pager";
@@ -50,6 +50,30 @@ const TARGET_LABEL: Record<string, string> = {
   module: "측정모듈 직결",
   gateway: "게이트웨이 PC",
 };
+
+/** 응답의 result 를 한 줄로 */
+function resultText(ack: unknown): string | null {
+  if (!ack || typeof ack !== "object") return null;
+  const result = (ack as Record<string, unknown>).result;
+  if (result === undefined || result === null) return null;
+  if (typeof result !== "object") return `응답 ${String(result)}`;
+  const parts = Object.entries(result as Record<string, unknown>).map(
+    ([k, v]) => `${k}=${typeof v === "object" ? JSON.stringify(v) : String(v)}`
+  );
+  return parts.length ? `응답 ${parts.join(", ")}` : null;
+}
+
+/** 수집기가 실제로 내보내는 명령 본문과 같은 모양 */
+function sentBody(row: CommandRow) {
+  const deviceId = row.device_id ?? (row.target_type === "module" ? row.target_id : undefined);
+  return {
+    cmdId: row.id,
+    command: row.command,
+    ...(deviceId ? { deviceId } : {}),
+    ...(row.params && Object.keys(row.params).length ? { params: row.params } : {}),
+    ts: row.sent_at ?? row.requested_at,
+  };
+}
 
 function timeText(iso: string | null): string {
   if (!iso) return "-";
@@ -171,7 +195,6 @@ export default function CommandClient() {
 
       {message && <div className={`banner ${message.kind}`}>{message.text}</div>}
 
-      <div className="banner warn-soft">명령 규격 확정 전 (장비 업체 협의 중)</div>
 
       {/* ── 명령 발행 ───────────────────────────────────────── */}
       <div className="card">
@@ -249,7 +272,16 @@ export default function CommandClient() {
             </label>
           )}
 
-          {(spec?.fields ?? []).map((f) => (
+          {(spec?.fields ?? []).map((f) => f.type === "boolean" ? (
+            <label className="field-row" key={f.key}>
+              <span>{f.label}</span>
+              <label style={{ display: "flex", alignItems: "center", gap: 6, height: 34 }}>
+                <input type="checkbox" checked={params[f.key] === "true"}
+                  onChange={(e) => setParams({ ...params, [f.key]: e.target.checked ? "true" : "" })} />
+                요청
+              </label>
+            </label>
+          ) : (
             <label className="field-row" key={f.key}>
               <span>
                 {f.label}
@@ -308,7 +340,8 @@ export default function CommandClient() {
                 </tr>
               )}
               {pg.slice.map((row) => (
-                <tr key={row.id} className={`clickable${openId === row.id ? " selected" : ""}`}
+                <Fragment key={row.id}>
+                <tr className={`clickable${openId === row.id ? " selected" : ""}`}
                   onClick={() => setOpenId(openId === row.id ? null : row.id)}>
                   <td className="num">{row.id}</td>
                   <td className="center">{timeText(row.requested_at)}</td>
@@ -331,8 +364,9 @@ export default function CommandClient() {
                     </span>
                   </td>
                   <td className="center">{timeText(row.acked_at)}</td>
-                  <td style={{ color: row.error ? "var(--danger)" : "var(--faint)" }}>
-                    {row.error ?? (row.requested_by ? `요청 ${row.requested_by.split("@")[0]}` : "-")}
+                  <td style={{ color: row.error ? "var(--danger)" : resultText(row.ack) ? undefined : "var(--faint)" }}
+                    title={resultText(row.ack) ?? undefined}>
+                    {row.error ?? resultText(row.ack) ?? (row.requested_by ? `요청 ${row.requested_by.split("@")[0]}` : "-")}
                   </td>
                   <td className="center">
                     {row.status === "pending" && (
@@ -343,20 +377,22 @@ export default function CommandClient() {
                     )}
                   </td>
                 </tr>
+                {openId === row.id && (
+                  <tr>
+                    <td colSpan={8} style={{ padding: 12, background: "#f7f8fa" }}>
+                      <div className="spark-title">보낸 명령</div>
+                      <pre className="codeblock">{JSON.stringify(sentBody(row), null, 2)}</pre>
+                      <div className="spark-title" style={{ marginTop: 8 }}>장치 응답</div>
+                      <pre className="codeblock">{row.ack ? JSON.stringify(row.ack, null, 2) : "-"}</pre>
+                    </td>
+                  </tr>
+                )}
+                </Fragment>
               ))}
             </tbody>
           </table>
         </div>
         {pg.total > 20 && <Pager page={pg.page} total={pg.total} pageSize={20} onPage={pg.setPage} />}
-
-        {openId !== null && (
-          <div style={{ paddingTop: 12 }}>
-            <div className="spark-title">장치 응답 원문</div>
-            <pre className="codeblock">
-              {JSON.stringify(commands.find((c) => c.id === openId)?.ack ?? { 응답: "아직 없음" }, null, 2)}
-            </pre>
-          </div>
-        )}
       </div>
 
       <div className="note">

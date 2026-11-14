@@ -938,8 +938,11 @@ def main() -> None:
                 "command": row["command"],
                 "ts": datetime.now(timezone.utc).isoformat(),
             }
-            if row["device_id"]:
-                body["deviceId"] = row["device_id"]
+            # 장치가 deviceId 로 자기 앞 명령인지 검증하므로 항상 채워 보냅니다.
+            # 측정모듈 직결은 대상 ID 가 곧 설비 ID 입니다.
+            device_id = row["device_id"] or (row["target_id"] if row["target_type"] == "module" else None)
+            if device_id:
+                body["deviceId"] = device_id
             if row["params"]:
                 body["params"] = row["params"]
 

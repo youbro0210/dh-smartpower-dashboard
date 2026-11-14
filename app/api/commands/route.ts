@@ -71,6 +71,11 @@ export async function POST(request: Request) {
   const params: Record<string, string | number | boolean> = {};
   for (const field of spec.fields ?? []) {
     const raw = body.params?.[field.key];
+    if (field.type === "boolean") {
+      // false 는 장비가 무시하므로 보내지 않습니다.
+      if (raw === true || raw === "true") params[field.key] = true;
+      continue;
+    }
     if (raw === undefined || raw === "") {
       if (field.required) {
         return NextResponse.json({ error: `${field.label} 값이 필요합니다.` }, { status: 400 });
@@ -92,6 +97,10 @@ export async function POST(request: Request) {
     } else {
       params[field.key] = String(raw).slice(0, 200);
     }
+  }
+
+  if (spec.needsAnyField && Object.keys(params).length === 0) {
+    return NextResponse.json({ error: "변경하거나 조회할 항목을 하나 이상 입력하세요." }, { status: 400 });
   }
 
   const config = await one<{ site: string }>(`SELECT site FROM mqtt_config WHERE id = 1`);
