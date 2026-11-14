@@ -13,6 +13,7 @@ import { downloadCsv, fmtDateTime, fmtShort, fmtValue } from "@/lib/format";
 import Pager from "./Pager";
 import { usePaged } from "@/lib/usePaged";
 import Sparkline from "./Sparkline";
+import { useSession } from "@/lib/useSession";
 
 /** 측정값이 한 번도 들어오지 않은 설비는 0 대신 '-' 로 보여 줍니다. */
 const hasData = (d: { since?: string | null }) =>
@@ -97,6 +98,10 @@ export default function DeviceTable({
   /** 조회 전이면 빈 표만 보입니다. */
   searched?: boolean;
 }) {
+  // 고객사 담당자에게는 통신 경로(브릿지·연결 방식) 같은 기술 정보를 보이지 않습니다.
+  const { tier } = useSession();
+  const isCustomer = tier === "customer";
+  const columns = isCustomer ? COLUMNS.filter((c) => c.label !== "연결") : COLUMNS;
   const [expandedId, setExpandedId] = useState<string | null>(null);
   // 기본은 상태순 — 이상이 난 설비가 맨 위로 옵니다.
   const [sort, setSort] = useState<{ key: SortKey; asc: boolean }>({ key: "status", asc: true });
@@ -182,7 +187,7 @@ export default function DeviceTable({
       <div className="table-wrap">
         <table className="sortable">
           <colgroup>
-            {COLUMNS.map((c) => (
+            {columns.map((c) => (
               <col
                 key={c.label}
                 className={c.opt ? "opt" : undefined}
@@ -192,7 +197,7 @@ export default function DeviceTable({
           </colgroup>
           <thead>
             <tr>
-              {COLUMNS.map((c) => {
+              {columns.map((c) => {
                 const active = c.key !== null && sort.key === c.key;
                 return (
                   <th
@@ -218,7 +223,7 @@ export default function DeviceTable({
           <tbody>
             {searched && devices.length === 0 && (
               <tr>
-                <td className="empty" colSpan={COLUMNS.length}>
+                <td className="empty" colSpan={columns.length}>
                   조회된 데이터가 없습니다.
                 </td>
               </tr>
@@ -243,10 +248,10 @@ export default function DeviceTable({
                     <td className="c-name" style={{ whiteSpace: "nowrap" }}>
                       <b>{u.name}</b>
                       {/* 좁은 화면에서는 연결 칸을 접고 이름 아래에 적습니다. */}
-                      <span className="cell-sub">{linkText(u)}</span>
+                      {!isCustomer && <span className="cell-sub">{linkText(u)}</span>}
                     </td>
                     {/* 값이 서버까지 오는 길. 헤디 구성 1·2·3안을 여기서 구분합니다. */}
-                    <td className="c-link opt">{linkText(u)}</td>
+                    {!isCustomer && <td className="c-link opt">{linkText(u)}</td>}
                     <td className="c-where" data-label="위치" style={{ whiteSpace: "nowrap" }}>{u.building}</td>
                     <td className="c-cap opt" data-label="용량" style={{ color: "var(--muted)", whiteSpace: "nowrap" }}>{u.capacity}</td>
                     <td className="center c-status">
@@ -290,7 +295,7 @@ export default function DeviceTable({
 
                   {open && (
                     <tr className="expand-row">
-                      <td colSpan={COLUMNS.length}>
+                      <td colSpan={columns.length}>
                         <div className="sensor-grid" style={{ marginBottom: 12 }}>
                           <div className="sensor">
                             <div className="s-lbl">수소가스 (H₂)</div>

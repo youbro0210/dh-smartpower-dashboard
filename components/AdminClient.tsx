@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Pager from "./Pager";
 import PageHeader from "./PageHeader";
 import { fmtDate, fmtDateTime } from "@/lib/format";
@@ -10,6 +10,8 @@ interface AdminUser {
   email: string | undefined;
   full_name: string | null;
   tier: string;
+  company_id: number | null;
+  company_name: string | null;
   approval: "approved" | "pending";
   created_at: string;
   last_login_at: string | null;
@@ -21,7 +23,21 @@ interface LoginEvent {
   created_at: string;
 }
 
+interface Company {
+  id: number;
+  name: string;
+  memo: string | null;
+  devices: number;
+  users: number;
+}
+
 const PAGE_SIZE = 20;
+
+const TIER_OPTIONS = [
+  { value: "admin", label: "DH 관리자" },
+  { value: "viewer", label: "DH 담당자" },
+  { value: "customer", label: "고객사 담당자" },
+];
 
 export default function AdminClient() {
   const [users, setUsers] = useState<AdminUser[]>([]);
@@ -37,7 +53,45 @@ export default function AdminClient() {
 
   // 회원 추가
   const [adding, setAdding] = useState(false);
-  const [newUser, setNewUser] = useState({ email: "", fullName: "", password: "", tier: "viewer" });
+  const [newUser, setNewUser] = useState({ email: "", fullName: "", password: "", tier: "viewer", company_id: "" });
+
+  // 고객사
+  const [companies, setCompanies] = useState<Company[]>([]);
+  const [newCompany, setNewCompany] = useState({ name: "", memo: "" });
+
+  async function loadCompanies() {
+    const res = await fetch("/api/admin/companies", { cache: "no-store" });
+    const json = await res.json().catch(() => ({}));
+    if (res.ok) setCompanies(json.companies ?? []);
+  }
+
+  useEffect(() => {
+    void loadCompanies();
+  }, []);
+
+  async function addCompany(e: React.FormEvent) {
+    e.preventDefault();
+    setNotice(null);
+    const res = await fetch("/api/admin/companies", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(newCompany),
+    });
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok) return setNotice({ ok: false, text: json.error ?? "고객사를 등록하지 못했습니다." });
+    setNotice({ ok: true, text: `${newCompany.name} 고객사를 등록했습니다.` });
+    setNewCompany({ name: "", memo: "" });
+    await loadCompanies();
+  }
+
+  async function removeCompany(c: Company) {
+    setNotice(null);
+    const res = await fetch(`/api/admin/companies?id=${c.id}`, { method: "DELETE" });
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok) return setNotice({ ok: false, text: json.error ?? "삭제하지 못했습니다." });
+    setNotice({ ok: true, text: `${c.name} 고객사를 삭제했습니다.` });
+    await loadCompanies();
+  }
   const [addBusy, setAddBusy] = useState(false);
 
   // 비밀번호 변경 — 한 번에 한 사람만 엽니다.
@@ -96,14 +150,23 @@ export default function AdminClient() {
   }
 
 
-  async function changeTier(id: string, tier: string) {
-    setSavingId(id);
-    await fetch("/api/admin/users", {
+  async function changeTier(u: AdminUser, tier: string, companyId?: number | null) {
+    const company = tier === "customer" ? companyId ?? u.company_id ?? companies[0]?.id ?? null : null;
+    if (tier === "customer" && !company) {
+      setNotice({ ok: false, text: "고객사를 먼저 등록하세요." });
+      return;
+    }
+    setSavingId(u.id);
+    setNotice(null);
+    const res = await fetch("/api/admin/users", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ user_id: id, tier }),
+      body: JSON.stringify({ user_id: u.id, tier, company_id: company }),
     });
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok) setNotice({ ok: false, text: json.error ?? "변경하지 못했습니다." });
     await loadUsers(userPage);
+    await loadCompanies();
     setSavingId(null);
   }
 
@@ -134,7 +197,7 @@ export default function AdminClient() {
     const res = await fetch("/api/admin/users", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(newUser),
+      body: JSON.stringify({ ...newUser, company_id: newUser.company_id ? Number(newUser.company_id) : null }),
     });
     const json = await res.json().catch(() => ({}));
     setAddBusy(false);
@@ -143,7 +206,7 @@ export default function AdminClient() {
       return;
     }
     setNotice({ ok: true, text: `${newUser.email} 계정을 등록했습니다.` });
-    setNewUser({ email: "", fullName: "", password: "", tier: "viewer" });
+    setNewUser({ email: "", fullName: "", password: "", tier: "viewer", company_id: "" });
     setAdding(false);
     await loadUsers(1);
   }
@@ -173,8 +236,84 @@ export default function AdminClient() {
       <PageHeader
         title="회원 관리"
         breadcrumb="홈 › 회원관리"
-        subtitle="가입 승인 · 회원 등록 · 등급 · 비밀번호 변경 · 로그인 이력 조회"
+        subtitle="고객사 · 가입 승인 · 회원 등록 · 등급 · 비밀번호 변경 · 로그인 이력 조회"
       />
+
+      <div className="card">
+        <div className="card-head">
+          <div className="card-title">
+            <span className="accent-bar" />
+            고객사
+          </div>
+          <span className="card-note">{companies.length}곳</span>
+        </div>
+        <form className="filterbar" onSubmit={addCompany}>
+          <span className="filter-label">고객사명</span>
+          <input
+            className="field"
+            value={newCompany.name}
+            onChange={(e) => setNewCompany({ ...newCompany, name: e.target.value })}
+          />
+          <span className="filter-label">메모</span>
+          <input
+            className="field"
+            style={{ minWidth: 260 }}
+            value={newCompany.memo}
+            onChange={(e) => setNewCompany({ ...newCompany, memo: e.target.value })}
+          />
+          <div className="filterbar-right">
+            <button className="btn primary" type="submit" disabled={!newCompany.name.trim()}>
+              고객사 추가
+            </button>
+          </div>
+        </form>
+        <div className="table-wrap">
+          <table className="fixed fit">
+            <colgroup>
+              <col style={{ width: 220 }} />
+              <col style={{ width: 320 }} />
+              <col style={{ width: 90 }} />
+              <col style={{ width: 90 }} />
+              <col style={{ width: 80 }} />
+            </colgroup>
+            <thead>
+              <tr>
+                <th>고객사</th>
+                <th>메모</th>
+                <th>설비</th>
+                <th>담당자</th>
+                <th>삭제</th>
+              </tr>
+            </thead>
+            <tbody>
+              {companies.length === 0 && (
+                <tr>
+                  <td className="empty" colSpan={5}>조회된 데이터가 없습니다.</td>
+                </tr>
+              )}
+              {companies.map((c) => (
+                <tr key={c.id}>
+                  <td><b>{c.name}</b></td>
+                  <td>{c.memo ?? "-"}</td>
+                  <td className="num">{c.devices}대</td>
+                  <td className="num">{c.users}명</td>
+                  <td className="center">
+                    <button
+                      className="btn sm"
+                      type="button"
+                      disabled={c.devices > 0 || c.users > 0}
+                      title={c.devices > 0 || c.users > 0 ? "연결된 설비·담당자가 있습니다" : undefined}
+                      onClick={() => void removeCompany(c)}
+                    >
+                      삭제
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
 
       <div className="card">
         <div className="card-head">
@@ -232,11 +371,29 @@ export default function AdminClient() {
                       value={newUser.tier}
                       onChange={(e) => setNewUser({ ...newUser, tier: e.target.value })}
                     >
-                      <option value="viewer">뷰어</option>
-                      <option value="admin">관리자</option>
+                      {TIER_OPTIONS.map((t) => (
+                        <option key={t.value} value={t.value}>{t.label}</option>
+                      ))}
                     </select>
                   </td>
                 </tr>
+                {newUser.tier === "customer" && (
+                  <tr>
+                    <th className="req">소속 고객사</th>
+                    <td colSpan={3}>
+                      <select
+                        className="field"
+                        value={newUser.company_id}
+                        onChange={(e) => setNewUser({ ...newUser, company_id: e.target.value })}
+                      >
+                        <option value="">선택</option>
+                        {companies.map((c) => (
+                          <option key={c.id} value={c.id}>{c.name}</option>
+                        ))}
+                      </select>
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
             <div className="save-bar">
@@ -267,15 +424,15 @@ export default function AdminClient() {
         <div className="table-wrap">
           <table className="grid">
             <thead>
-              <tr><th>이메일</th><th style={{ width: 160 }}>이름</th><th style={{ width: 110 }}>가입일</th><th style={{ width: 150 }}>최근 로그인</th><th style={{ width: 150 }}>가입 승인</th><th style={{ width: 110 }}>등급</th><th style={{ width: 230 }}>비밀번호</th></tr>
+              <tr><th>이메일</th><th style={{ width: 160 }}>이름</th><th style={{ width: 110 }}>가입일</th><th style={{ width: 150 }}>최근 로그인</th><th style={{ width: 150 }}>가입 승인</th><th style={{ width: 130 }}>등급</th><th style={{ width: 160 }}>소속</th><th style={{ width: 230 }}>비밀번호</th></tr>
             </thead>
             <tbody>
               {userLoading ? (
-                <tr><td className="empty" colSpan={7}>불러오는 중...</td></tr>
+                <tr><td className="empty" colSpan={8}>불러오는 중...</td></tr>
               ) : !userSearched ? (
-                <tr><td className="empty" colSpan={7}></td></tr>
+                <tr><td className="empty" colSpan={8}></td></tr>
               ) : users.length === 0 && !userError ? (
-                <tr><td className="empty" colSpan={7}>조회된 데이터가 없습니다.</td></tr>
+                <tr><td className="empty" colSpan={8}>조회된 데이터가 없습니다.</td></tr>
               ) : (
                 users.map((u) => (
                   <tr key={u.id}>
@@ -298,10 +455,27 @@ export default function AdminClient() {
                       )}
                     </td>
                     <td className="center">
-                      <select value={u.tier} disabled={savingId === u.id} onChange={(e) => changeTier(u.id, e.target.value)}>
-                        <option value="viewer">뷰어</option>
-                        <option value="admin">관리자</option>
+                      <select value={u.tier} disabled={savingId === u.id} onChange={(e) => void changeTier(u, e.target.value)}>
+                        {TIER_OPTIONS.map((t) => (
+                          <option key={t.value} value={t.value}>{t.label}</option>
+                        ))}
                       </select>
+                    </td>
+                    <td className="center">
+                      {u.tier === "customer" ? (
+                        <select
+                          value={u.company_id ?? ""}
+                          disabled={savingId === u.id}
+                          onChange={(e) => void changeTier(u, "customer", Number(e.target.value))}
+                        >
+                          {!u.company_id && <option value="">미지정</option>}
+                          {companies.map((c) => (
+                            <option key={c.id} value={c.id}>{c.name}</option>
+                          ))}
+                        </select>
+                      ) : (
+                        "DH스마트파워"
+                      )}
                     </td>
                     <td className="center">
                       {pwId === u.id ? (

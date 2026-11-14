@@ -5,6 +5,8 @@ export interface NavItem {
   label: string;
   icon: IconName;
   adminOnly?: boolean;
+  /** DH스마트파워 직원만 (고객사 담당자에게는 숨김) */
+  staffOnly?: boolean;
 }
 
 export interface NavGroup {
@@ -26,11 +28,11 @@ export const NAV: NavGroup[] = [
     label: "분석",
     items: [
       { href: "/trend", label: "추세 분석", icon: "chart" },
-      { href: "/readings", label: "계측 이력", icon: "history" },
+      { href: "/readings", label: "계측 이력", icon: "history", staffOnly: true },
       { href: "/diagnosis", label: "가스 진단", icon: "flask" },
       { href: "/aging", label: "열화·수명", icon: "thermo" },
       { href: "/report", label: "운영 보고서", icon: "report" },
-      { href: "/sample", label: "샘플 대시보드", icon: "sample" },
+      { href: "/sample", label: "샘플 대시보드", icon: "sample", staffOnly: true },
     ],
   },
   {

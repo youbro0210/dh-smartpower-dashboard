@@ -1,5 +1,6 @@
 import { Client } from "pg";
 import { getSessionUser } from "@/lib/auth";
+import { allowedDeviceIds } from "@/lib/scope";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -17,6 +18,9 @@ export const dynamic = "force-dynamic";
 export async function GET(request: Request) {
   const user = await getSessionUser();
   if (!user) return new Response("unauthorized", { status: 401 });
+  // 고객사 담당자에게는 자기 회사 설비의 변경만 흘려보냅니다.
+  const allowed = await allowedDeviceIds(user);
+  const allowedSet = allowed === null ? null : new Set(allowed);
 
   const client = new Client({
     connectionString: process.env.DATABASE_URL,
@@ -65,7 +69,9 @@ export async function GET(request: Request) {
         client.on("notification", (message) => {
           if (!message.payload) return;
           try {
-            send(message.channel, JSON.parse(message.payload));
+            const data = JSON.parse(message.payload);
+            if (allowedSet && !allowedSet.has(String(data?.device_id ?? ""))) return;
+            send(message.channel, data);
           } catch {
             /* 형식이 깨진 payload 는 무시 */
           }

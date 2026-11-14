@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSessionUser } from "@/lib/auth";
 import { query, one } from "@/lib/db";
+import { allowedDeviceIds } from "@/lib/scope";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -19,6 +20,12 @@ export async function GET(request: Request) {
 
   const where: string[] = [];
   const values: unknown[] = [];
+
+  const allowed = await allowedDeviceIds(user);
+  if (allowed !== null) {
+    values.push(allowed);
+    where.push(`device_id = ANY($${values.length})`);
+  }
 
   if (from) {
     values.push(from);

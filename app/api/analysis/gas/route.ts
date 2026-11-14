@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSessionUser } from "@/lib/auth";
 import { query } from "@/lib/db";
+import { allowedDeviceIds, canSee } from "@/lib/scope";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -42,7 +43,8 @@ export async function GET() {
   );
 
   // pg 는 double precision 을 숫자로, numeric 을 문자열로 줍니다. 모두 숫자로 맞춥니다.
-  const devices = rows.map((r) => {
+  const allowed = await allowedDeviceIds(user);
+  const devices = rows.filter((r) => canSee(String(r.device_id), allowed)).map((r) => {
     const out: Record<string, number | string | null> = {};
     for (const [k, v] of Object.entries(r)) {
       out[k] =

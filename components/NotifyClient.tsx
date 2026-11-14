@@ -52,11 +52,13 @@ const EMPTY_FORM = {
   quiet_from: "",
   quiet_to: "",
   memo: "",
+  company_id: "",
 };
 
 export default function NotifyClient() {
   const [channels, setChannels] = useState<ChannelState[]>([]);
   const [recipients, setRecipients] = useState<Recipient[]>([]);
+  const [companies, setCompanies] = useState<{ id: number; name: string }[]>([]);
   const [log, setLog] = useState<LogRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState<{ kind: "ok" | "error"; text: string } | null>(null);
@@ -73,11 +75,13 @@ export default function NotifyClient() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const [c, r, l] = await Promise.all([
+      const [c, r, l, co] = await Promise.all([
         fetch("/api/notify/channels", { cache: "no-store" }).then((x) => x.json()),
         fetch("/api/notify/recipients", { cache: "no-store" }).then((x) => x.json()),
         fetch("/api/notify/log?limit=50", { cache: "no-store" }).then((x) => x.json()),
+        fetch("/api/admin/companies", { cache: "no-store" }).then((x) => x.json()).catch(() => ({})),
       ]);
+      if (co.companies) setCompanies(co.companies);
       if (c.channels) setChannels(c.channels);
       if (r.recipients) setRecipients(r.recipients);
       if (l.log) setLog(l.log);
@@ -125,6 +129,7 @@ export default function NotifyClient() {
       quiet_from: form.quiet_from === "" ? null : Number(form.quiet_from),
       quiet_to: form.quiet_to === "" ? null : Number(form.quiet_to),
       memo: form.memo,
+      company_id: form.company_id === "" ? null : Number(form.company_id),
       enabled: true,
     };
     const res = await fetch("/api/notify/recipients", {
@@ -182,6 +187,7 @@ export default function NotifyClient() {
       quiet_from: r.quiet_from === null ? "" : String(r.quiet_from),
       quiet_to: r.quiet_to === null ? "" : String(r.quiet_to),
       memo: r.memo ?? "",
+      company_id: r.company_id === null ? "" : String(r.company_id),
     });
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
@@ -308,6 +314,22 @@ export default function NotifyClient() {
             </span>
           </label>
 
+          <label className="field-row">
+            <span>소속</span>
+            <select
+              className="field"
+              value={form.company_id}
+              onChange={(e) => setForm({ ...form, company_id: e.target.value })}
+            >
+              <option value="">DH스마트파워 (전체 알람)</option>
+              {companies.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name} (자사 설비 알람만)
+                </option>
+              ))}
+            </select>
+          </label>
+
           <label className="field-row wide">
             <span>메모</span>
             <input
@@ -331,6 +353,7 @@ export default function NotifyClient() {
           <table className="fixed">
             <colgroup>
               <col style={{ width: 200 }} />
+              <col style={{ width: 140 }} />
               <col style={{ width: 120 }} />
               <col />
               <col style={{ width: 100 }} />
@@ -341,6 +364,7 @@ export default function NotifyClient() {
             <thead>
               <tr>
                 <th>이름</th>
+                <th>소속</th>
                 <th>발송 경로</th>
                 <th>받는 곳</th>
                 <th>발송 기준</th>
@@ -352,7 +376,7 @@ export default function NotifyClient() {
             <tbody>
               {recipients.length === 0 && (
                 <tr>
-                  <td className="empty" colSpan={7}>
+                  <td className="empty" colSpan={8}>
                     조회된 데이터가 없습니다.
                   </td>
                 </tr>
@@ -363,6 +387,7 @@ export default function NotifyClient() {
                     <b>{r.name}</b>
                     {r.memo && <span className="cell-sub">{r.memo}</span>}
                   </td>
+                  <td style={{ whiteSpace: "nowrap" }}>{r.company_name ?? "DH스마트파워"}</td>
                   <td style={{ whiteSpace: "nowrap" }}>{CHANNEL_LABEL[r.channel]}</td>
                   <td style={{ whiteSpace: "nowrap" }}>{r.target}</td>
                   <td style={{ whiteSpace: "nowrap" }}>{LEVEL_LABEL[r.min_level]}</td>

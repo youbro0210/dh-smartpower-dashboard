@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireUser } from "@/lib/auth";
+import { requireStaff } from "@/lib/auth";
 import { query, one } from "@/lib/db";
 
 export const runtime = "nodejs";
@@ -14,8 +14,9 @@ const REPLAY_SQL = `(t.received_at - t.measured_at) > make_interval(secs => GREA
 const SERIES_MAX = 2000;
 
 export async function GET(request: Request) {
-  const user = await requireUser();
-  if (!user) return NextResponse.json({ error: "로그인이 필요합니다." }, { status: 401 });
+  // 계측 이력은 통신 진단용이라 DH 직원만 봅니다.
+  const user = await requireStaff();
+  if (!user) return NextResponse.json({ error: "권한이 없습니다." }, { status: 403 });
 
   const url = new URL(request.url);
   const device = (url.searchParams.get("device") ?? "").trim();

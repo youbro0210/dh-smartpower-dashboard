@@ -69,10 +69,13 @@ export default function AttentionPanel({
   devices,
   alarms,
   thresholds,
+  isCustomer = false,
 }: {
   devices: DeviceEvaluated[];
   alarms: AlarmEvent[];
   thresholds: ThresholdConfig;
+  /** 고객사 담당자는 브릿지 같은 통신 정보를 보지 않습니다. */
+  isCustomer?: boolean;
 }) {
   // 값이 한 번도 들어오지 않은 설비는 카드로 늘어놓지 않고 한 줄로 묶습니다.
   const hasData = (d: DeviceEvaluated) =>
@@ -163,8 +166,9 @@ export default function AttentionPanel({
                 <span className={`badge ${d.status}`}>{STATUS_LABEL[d.status]}</span>
                 <span className="attn-name">{d.name}</span>
                 <span className="attn-meta">
+                  {!isCustomer && d.company_name ? `${d.company_name} · ` : ""}
                   {d.building} · {d.capacity}
-                  {d.bridge_id ? ` · ${d.bridge_id}` : ""}
+                  {!isCustomer && d.bridge_id ? ` · ${d.bridge_id}` : ""}
                 </span>
                 <span className="attn-spacer" />
                 <span className="attn-since">

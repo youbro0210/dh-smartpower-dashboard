@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSessionUser } from "@/lib/auth";
 import { query } from "@/lib/db";
+import { allowedDeviceIds, keepAllowed } from "@/lib/scope";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -69,7 +70,8 @@ export async function GET(request: Request) {
     [String(days), gradient]
   );
 
-  const devices = rows.map((r) => {
+  const allowed = await allowedDeviceIds(user);
+  const devices = keepAllowed(rows, allowed).map((r) => {
     const consumed = r.faa_avg !== null ? r.faa_avg * r.hours : null;
     return {
       ...r,

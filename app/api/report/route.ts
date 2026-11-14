@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSessionUser } from "@/lib/auth";
 import { query } from "@/lib/db";
+import { allowedDeviceIds, keepAllowed } from "@/lib/scope";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -29,7 +30,7 @@ export async function GET(request: Request) {
   const start = `($1::date)::timestamp AT TIME ZONE 'Asia/Seoul'`;
   const end = `($2::date + 1)::timestamp AT TIME ZONE 'Asia/Seoul'`;
 
-  const devices = await query(
+  const allDevices = await query<{ device_id: string }>(
     `SELECT d.device_id, d.name, d.building, d.capacity,
             count(t.id)::int                         AS samples,
             round(min(t.h2)::numeric, 1)::float      AS h2_min,
@@ -52,7 +53,7 @@ export async function GET(request: Request) {
     range
   );
 
-  const alarms = await query<{ device_id: string | null; unit: string; level: string; count: number }>(
+  const allAlarms = await query<{ device_id: string | null; unit: string; level: string; count: number }>(
     `SELECT device_id, unit, level, count(*)::int AS count
        FROM alarm_events
       WHERE created_at >= ${start} AND created_at < ${end}
@@ -60,13 +61,19 @@ export async function GET(request: Request) {
     range
   );
 
-  const maintenance = await query(
+  const allMaintenance = await query<{ device_id: string | null }>(
     `SELECT device_id, unit, to_char(work_date, 'YYYY-MM-DD') AS work_date, kind, title
        FROM maintenance_logs
       WHERE work_date BETWEEN $1::date AND $2::date
       ORDER BY work_date, id`,
     range
   );
+
+  // 고객사 담당자는 자기 회사 설비 보고서만 받습니다.
+  const allowed = await allowedDeviceIds(user);
+  const devices = keepAllowed(allDevices, allowed);
+  const alarms = keepAllowed(allAlarms, allowed);
+  const maintenance = keepAllowed(allMaintenance, allowed);
 
   // 기대 수신 건수 — 기간이 오늘을 포함하면 지금까지만 셉니다.
   const expected = await query<{ minutes: number }>(

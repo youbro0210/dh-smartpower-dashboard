@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSessionUser, requireAdmin } from "@/lib/auth";
 import { execute, one, query } from "@/lib/db";
+import { allowedDeviceIds, keepAllowed } from "@/lib/scope";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -23,6 +24,11 @@ export async function GET(request: Request) {
 
   const where: string[] = [];
   const values: unknown[] = [];
+  const allowed = await allowedDeviceIds(user);
+  if (allowed !== null) {
+    values.push(allowed);
+    where.push(`device_id = ANY($${values.length})`);
+  }
   if (from && DATE_PATTERN.test(from)) {
     values.push(from);
     where.push(`work_date >= $${values.length}::date`);
@@ -55,12 +61,14 @@ export async function GET(request: Request) {
   );
 
   // 설비별 가장 가까운 다음 점검 예정일 — 지난 것도 포함해 늦어진 점검을 드러냅니다.
-  const due = await query(
+  const allDue = await query<{ device_id: string }>(
     `SELECT DISTINCT ON (device_id) device_id, unit, to_char(next_due, 'YYYY-MM-DD') AS next_due
        FROM maintenance_logs
       WHERE next_due IS NOT NULL AND device_id IS NOT NULL
       ORDER BY device_id, work_date DESC, id DESC`
   );
+
+  const due = keepAllowed(allDue, allowed);
 
   return NextResponse.json({ logs, total: total?.count ?? 0, page, pageSize, due });
 }

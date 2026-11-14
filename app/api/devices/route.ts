@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { kstParts } from "@/lib/kst";
 import { getSessionUser, requireAdmin } from "@/lib/auth";
 import { query, one, execute } from "@/lib/db";
+import { allowedDeviceIds, keepAllowed } from "@/lib/scope";
 import {
   DEFAULT_THRESHOLDS,
   LinkType,
@@ -29,17 +30,22 @@ export async function GET() {
   const user = await getSessionUser();
   if (!user) return NextResponse.json({ error: "로그인이 필요합니다." }, { status: 401 });
 
-  const [devices, bridges, readings, config, alarms, trendRows, baselines] = await Promise.all([
-    query(`SELECT device_id, name, building, capacity, bridge_id, slave_addr, sort_order,
-                  link_type, online, last_seen_at, fw_version, interval_sec
-             FROM devices ORDER BY sort_order, device_id`),
-    query(`SELECT bridge_id, name, online, last_seen_at, kind, max_devices
+  const allowed = await allowedDeviceIds(user);
+
+  const [allDevices, allBridges, allReadings, config, allAlarms, allTrendRows, allBaselines] = await Promise.all([
+    query<{ device_id: string; bridge_id: string | null }>(
+      `SELECT d.device_id, d.name, d.building, d.capacity, d.bridge_id, d.slave_addr, d.sort_order,
+              d.link_type, d.online, d.last_seen_at, d.fw_version, d.interval_sec,
+              d.company_id, c.name AS company_name
+         FROM devices d LEFT JOIN companies c ON c.id = d.company_id
+        ORDER BY d.sort_order, d.device_id`),
+    query<{ bridge_id: string }>(`SELECT bridge_id, name, online, last_seen_at, kind, max_devices
              FROM bridges ORDER BY bridge_id`),
-    query(`SELECT device_id, h2, ch4, temperature, oil_level, updated_at FROM device_readings`),
+    query<{ device_id: string }>(`SELECT device_id, h2, ch4, temperature, oil_level, updated_at FROM device_readings`),
     one<{ thresholds: ThresholdConfig; version: number }>(
       `SELECT thresholds, version FROM app_config WHERE id = 1`
     ),
-    query(`SELECT id, device_id, unit, item, level, detail, created_at
+    query<{ device_id: string | null }>(`SELECT id, device_id, unit, item, level, detail, created_at
              FROM alarm_events
             WHERE created_at > now() - interval '7 days'
             ORDER BY created_at DESC
@@ -54,12 +60,22 @@ export async function GET() {
        WHERE measured_at > now() - interval '24 hours'
        GROUP BY device_id, bucket
        ORDER BY device_id, bucket`),
-    query(`
+    query<{ device_id: string }>(`
       SELECT DISTINCT ON (device_id) device_id, h2, ch4, temperature
         FROM telemetry
        WHERE measured_at <= now() - interval '24 hours'
        ORDER BY device_id, measured_at DESC`),
   ]);
+
+  // 고객사 담당자는 자기 회사 설비와 그 설비가 물린 브릿지만 봅니다.
+  const devices = keepAllowed(allDevices, allowed);
+  const usedBridges = new Set(devices.map((d) => d.bridge_id).filter(Boolean));
+  const bridges = allowed === null ? allBridges : allBridges.filter((b) => usedBridges.has(b.bridge_id));
+  const readings = keepAllowed(allReadings, allowed);
+  // 설비가 없는 시스템 알람(수집 서버 중단 등)은 직원에게만 보입니다.
+  const alarms = keepAllowed(allAlarms, allowed);
+  const trendRows = keepAllowed(allTrendRows, allowed);
+  const baselines = keepAllowed(allBaselines, allowed);
 
   // 세 계열의 길이를 항상 같게 맞춥니다. 값이 없는 시간대는 null 로 남겨
   // 그래프에서 선을 끊어 그리고, 있지도 않은 값을 이어 붙이지 않습니다.
@@ -89,7 +105,11 @@ export async function GET() {
   }
 
   const alarms24h = await one<{ count: number }>(
-    `SELECT count(*)::int AS count FROM alarm_events WHERE created_at > now() - interval '24 hours'`
+    allowed === null
+      ? `SELECT count(*)::int AS count FROM alarm_events WHERE created_at > now() - interval '24 hours'`
+      : `SELECT count(*)::int AS count FROM alarm_events
+          WHERE created_at > now() - interval '24 hours' AND device_id = ANY($1)`,
+    allowed === null ? [] : [allowed]
   );
 
   return NextResponse.json({
@@ -180,5 +200,18 @@ export async function DELETE(request: Request) {
   const removed = await execute(`DELETE FROM devices WHERE device_id = $1`, [deviceId]);
   if (!removed) return NextResponse.json({ error: "해당 설비를 찾을 수 없습니다." }, { status: 404 });
 
+  return NextResponse.json({ ok: true });
+}
+
+/** 설비의 소속 고객사 지정 (관리자 전용). company_id 가 없으면 소속 해제. */
+export async function PATCH(request: Request) {
+  const admin = await requireAdmin();
+  if (!admin) return NextResponse.json({ error: "관리자 권한이 필요합니다." }, { status: 403 });
+  const body = await request.json().catch(() => null);
+  const deviceId = String(body?.device_id ?? "").trim();
+  const companyId = body?.company_id ? Number(body.company_id) : null;
+  if (!deviceId) return NextResponse.json({ error: "설비를 지정하세요." }, { status: 400 });
+  const n = await execute(`UPDATE devices SET company_id = $1 WHERE device_id = $2`, [companyId, deviceId]);
+  if (!n) return NextResponse.json({ error: "설비를 찾을 수 없습니다." }, { status: 404 });
   return NextResponse.json({ ok: true });
 }

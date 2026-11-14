@@ -34,10 +34,10 @@ export async function POST(request: Request) {
   }
 
   // 사용자가 한 명도 없으면 최초 가입자를 관리자로 지정합니다.
-  // 운영 중에는 create-admin 스크립트로 관리자를 만들고, 이후 가입자는 viewer 로 넣되
-  // 관리자가 회원관리에서 승인해야 로그인할 수 있습니다.
+  // 이후 가입자는 고객사 담당자(소속 미지정)로 넣고, 관리자가 회원관리에서
+  // 등급·소속을 정해 승인해야 로그인할 수 있습니다. 승인 전에 전체 설비가 보이지 않게 하려는 것입니다.
   const existing = await one<{ count: number }>(`SELECT count(*)::int AS count FROM users`);
-  const tier = (existing?.count ?? 0) === 0 ? "admin" : "viewer";
+  const tier = (existing?.count ?? 0) === 0 ? "admin" : "customer";
 
   try {
     const approval = tier === "admin" ? "approved" : "pending";

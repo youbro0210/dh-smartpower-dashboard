@@ -599,3 +599,35 @@ ALTER TABLE users ADD CONSTRAINT users_approval_check CHECK (approval IN ('appro
 -- 장비 센서 구성값 (set_config 응답으로 받은 값). 경고(LED) 임계값 등.
 ALTER TABLE devices ADD COLUMN IF NOT EXISTS sensor_config    jsonb;
 ALTER TABLE devices ADD COLUMN IF NOT EXISTS sensor_config_at timestamptz;
+
+-- ----------------------------------------------------------------------------
+-- 고객사 구분 (2026-11-14)
+-- DH스마트파워 직원은 전체를, 고객사 담당자는 자기 회사 설비만 봅니다.
+--   tier: admin = DH 관리자, viewer = DH 담당자(조회), customer = 고객사 담당자
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS companies (
+  id         serial PRIMARY KEY,
+  name       text NOT NULL,
+  memo       text,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE UNIQUE INDEX IF NOT EXISTS companies_name_key ON companies (lower(name));
+
+ALTER TABLE devices ADD COLUMN IF NOT EXISTS company_id integer REFERENCES companies(id) ON DELETE SET NULL;
+ALTER TABLE users   ADD COLUMN IF NOT EXISTS company_id integer REFERENCES companies(id) ON DELETE SET NULL;
+CREATE INDEX IF NOT EXISTS devices_company_idx ON devices (company_id);
+
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'users_tier_check'
+              AND pg_get_constraintdef(oid) NOT LIKE '%customer%') THEN
+    ALTER TABLE users DROP CONSTRAINT users_tier_check;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'users_tier_check') THEN
+    ALTER TABLE users ADD CONSTRAINT users_tier_check CHECK (tier IN ('viewer', 'admin', 'customer'));
+  END IF;
+END $$;
+
+-- 알림 수신자의 소속 고객사. NULL 이면 DH 직원 — 모든 설비의 알람과 시스템 알람을 받습니다.
+-- 지정하면 그 고객사 설비의 알람만 받습니다.
+ALTER TABLE notify_recipients ADD COLUMN IF NOT EXISTS company_id integer REFERENCES companies(id) ON DELETE CASCADE;

@@ -56,6 +56,7 @@ function parse(body: Record<string, unknown>): { ok: true; value: Omit<Recipient
       quiet_to: quietTo,
       enabled: body.enabled === undefined ? true : Boolean(body.enabled),
       memo: body.memo ? String(body.memo).trim() : null,
+      company_id: body.company_id ? Number(body.company_id) : null,
     },
   };
 }
@@ -65,8 +66,10 @@ export async function GET() {
   if (!admin) return NextResponse.json({ error: "관리자 권한이 필요합니다." }, { status: 403 });
 
   const recipients = await query<Recipient>(
-    `SELECT id, name, channel, target, min_level, quiet_from, quiet_to, enabled, memo
-       FROM notify_recipients ORDER BY name, channel`
+    `SELECT r.id, r.name, r.channel, r.target, r.min_level, r.quiet_from, r.quiet_to, r.enabled, r.memo,
+            r.company_id, c.name AS company_name
+       FROM notify_recipients r LEFT JOIN companies c ON c.id = r.company_id
+      ORDER BY c.name NULLS FIRST, r.name, r.channel`
   );
   return NextResponse.json({ recipients });
 }
@@ -84,9 +87,9 @@ export async function POST(request: Request) {
 
   try {
     const row = await one<{ id: number }>(
-      `INSERT INTO notify_recipients (name, channel, target, min_level, quiet_from, quiet_to, enabled, memo)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING id`,
-      [v.name, v.channel, v.target, v.min_level, v.quiet_from, v.quiet_to, v.enabled, v.memo]
+      `INSERT INTO notify_recipients (name, channel, target, min_level, quiet_from, quiet_to, enabled, memo, company_id)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING id`,
+      [v.name, v.channel, v.target, v.min_level, v.quiet_from, v.quiet_to, v.enabled, v.memo, v.company_id]
     );
     return NextResponse.json({ id: row?.id }, { status: 201 });
   } catch (err) {
@@ -123,9 +126,9 @@ export async function PUT(request: Request) {
     const changed = await execute(
       `UPDATE notify_recipients
           SET name = $2, channel = $3, target = $4, min_level = $5,
-              quiet_from = $6, quiet_to = $7, enabled = $8, memo = $9
+              quiet_from = $6, quiet_to = $7, enabled = $8, memo = $9, company_id = $10
         WHERE id = $1`,
-      [Number(body.id), v.name, v.channel, v.target, v.min_level, v.quiet_from, v.quiet_to, v.enabled, v.memo]
+      [Number(body.id), v.name, v.channel, v.target, v.min_level, v.quiet_from, v.quiet_to, v.enabled, v.memo, v.company_id]
     );
     if (!changed) return NextResponse.json({ error: "수신자를 찾을 수 없습니다." }, { status: 404 });
     return NextResponse.json({ ok: true });

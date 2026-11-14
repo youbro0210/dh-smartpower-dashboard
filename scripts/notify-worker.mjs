@@ -307,9 +307,16 @@ async function dispatch(alarm) {
 
   const [{ rows: channelRows }, { rows: recipients }] = await Promise.all([
     pool.query(`SELECT channel, enabled, config FROM notify_channels`),
+    // 고객사 수신자는 자기 회사 설비 알람만, DH 수신자(company_id 없음)는 전부 받습니다.
+    // 설비가 없는 시스템 알람은 DH 수신자에게만 갑니다.
     pool.query(
-      `SELECT id, name, channel, target, min_level, quiet_from, quiet_to
-         FROM notify_recipients WHERE enabled ORDER BY name`
+      `SELECT r.id, r.name, r.channel, r.target, r.min_level, r.quiet_from, r.quiet_to
+         FROM notify_recipients r
+        WHERE r.enabled
+          AND (r.company_id IS NULL
+               OR r.company_id = (SELECT d.company_id FROM devices d WHERE d.device_id = $1))
+        ORDER BY r.name`,
+      [alarm.device_id ?? null]
     ),
   ]);
   if (recipients.length === 0) return;

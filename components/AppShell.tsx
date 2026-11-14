@@ -19,7 +19,7 @@ interface Tab {
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { email, tier, loading, logout } = useSession();
+  const { email, tier, companyName, loading, logout } = useSession();
   const [tabs, setTabs] = useState<Tab[]>([{ href: "/", label: "홈" }]);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [menuQuery, setMenuQuery] = useState("");
@@ -93,6 +93,19 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   }, [pathname, email, isAuthPage]);
 
   const isAdmin = tier === "admin";
+  const isCustomer = tier === "customer";
+  const visible = (i: { adminOnly?: boolean; staffOnly?: boolean }) =>
+    (!i.adminOnly || isAdmin) && (!i.staffOnly || (tier !== null && !isCustomer));
+
+  // 고객사 담당자가 직원 전용 화면 주소로 바로 들어오면 홈으로 돌려보냅니다.
+  // (데이터는 API 가 이미 막지만, 빈 화면 대신 갈 곳을 보여 주기 위함입니다.)
+  useEffect(() => {
+    if (!isCustomer) return;
+    const staffOnly = NAV.flatMap((g) => g.items).some(
+      (i) => (i.staffOnly || i.adminOnly) && (pathname === i.href || pathname.startsWith(`${i.href}/`))
+    );
+    if (staffOnly) router.replace("/");
+  }, [isCustomer, pathname, router]);
   const canRequestFix = !pathname.startsWith("/cs") && !isAdminScreen(pathname);
 
   // 로그인·회원가입 화면은 셸 없이 그대로 보여줍니다.
@@ -166,7 +179,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
             // 관리자 전용 항목은 등급에 따라 감춥니다.
             // 검색어가 있으면 이름이 맞는 항목만 남깁니다.
             const items = group.items
-              .filter((i) => !i.adminOnly || isAdmin)
+              .filter(visible)
               .filter((i) => !query || i.label.toLowerCase().includes(query));
             if (!items.length) return null;
 
@@ -208,7 +221,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
           {query && !NAV.some((g) =>
             g.items.some(
-              (i) => (!i.adminOnly || isAdmin) && i.label.toLowerCase().includes(query)
+              (i) => visible(i) && i.label.toLowerCase().includes(query)
             )
           ) && <p className="side-empty">찾는 메뉴가 없습니다.</p>}
         </nav>
@@ -217,8 +230,8 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           <p className="side-user">
             {loading ? "확인 중..." : email ? (
               <>
-                <b>DH 스마트파워</b> · {email.split("@")[0]} ·{" "}
-                {isAdmin ? "ADMIN" : "VIEWER"}
+                <b>{isCustomer ? companyName ?? "소속 미지정" : "DH 스마트파워"}</b> · {email.split("@")[0]} ·{" "}
+                {isAdmin ? "DH 관리자" : isCustomer ? "고객사 담당자" : "DH 담당자"}
               </>
             ) : (
               "로그인하지 않음"

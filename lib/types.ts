@@ -46,6 +46,9 @@ export interface DeviceRegistry {
   fw_version?: string | null;
   /** 장치에 설정된 측정 주기(초) */
   interval_sec?: number | null;
+  /** 소속 고객사 */
+  company_id?: number | null;
+  company_name?: string | null;
 }
 
 // ---- 실시간 센서 원본값 (DB의 device_readings 테이블) ----

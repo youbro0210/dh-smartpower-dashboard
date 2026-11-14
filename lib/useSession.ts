@@ -6,7 +6,9 @@ export interface SessionUser {
   id: string;
   email: string;
   full_name: string | null;
-  tier: "viewer" | "admin";
+  tier: "viewer" | "admin" | "customer";
+  company_id: number | null;
+  company_name?: string | null;
 }
 
 export function useSession() {
@@ -45,6 +47,7 @@ export function useSession() {
     user,
     email: user?.email ?? null,
     tier: user?.tier ?? null,
+    companyName: user?.company_name ?? null,
     loading,
     logout,
   };

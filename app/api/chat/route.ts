@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSessionUser } from "@/lib/auth";
+import { allowedDeviceIds, keepAllowed } from "@/lib/scope";
 import { query, one } from "@/lib/db";
 import { evaluateDevice } from "@/lib/alarmEngine";
 import {
@@ -92,8 +93,8 @@ const TOOLS = [
   },
 ];
 
-async function loadEvaluated() {
-  const [registry, readings, config] = await Promise.all([
+async function loadEvaluated(allowed: string[] | null) {
+  const [allRegistry, readings, config] = await Promise.all([
     query<DeviceRegistry>(
       `SELECT device_id, name, building, capacity, bridge_id FROM devices ORDER BY sort_order, device_id`
     ),
@@ -103,6 +104,8 @@ async function loadEvaluated() {
     one<{ thresholds: ThresholdConfig }>(`SELECT thresholds FROM app_config WHERE id = 1`),
   ]);
 
+  // 고객사 담당자는 자기 회사 설비만 물어볼 수 있습니다.
+  const registry = keepAllowed(allRegistry, allowed);
   const thresholds = config?.thresholds ?? DEFAULT_THRESHOLDS;
   const byId = new Map(readings.map((r) => [r.device_id, r]));
 
@@ -142,9 +145,14 @@ const STATUS_KEY: Record<string, string> = {
   offline: "통신단절",
 };
 
-async function runTool(name: string, input: Record<string, unknown>, isAdmin: boolean) {
+async function runTool(
+  name: string,
+  input: Record<string, unknown>,
+  isAdmin: boolean,
+  allowed: string[] | null
+) {
   if (name === "list_devices") {
-    const { devices } = await loadEvaluated();
+    const { devices } = await loadEvaluated(allowed);
     const want = String(input.status ?? "all");
     if (want === "all") return { count: devices.length, devices };
     const label = STATUS_KEY[want] ?? want;
@@ -154,7 +162,7 @@ async function runTool(name: string, input: Record<string, unknown>, isAdmin: bo
 
   if (name === "get_device") {
     const needle = String(input.name ?? "").replace(/\s/g, "");
-    const { devices } = await loadEvaluated();
+    const { devices } = await loadEvaluated(allowed);
     const hit =
       devices.find((d) => d.name.replace(/\s/g, "") === needle) ??
       devices.find((d) => d.name.replace(/\s/g, "").includes(needle)) ??
@@ -182,14 +190,15 @@ async function runTool(name: string, input: Record<string, unknown>, isAdmin: bo
               item AS 항목, level AS 등급, detail AS 내용
          FROM alarm_events
         WHERE created_at > now() - ($1 || ' hours')::interval
+          AND ($3::text[] IS NULL OR device_id = ANY($3))
         ORDER BY created_at DESC LIMIT $2`,
-      [String(hours), limit]
+      [String(hours), limit, allowed]
     );
     return { 기간_시간: hours, 건수: rows.length, 알람: rows };
   }
 
   if (name === "get_thresholds") {
-    const { thresholds } = await loadEvaluated();
+    const { thresholds } = await loadEvaluated(allowed);
     return { thresholds };
   }
 
@@ -238,6 +247,7 @@ interface AnthropicBlock {
 export async function POST(request: Request) {
   const user = await getSessionUser();
   if (!user) return NextResponse.json({ error: "로그인이 필요합니다." }, { status: 401 });
+  const allowed = await allowedDeviceIds(user);
 
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) {
@@ -279,7 +289,7 @@ export async function POST(request: Request) {
           model: MODEL,
           max_tokens: 1200,
           system: `${SYSTEM_PROMPT}\n\n현재 사용자: ${user.email} (등급: ${
-            user.tier === "admin" ? "관리자" : "뷰어"
+            user.tier === "admin" ? "DH 관리자" : user.tier === "customer" ? `고객사 담당자(${user.company_name ?? "소속 미지정"})` : "DH 담당자"
           })`,
           tools: TOOLS,
           messages,
@@ -315,7 +325,8 @@ export async function POST(request: Request) {
         const output = await runTool(
           block.name ?? "",
           block.input ?? {},
-          user.tier === "admin"
+          user.tier === "admin",
+          allowed
         );
         results.push({
           type: "tool_result",

@@ -8,6 +8,7 @@ import AttentionPanel from "@/components/AttentionPanel";
 import LinkSignal from "@/components/LinkSignal";
 import { DeviceStatus, STATUS_LABEL } from "@/lib/types";
 import { fmtDateTime, fmtDetail } from "@/lib/format";
+import { useSession } from "@/lib/useSession";
 
 /**
  * 홈 화면.
@@ -27,6 +28,9 @@ const ORDER: DeviceStatus[] = ["danger", "warning", "caution", "offline", "norma
 export default function DashboardPage() {
   const { devices, bridges, thresholds, alarms, alarms24h, loading, error, refresh } =
     useDashboard();
+
+  const { tier, companyName } = useSession();
+  const isCustomer = tier === "customer";
 
   const [now, setNow] = useState("");
   const [nowMs, setNowMs] = useState(() => Date.now());
@@ -64,6 +68,26 @@ export default function DashboardPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [devices, loading, attention.length]);
 
+  // DH 직원용: 고객사별 상태 요약. 고객사가 지정된 설비가 있을 때만 보입니다.
+  const byCompany = useMemo(() => {
+    if (isCustomer || !devices.some((d) => d.company_id)) return [];
+    const map = new Map<string, { name: string; total: number; counts: Record<string, number> }>();
+    for (const d of devices) {
+      const key = d.company_name ?? "미지정";
+      const row = map.get(key) ?? { name: key, total: 0, counts: {} };
+      row.total += 1;
+      row.counts[d.status] = (row.counts[d.status] ?? 0) + 1;
+      map.set(key, row);
+    }
+    const rank = (r: { counts: Record<string, number> }) =>
+      ORDER.findIndex((st) => st !== "normal" && (r.counts[st] ?? 0) > 0);
+    return [...map.values()].sort((a, b) => {
+      const ra = rank(a) < 0 ? 99 : rank(a);
+      const rb = rank(b) < 0 ? 99 : rank(b);
+      return ra - rb || a.name.localeCompare(b.name, "ko");
+    });
+  }, [devices, isCustomer]);
+
   const worst: DeviceStatus = attention.length
     ? (ORDER.find((s) => s !== "normal" && count(s)) as DeviceStatus)
     : "normal";
@@ -71,7 +95,7 @@ export default function DashboardPage() {
   return (
     <>
       <PageHeader
-        title="변압기 통합 모니터링"
+        title={isCustomer && companyName ? `${companyName} 변압기 모니터링` : "변압기 통합 모니터링"}
         breadcrumb="홈"
         subtitle={now || "-"}
         actions={
@@ -127,19 +151,72 @@ export default function DashboardPage() {
               <dt>24시간 알람</dt>
               <dd>{alarms24h.toLocaleString()}건</dd>
             </div>
-            <div>
-              <dt>브릿지·게이트웨이</dt>
-              <dd className={bridgesOnline < bridges.length ? "t-danger" : undefined}>
-                {bridgesOnline} / {bridges.length} 접속
-              </dd>
-            </div>
+            {isCustomer ? (
+              <div>
+                <dt>감시 설비</dt>
+                <dd>{devices.length.toLocaleString()}대</dd>
+              </div>
+            ) : (
+              <div>
+                <dt>브릿지·게이트웨이</dt>
+                <dd className={bridgesOnline < bridges.length ? "t-danger" : undefined}>
+                  {bridgesOnline} / {bridges.length} 접속
+                </dd>
+              </div>
+            )}
           </dl>
         </div>
         <LinkSignal devices={devices} bridges={bridges} now={nowMs} />
       </section>
 
+      {/* 고객사별 현황 (DH 직원) ------------------------------------------- */}
+      {byCompany.length > 0 && (
+        <div className="card flush">
+          <div className="card-head">
+            <div className="card-title">
+              <span className="accent-bar" />
+              고객사별 현황
+            </div>
+            <span className="card-note">{byCompany.length}곳</span>
+          </div>
+          <div className="table-wrap">
+            <table className="fixed fit">
+              <colgroup>
+                <col style={{ width: 220 }} />
+                <col style={{ width: 90 }} />
+                {ORDER.map((st) => (
+                  <col key={st} style={{ width: 90 }} />
+                ))}
+              </colgroup>
+              <thead>
+                <tr>
+                  <th>고객사</th>
+                  <th>설비</th>
+                  {ORDER.map((st) => (
+                    <th key={st}>{STATUS_LABEL[st]}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {byCompany.map((r) => (
+                  <tr key={r.name}>
+                    <td><b>{r.name}</b></td>
+                    <td className="num">{r.total}대</td>
+                    {ORDER.map((st) => (
+                      <td key={st} className={`num${st !== "normal" && r.counts[st] ? ` t-${st === "offline" ? "muted" : st}` : ""}`}>
+                        {r.counts[st] ? `${r.counts[st]}대` : "-"}
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
       {/* ② 확인할 설비 ----------------------------------------------------- */}
-      <AttentionPanel devices={devices} alarms={alarms} thresholds={thresholds} />
+      <AttentionPanel devices={devices} alarms={alarms} thresholds={thresholds} isCustomer={isCustomer} />
 
       {/* ③ 나머지 설비 — 이름만 한 줄로 */}
       {normalDevices.length > 0 && (

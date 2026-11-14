@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { SESSION_COOKIE, unsignValue } from "@/lib/cookieSign";
-import { createUser, findUserByEmail, hashPassword, requireAdmin } from "@/lib/auth";
+import { createUser, findUserByEmail, hashPassword, requireAdmin, Tier } from "@/lib/auth";
 import { query, one, execute } from "@/lib/db";
 
 export const runtime = "nodejs";
@@ -23,6 +23,7 @@ export async function POST(request: Request) {
   const fullName = String(body?.fullName ?? "").trim();
   const password = String(body?.password ?? "");
   const tier = String(body?.tier ?? "viewer");
+  const companyId = body?.company_id ? Number(body.company_id) : null;
 
   if (!EMAIL_PATTERN.test(email)) {
     return NextResponse.json({ error: "이메일 형식이 올바르지 않습니다." }, { status: 400 });
@@ -36,15 +37,24 @@ export async function POST(request: Request) {
       { status: 400 }
     );
   }
-  if (!["viewer", "admin"].includes(tier)) {
+  if (!["viewer", "admin", "customer"].includes(tier)) {
     return NextResponse.json({ error: "등급이 올바르지 않습니다." }, { status: 400 });
+  }
+  if (tier === "customer" && !companyId) {
+    return NextResponse.json({ error: "고객사 담당자는 소속 고객사를 지정해야 합니다." }, { status: 400 });
   }
   if (await findUserByEmail(email)) {
     return NextResponse.json({ error: "이미 등록된 이메일입니다." }, { status: 409 });
   }
 
   try {
-    const user = await createUser({ email, password, fullName, tier: tier as "viewer" | "admin" });
+    const user = await createUser({
+      email,
+      password,
+      fullName,
+      tier: tier as Tier,
+      companyId: tier === "customer" ? companyId : null,
+    });
     return NextResponse.json({ user }, { status: 201 });
   } catch {
     return NextResponse.json({ error: "이미 등록된 이메일입니다." }, { status: 409 });
@@ -80,9 +90,11 @@ export async function GET(request: Request) {
   );
 
   const users = await query(
-    `SELECT id, email, full_name, tier, is_active, approval, created_at, last_login_at
-       FROM users ${whereSql}
-      ORDER BY (approval = 'pending') DESC, created_at DESC
+    `SELECT u.id, u.email, u.full_name, u.tier, u.company_id, c.name AS company_name,
+            u.is_active, u.approval, u.created_at, u.last_login_at
+       FROM users u LEFT JOIN companies c ON c.id = u.company_id
+       ${whereSql.replace(/created_at/g, "u.created_at")}
+      ORDER BY (u.approval = 'pending') DESC, u.created_at DESC
       LIMIT $${values.length + 1} OFFSET $${values.length + 2}`,
     [...values, pageSize, (page - 1) * pageSize]
   );
@@ -127,6 +139,14 @@ export async function PATCH(request: Request) {
   // 가입 승인
   if (body?.approve === true) {
     if (!userId) return NextResponse.json({ error: "요청 값이 올바르지 않습니다." }, { status: 400 });
+    // 고객사 담당자로 승인하려면 소속 고객사가 정해져 있어야 합니다.
+    const pending = await one<{ tier: string; company_id: number | null }>(
+      `SELECT tier, company_id FROM users WHERE id = $1`,
+      [userId]
+    );
+    if (pending?.tier === "customer" && !pending.company_id) {
+      return NextResponse.json({ error: "소속 고객사를 먼저 지정하세요." }, { status: 400 });
+    }
     const approved = await execute(
       `UPDATE users SET approval = 'approved' WHERE id = $1 AND approval = 'pending'`,
       [userId]
@@ -135,12 +155,16 @@ export async function PATCH(request: Request) {
     return NextResponse.json({ ok: true });
   }
 
-  if (!userId || !["viewer", "admin"].includes(tier)) {
+  if (!userId || !["viewer", "admin", "customer"].includes(tier)) {
     return NextResponse.json({ error: "요청 값이 올바르지 않습니다." }, { status: 400 });
   }
+  const companyId = body?.company_id ? Number(body.company_id) : null;
+  if (tier === "customer" && !companyId) {
+    return NextResponse.json({ error: "고객사 담당자는 소속 고객사를 지정해야 합니다." }, { status: 400 });
+  }
 
-  // 마지막 관리자를 뷰어로 내리면 아무도 설정을 못 바꾸게 되므로 막습니다.
-  if (tier === "viewer") {
+  // 마지막 관리자를 다른 등급으로 내리면 아무도 설정을 못 바꾸게 되므로 막습니다.
+  if (tier !== "admin") {
     const admins = await one<{ count: number }>(
       `SELECT count(*)::int AS count FROM users WHERE tier = 'admin' AND is_active`
     );
@@ -153,7 +177,11 @@ export async function PATCH(request: Request) {
     }
   }
 
-  const updated = await execute(`UPDATE users SET tier = $1 WHERE id = $2`, [tier, userId]);
+  const updated = await execute(`UPDATE users SET tier = $1, company_id = $2 WHERE id = $3`, [
+    tier,
+    tier === "customer" ? companyId : null,
+    userId,
+  ]);
   if (!updated) return NextResponse.json({ error: "대상 회원을 찾을 수 없습니다." }, { status: 404 });
 
   // 등급이 바뀌면 기존 세션의 권한 캐시가 남지 않도록 세션을 끊습니다.

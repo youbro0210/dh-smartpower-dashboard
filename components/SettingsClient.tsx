@@ -16,8 +16,32 @@ import SettingsTabs from "./SettingsTabs";
 import { fmtDateTime } from "@/lib/format";
 
 export default function SettingsClient() {
-  const { thresholds, bridges, devices, configVersion, saveThresholds, addDevice, removeDevice } =
+  const { thresholds, bridges, devices, configVersion, saveThresholds, addDevice, removeDevice, refresh } =
     useDashboard();
+
+  // 설비의 소속 고객사
+  const [companies, setCompanies] = useState<{ id: number; name: string }[]>([]);
+  useEffect(() => {
+    fetch("/api/admin/companies", { cache: "no-store" })
+      .then((r) => r.json())
+      .then((j) => setCompanies(j.companies ?? []))
+      .catch(() => setCompanies([]));
+  }, []);
+
+  async function setDeviceCompany(deviceId: string, companyId: string) {
+    setMessage(null);
+    const res = await fetch("/api/devices", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ device_id: deviceId, company_id: companyId ? Number(companyId) : null }),
+    });
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      setMessage({ kind: "error", text: json.error ?? "소속을 바꾸지 못했습니다." });
+      return;
+    }
+    await refresh();
+  }
 
   const [form, setForm] = useState<ThresholdConfig>(thresholds);
   const [message, setMessage] = useState<{ kind: "ok" | "error"; text: string } | null>(null);
@@ -379,13 +403,14 @@ export default function SettingsClient() {
                 <th style={{ width: 140 }}>용량</th>
                 <th style={{ width: 110 }}>연결 방식</th>
                 <th>브릿지 / PC</th>
+                <th style={{ width: 180 }}>고객사</th>
                 <th style={{ width: 72 }}>삭제</th>
               </tr>
             </thead>
             <tbody>
               {devices.length === 0 && (
                 <tr>
-                  <td className="empty" colSpan={7}>
+                  <td className="empty" colSpan={8}>
                     조회된 데이터가 없습니다.
                   </td>
                 </tr>
@@ -401,6 +426,17 @@ export default function SettingsClient() {
                   </td>
                   <td>
                     {bridges.find((b) => b.bridge_id === d.bridge_id)?.name ?? d.bridge_id ?? "-"}
+                  </td>
+                  <td className="center">
+                    <select
+                      value={d.company_id ?? ""}
+                      onChange={(e) => void setDeviceCompany(d.device_id, e.target.value)}
+                    >
+                      <option value="">미지정</option>
+                      {companies.map((c) => (
+                        <option key={c.id} value={c.id}>{c.name}</option>
+                      ))}
+                    </select>
                   </td>
                   <td className="center">
                     <button

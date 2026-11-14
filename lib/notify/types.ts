@@ -43,6 +43,9 @@ export interface Recipient {
   quiet_to: number | null;
   enabled: boolean;
   memo: string | null;
+  /** 소속 고객사. null 이면 DH(전체 알람) */
+  company_id: number | null;
+  company_name?: string | null;
 }
 
 export interface AlarmPayload {

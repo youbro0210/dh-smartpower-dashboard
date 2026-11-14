@@ -69,11 +69,17 @@ export async function burnTime(password: string): Promise<void> {
 // 사용자
 // ----------------------------------------------------------------------------
 
+export type Tier = "viewer" | "admin" | "customer";
+
 export interface SessionUser {
   id: string;
   email: string;
   full_name: string | null;
-  tier: "viewer" | "admin";
+  /** admin = DH 관리자, viewer = DH 담당자(조회), customer = 고객사 담당자 */
+  tier: Tier;
+  /** 고객사 담당자의 소속 고객사. DH 직원은 null */
+  company_id: number | null;
+  company_name?: string | null;
 }
 
 interface UserRow extends SessionUser {
@@ -84,7 +90,7 @@ interface UserRow extends SessionUser {
 
 export async function findUserByEmail(email: string): Promise<UserRow | null> {
   return one<UserRow>(
-    `SELECT id, email, full_name, tier, password_hash, is_active, approval
+    `SELECT id, email, full_name, tier, company_id, password_hash, is_active, approval
        FROM users
       WHERE lower(email) = lower($1)`,
     [email.trim()]
@@ -95,15 +101,23 @@ export async function createUser(input: {
   email: string;
   password: string;
   fullName?: string | null;
-  tier?: "viewer" | "admin";
+  tier?: Tier;
+  companyId?: number | null;
   approval?: "approved" | "pending";
 }): Promise<SessionUser> {
   const passwordHash = await hashPassword(input.password);
   const rows = await query<SessionUser>(
-    `INSERT INTO users (email, full_name, password_hash, tier, approval)
-     VALUES ($1, $2, $3, $4, $5)
-     RETURNING id, email, full_name, tier`,
-    [input.email.trim(), input.fullName ?? null, passwordHash, input.tier ?? "viewer", input.approval ?? "approved"]
+    `INSERT INTO users (email, full_name, password_hash, tier, company_id, approval)
+     VALUES ($1, $2, $3, $4, $5, $6)
+     RETURNING id, email, full_name, tier, company_id`,
+    [
+      input.email.trim(),
+      input.fullName ?? null,
+      passwordHash,
+      input.tier ?? "viewer",
+      input.companyId ?? null,
+      input.approval ?? "approved",
+    ]
   );
   return rows[0];
 }
@@ -146,9 +160,10 @@ export async function getSessionUser(): Promise<SessionUser | null> {
   if (!sessionId) return null;
 
   return one<SessionUser>(
-    `SELECT u.id, u.email, u.full_name, u.tier
+    `SELECT u.id, u.email, u.full_name, u.tier, u.company_id, c.name AS company_name
        FROM sessions s
        JOIN users u ON u.id = s.user_id
+       LEFT JOIN companies c ON c.id = u.company_id
       WHERE s.id = $1
         AND s.expires_at > now()
         AND u.is_active
@@ -159,6 +174,21 @@ export async function getSessionUser(): Promise<SessionUser | null> {
 
 export async function requireUser(): Promise<SessionUser | null> {
   return getSessionUser();
+}
+
+/** DH스마트파워 직원(관리자·담당자). 설정·원시 데이터 화면은 직원만 봅니다. */
+export async function requireStaff(): Promise<SessionUser | null> {
+  const user = await getSessionUser();
+  return user && user.tier !== "customer" ? user : null;
+}
+
+/**
+ * 데이터 조회 범위. null 이면 전체(직원), 숫자면 그 고객사 설비만.
+ * 소속 고객사가 아직 지정되지 않은 고객사 담당자는 -1 (아무 설비도 보이지 않음).
+ */
+export function companyScope(user: SessionUser): number | null {
+  if (user.tier !== "customer") return null;
+  return user.company_id ?? -1;
 }
 
 export async function requireAdmin(): Promise<SessionUser | null> {
