@@ -63,6 +63,7 @@ forbidden:
   - "app/admin/*"
   - "app/settings/*"
   - "app/login-history/*"
+  - "app/companies/*"
   - "app/login/*"
   - "app/signup/*"
   - "components/AppShell*"
