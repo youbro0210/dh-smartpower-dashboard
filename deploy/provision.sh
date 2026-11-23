@@ -165,10 +165,7 @@ cat <<EOF
     1) 관리자 계정 생성
        cd ${APP_DIR} && node scripts/create-admin.mjs
 
-    2) (선택) 초기 설비 등록
-       psql "\$DATABASE_URL" -f db/seed.sql
-
-    3) HTTPS 적용 (도메인 연결 후)
+    2) HTTPS 적용 (도메인 연결 후)
        sudo apt-get install -y certbot python3-certbot-nginx
        sudo certbot --nginx -d ${SERVER_NAME}
        # 발급 후 .env.local 의 COOKIE_SECURE=true 로 변경하고

@@ -50,7 +50,6 @@ export const NAV: NavGroup[] = [
     items: [
       { href: "/companies", label: "고객사 관리", icon: "building", staffOnly: true },
       { href: "/readings", label: "계측 이력", icon: "history", staffOnly: true },
-      { href: "/sample", label: "샘플 대시보드", icon: "sample", staffOnly: true },
     ],
   },
   {

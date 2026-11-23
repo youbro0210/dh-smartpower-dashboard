@@ -12,7 +12,6 @@ export type IconName =
   | "settings"
   | "users"
   | "history"
-  | "sample"
   | "menu"
   | "logout"
   | "close"
@@ -98,14 +97,6 @@ const PATHS: Record<IconName, JSX.Element> = {
       <path d="M3 12a9 9 0 1 0 3-6.7L3 8" />
       <path d="M3 3v5h5" />
       <path d="M12 7v5l3 2" />
-    </>
-  ),
-  // 샘플 대시보드 (레이아웃 미리보기)
-  sample: (
-    <>
-      <rect x="3" y="4" width="18" height="16" rx="2" />
-      <path d="M3 9h18M9 9v11" />
-      <path d="M12.5 16.5v-3M15.5 16.5v-5M18.5 16.5v-2" />
     </>
   ),
   // 햄버거

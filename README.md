@@ -36,7 +36,6 @@ cp .env.example .env.local
 
 npm install
 npm run db:schema          # 스키마 반영 (반복 실행 안전)
-psql "$DATABASE_URL" -f db/seed.sql   # (선택) 설비 10대 등록
 npm run create-admin       # 관리자 계정 생성
 npm run dev
 ```

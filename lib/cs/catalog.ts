@@ -13,7 +13,6 @@ export const SCREENS: [string, string][] = [
   ["/diagnosis", "가스 진단"],
   ["/aging", "열화·수명"],
   ["/report", "운영 보고서"],
-  ["/sample", "샘플 대시보드"],
   ["/settings", "설정"],
   ["/settings/mqtt", "설정 › 데이터 연결"],
   ["/settings/ingest", "설정 › 수집 내역"],
