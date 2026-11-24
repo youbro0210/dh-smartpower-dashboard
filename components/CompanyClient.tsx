@@ -3,7 +3,8 @@
 import { Fragment, useEffect, useMemo, useState } from "react";
 import PageHeader from "./PageHeader";
 import { useDashboard } from "@/lib/configStore";
-import { STATUS_LABEL } from "@/lib/types";
+import { REGIONS, STATUS_LABEL } from "@/lib/types";
+import { SiteRow } from "./site/siteData";
 
 interface Company {
   id: number;
@@ -23,6 +24,47 @@ export default function CompanyClient({ canEdit }: { canEdit: boolean }) {
   const [edit, setEdit] = useState({ name: "", memo: "" });
   const [openId, setOpenId] = useState<number | null>(null);
   const [pick, setPick] = useState("");
+  const [sites, setSites] = useState<SiteRow[]>([]);
+  const [siteForm, setSiteForm] = useState({ name: "", region: "" });
+  const [siteEdit, setSiteEdit] = useState<{ id: number; name: string; region: string } | null>(null);
+
+  async function loadSites() {
+    const res = await fetch("/api/sites", { cache: "no-store" });
+    const json = await res.json().catch(() => ({}));
+    if (res.ok) setSites(json.sites ?? []);
+  }
+
+  useEffect(() => {
+    void loadSites();
+  }, []);
+
+  async function addSite(companyId: number) {
+    if (await call("/api/sites", "POST", { ...siteForm, company_id: companyId })) {
+      setNotice({ ok: true, text: `${siteForm.name} 사업장을 등록했습니다.` });
+      setSiteForm({ name: "", region: "" });
+      await loadSites();
+    }
+  }
+
+  async function saveSite() {
+    if (siteEdit && (await call("/api/sites", "PATCH", siteEdit))) {
+      setSiteEdit(null);
+      await Promise.all([loadSites(), refresh()]);
+    }
+  }
+
+  async function removeSite(id: number, name: string) {
+    if (await call(`/api/sites?id=${id}`, "DELETE")) {
+      setNotice({ ok: true, text: `${name} 사업장을 삭제했습니다.` });
+      await loadSites();
+    }
+  }
+
+  async function patchDevice(deviceId: string, patch: Record<string, unknown>) {
+    if (await call("/api/devices", "PATCH", { device_id: deviceId, ...patch })) {
+      await Promise.all([loadSites(), refresh()]);
+    }
+  }
 
   async function load() {
     const res = await fetch("/api/admin/companies", { cache: "no-store" });
@@ -72,7 +114,7 @@ export default function CompanyClient({ canEdit }: { canEdit: boolean }) {
   }
 
   async function assign(deviceId: string, companyId: number | null) {
-    if (await call("/api/devices", "PATCH", { device_id: deviceId, company_id: companyId })) {
+    if (await call("/api/devices", "PATCH", { device_id: deviceId, company_id: companyId, site_id: null })) {
       setPick("");
       await Promise.all([load(), refresh()]);
     }
@@ -212,19 +254,136 @@ export default function CompanyClient({ canEdit }: { canEdit: boolean }) {
                     {open && (
                       <tr className="detail-row">
                         <td colSpan={canEdit ? 6 : 5}>
-                          <div className="spark-title">배정 설비 {mine.length}대</div>
+                          <div className="spark-title">{`사업장 ${sites.filter((x) => x.company_id === c.id).length}곳`}</div>
+                          <table className="fixed fit sub-table">
+                            <colgroup>
+                              <col style={{ width: 220 }} />
+                              <col style={{ width: 110 }} />
+                              <col style={{ width: 80 }} />
+                              {canEdit && <col style={{ width: 130 }} />}
+                            </colgroup>
+                            <thead>
+                              <tr>
+                                <th>사업장</th>
+                                <th>권역</th>
+                                <th>설비</th>
+                                {canEdit && <th>동작</th>}
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {sites.filter((x) => x.company_id === c.id).length === 0 && (
+                                <tr>
+                                  <td className="empty" colSpan={canEdit ? 4 : 3}>조회된 데이터가 없습니다.</td>
+                                </tr>
+                              )}
+                              {sites
+                                .filter((x) => x.company_id === c.id)
+                                .map((st) => (
+                                  <tr key={st.id}>
+                                    <td>
+                                      {siteEdit?.id === st.id ? (
+                                        <input
+                                          className="field"
+                                          aria-label="사업장명"
+                                          value={siteEdit.name}
+                                          onChange={(e) => setSiteEdit({ ...siteEdit, name: e.target.value })}
+                                        />
+                                      ) : (
+                                        <b>{st.name}</b>
+                                      )}
+                                    </td>
+                                    <td className="center">
+                                      {siteEdit?.id === st.id ? (
+                                        <select
+                                          className="field"
+                                          aria-label="권역"
+                                          value={siteEdit.region}
+                                          onChange={(e) => setSiteEdit({ ...siteEdit, region: e.target.value })}
+                                        >
+                                          <option value="">미지정</option>
+                                          {REGIONS.map((r) => (
+                                            <option key={r} value={r}>
+                                              {r}
+                                            </option>
+                                          ))}
+                                        </select>
+                                      ) : (
+                                        st.region || "-"
+                                      )}
+                                    </td>
+                                    <td className="num">{`${st.devices}대`}</td>
+                                    {canEdit && (
+                                      <td className="center">
+                                        {siteEdit?.id === st.id ? (
+                                          <span className="pw-edit">
+                                            <button className="btn sm primary" disabled={!siteEdit.name.trim()} onClick={() => void saveSite()}>
+                                              저장
+                                            </button>
+                                            <button className="btn sm" onClick={() => setSiteEdit(null)}>
+                                              취소
+                                            </button>
+                                          </span>
+                                        ) : (
+                                          <span className="pw-edit">
+                                            <button className="btn sm" onClick={() => setSiteEdit({ id: st.id, name: st.name, region: st.region })}>
+                                              수정
+                                            </button>
+                                            <button className="btn sm" disabled={st.devices > 0} onClick={() => void removeSite(st.id, st.name)}>
+                                              삭제
+                                            </button>
+                                          </span>
+                                        )}
+                                      </td>
+                                    )}
+                                  </tr>
+                                ))}
+                            </tbody>
+                          </table>
+                          {canEdit && (
+                            <div className="pw-edit">
+                              <input
+                                className="field"
+                                aria-label="새 사업장명"
+                                placeholder="사업장명"
+                                value={siteForm.name}
+                                onChange={(e) => setSiteForm({ ...siteForm, name: e.target.value })}
+                              />
+                              <select
+                                className="field"
+                                aria-label="권역"
+                                value={siteForm.region}
+                                onChange={(e) => setSiteForm({ ...siteForm, region: e.target.value })}
+                              >
+                                <option value="">권역 선택</option>
+                                {REGIONS.map((r) => (
+                                  <option key={r} value={r}>
+                                    {r}
+                                  </option>
+                                ))}
+                              </select>
+                              <button className="btn sm primary" disabled={!siteForm.name.trim()} onClick={() => void addSite(c.id)}>
+                                사업장 추가
+                              </button>
+                            </div>
+                          )}
+
+                          <div className="spark-title">{`배정 설비 ${mine.length}대`}</div>
                           <table className="fixed fit sub-table">
                             <colgroup>
                               <col style={{ width: 130 }} />
-                              <col style={{ width: 120 }} />
-                              <col style={{ width: 140 }} />
+                              <col style={{ width: 200 }} />
                               <col style={{ width: 90 }} />
+                              <col style={{ width: 170 }} />
+                              <col style={{ width: 110 }} />
+                              <col style={{ width: 80 }} />
                               {canEdit && <col style={{ width: 90 }} />}
                             </colgroup>
                             <thead>
                               <tr>
                                 <th>설비</th>
-                                <th>위치</th>
+                                <th>사업장</th>
+                                <th>형식</th>
+                                <th>설치 장소</th>
                                 <th>용량</th>
                                 <th>상태</th>
                                 {canEdit && <th>배정 해제</th>}
@@ -233,13 +392,63 @@ export default function CompanyClient({ canEdit }: { canEdit: boolean }) {
                             <tbody>
                               {mine.length === 0 && (
                                 <tr>
-                                  <td className="empty" colSpan={canEdit ? 5 : 4}>조회된 데이터가 없습니다.</td>
+                                  <td className="empty" colSpan={canEdit ? 7 : 6}>조회된 데이터가 없습니다.</td>
                                 </tr>
                               )}
                               {mine.map((d) => (
                                 <tr key={d.device_id}>
                                   <td><b>{d.name}</b></td>
-                                  <td>{d.building}</td>
+                                  <td>
+                                    {canEdit ? (
+                                      <select
+                                        className="field"
+                                        aria-label="사업장"
+                                        value={d.site_id ?? ""}
+                                        onChange={(e) => void patchDevice(d.device_id, { site_id: e.target.value || null })}
+                                      >
+                                        <option value="">미지정</option>
+                                        {sites
+                                          .filter((x) => x.company_id === c.id)
+                                          .map((x) => (
+                                            <option key={x.id} value={x.id}>
+                                              {x.name}
+                                            </option>
+                                          ))}
+                                      </select>
+                                    ) : (
+                                      d.site_name ?? "-"
+                                    )}
+                                  </td>
+                                  <td className="center">
+                                    {canEdit ? (
+                                      <select
+                                        className="field"
+                                        aria-label="형식"
+                                        value={d.model ?? "4형"}
+                                        onChange={(e) => void patchDevice(d.device_id, { model: e.target.value })}
+                                      >
+                                        <option value="3형">3형</option>
+                                        <option value="4형">4형</option>
+                                      </select>
+                                    ) : (
+                                      d.model ?? "4형"
+                                    )}
+                                  </td>
+                                  <td>
+                                    {canEdit ? (
+                                      <input
+                                        className="field"
+                                        aria-label="설치 장소"
+                                        defaultValue={d.place ?? ""}
+                                        placeholder={d.building || "예: 제1전기실"}
+                                        onBlur={(e) => {
+                                          if (e.target.value !== (d.place ?? "")) void patchDevice(d.device_id, { place: e.target.value });
+                                        }}
+                                      />
+                                    ) : (
+                                      d.place || d.building || "-"
+                                    )}
+                                  </td>
                                   <td>{d.capacity}</td>
                                   <td className="center">
                                     <span className={`badge ${d.status}`}>{STATUS_LABEL[d.status]}</span>

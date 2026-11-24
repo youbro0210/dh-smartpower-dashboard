@@ -18,7 +18,8 @@ export async function GET(request: Request) {
   const page = Math.max(1, parseInt(params.get("page") ?? "1", 10) || 1);
   const pageSize = Math.min(200, Math.max(1, parseInt(params.get("pageSize") ?? "50", 10) || 50));
 
-  const where: string[] = [];
+  // 복귀·통신 복구 같은 이력(normal)은 알람 이력에 넣지 않습니다.
+  const where: string[] = ["level <> 'normal'"];
   const values: unknown[] = [];
 
   const allowed = await allowedDeviceIds(user);

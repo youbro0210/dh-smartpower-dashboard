@@ -631,3 +631,69 @@ END $$;
 -- 알림 수신자의 소속 고객사. NULL 이면 DH 직원 — 모든 설비의 알람과 시스템 알람을 받습니다.
 -- 지정하면 그 고객사 설비의 알람만 받습니다.
 ALTER TABLE notify_recipients ADD COLUMN IF NOT EXISTS company_id integer REFERENCES companies(id) ON DELETE CASCADE;
+
+-- ----------------------------------------------------------------------------
+-- 사업장 관제 화면 (2026-11-24)
+--   사업장: 고객사 아래 단계. 권역으로 전국 관제에서 묶어 봅니다.
+--   model : 3형(수소·메탄) / 4형(수소·메탄·온도·유면). 장비가 보내지 않으므로 등록 시 지정합니다.
+--   place : 설치 장소 (예: 제1전기실)
+--   temp_limit : 설비별 절연유 온도 경고 기준(℃). 비우면 공통 기준을 씁니다.
+--                서버 판정에만 쓰며 장비(temp_thres)로 보내지 않습니다.
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS sites (
+  id         serial PRIMARY KEY,
+  company_id integer REFERENCES companies(id) ON DELETE CASCADE,
+  name       text NOT NULL,
+  region     text NOT NULL DEFAULT '',
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE UNIQUE INDEX IF NOT EXISTS sites_name_key ON sites (COALESCE(company_id, 0), lower(name));
+
+ALTER TABLE devices ADD COLUMN IF NOT EXISTS site_id    integer REFERENCES sites(id) ON DELETE SET NULL;
+ALTER TABLE devices ADD COLUMN IF NOT EXISTS model      text NOT NULL DEFAULT '4형';
+ALTER TABLE devices ADD COLUMN IF NOT EXISTS place      text NOT NULL DEFAULT '';
+ALTER TABLE devices ADD COLUMN IF NOT EXISTS temp_limit double precision;
+ALTER TABLE devices DROP CONSTRAINT IF EXISTS devices_model_check;
+ALTER TABLE devices ADD CONSTRAINT devices_model_check CHECK (model IN ('3형', '4형'));
+CREATE INDEX IF NOT EXISTS devices_site_idx ON devices (site_id);
+
+-- 알림 처리 상태
+--   open = 미확인, acked = 확인(조치 중), done = 조치 완료, info = 이력(복귀 등 처리할 일이 없는 기록)
+-- 이 칸이 생기기 전 알람은 처리 대상에서 빼고 이력으로 둡니다.
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns
+                  WHERE table_name = 'alarm_events' AND column_name = 'status') THEN
+    ALTER TABLE alarm_events ADD COLUMN status text NOT NULL DEFAULT 'info';
+    ALTER TABLE alarm_events ALTER COLUMN status SET DEFAULT 'open';
+  END IF;
+END $$;
+ALTER TABLE alarm_events DROP CONSTRAINT IF EXISTS alarm_events_status_check;
+ALTER TABLE alarm_events ADD CONSTRAINT alarm_events_status_check
+  CHECK (status IN ('open', 'acked', 'done', 'info'));
+ALTER TABLE alarm_events ADD COLUMN IF NOT EXISTS acked_by uuid REFERENCES users(id) ON DELETE SET NULL;
+ALTER TABLE alarm_events ADD COLUMN IF NOT EXISTS acked_at timestamptz;
+ALTER TABLE alarm_events ADD COLUMN IF NOT EXISTS done_by  uuid REFERENCES users(id) ON DELETE SET NULL;
+ALTER TABLE alarm_events ADD COLUMN IF NOT EXISTS done_at  timestamptz;
+ALTER TABLE alarm_events ADD COLUMN IF NOT EXISTS note     text;
+ALTER TABLE alarm_events ADD COLUMN IF NOT EXISTS kind     text NOT NULL DEFAULT 'sensor';
+CREATE INDEX IF NOT EXISTS alarm_events_open_idx ON alarm_events (status) WHERE status IN ('open', 'acked');
+
+-- 복귀·통신 기록은 등급이 없으므로 normal 을 허용합니다. 알림 발송은 normal 을 보내지 않습니다.
+ALTER TABLE alarm_events DROP CONSTRAINT IF EXISTS alarm_events_level_check;
+ALTER TABLE alarm_events ADD CONSTRAINT alarm_events_level_check
+  CHECK (level IN ('normal', 'caution', 'warning', 'danger'));
+
+-- 설비의 연결 경로를 실제 마지막 수신 경로(수신 내역)로 맞춥니다. (2026-11-24)
+-- 예: 처음엔 모듈 직결로 들어왔다가 브릿지 경유로 바뀐 설비
+UPDATE devices d
+   SET bridge_id = CASE WHEN x.src_type IN ('bridge', 'gateway') THEN x.src_id END,
+       link_type = CASE WHEN x.src_type IN ('bridge', 'gateway') THEN x.src_type ELSE 'direct' END
+  FROM (SELECT DISTINCT ON (dev) dev, src_type, src_id
+          FROM ingest_log, unnest(device_ids) AS dev
+         WHERE kind = 'tele' AND status <> 'error'
+         ORDER BY dev, received_at DESC) x
+ WHERE x.dev = d.device_id
+   AND (d.bridge_id IS DISTINCT FROM CASE WHEN x.src_type IN ('bridge', 'gateway') THEN x.src_id END
+        OR d.link_type IS DISTINCT FROM CASE WHEN x.src_type IN ('bridge', 'gateway') THEN x.src_type ELSE 'direct' END)
+   AND (x.src_type NOT IN ('bridge', 'gateway') OR EXISTS (SELECT 1 FROM bridges b WHERE b.bridge_id = x.src_id));

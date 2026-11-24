@@ -3,7 +3,8 @@
  * 메뉴가 바뀌면 lib/nav.ts 와 함께 고칩니다.
  */
 export const SCREENS: [string, string][] = [
-  ["/", "홈"],
+  ["/", "사업장 관제"],
+  ["/national", "전국 통합 관제"],
   ["/devices", "설비 현황"],
   ["/alarms", "알람 이력"],
   ["/maintenance", "점검 이력"],

@@ -294,6 +294,8 @@ async function writeLog(row) {
 }
 
 async function dispatch(alarm) {
+  // 복귀·통신 복구 같은 이력(normal)은 알림 대상이 아닙니다.
+  if (!(alarm.level in SEVERITY_RANK)) return;
   if (alarm.id != null) {
     const claim = await pool.query(
       `INSERT INTO notify_dispatched (alarm_id) VALUES ($1) ON CONFLICT DO NOTHING`,

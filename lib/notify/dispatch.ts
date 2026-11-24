@@ -118,6 +118,8 @@ export interface DispatchSummary {
  */
 export async function dispatchAlarm(alarm: AlarmPayload): Promise<DispatchSummary> {
   const summary: DispatchSummary = { sent: 0, failed: 0, skipped: 0 };
+  // 복귀·통신 복구 같은 이력(normal)은 알림 대상이 아닙니다.
+  if (!(alarm.level in SEVERITY_RANK)) return summary;
 
   if (alarm.id != null) {
     const claimed = await execute(

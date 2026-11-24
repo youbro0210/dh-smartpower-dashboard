@@ -1,5 +1,7 @@
 "use client";
 
+import { storedLang } from "@/lib/i18n/translate";
+
 import { useEffect, useRef, useState } from "react";
 
 interface ChatMessage {
@@ -41,6 +43,7 @@ export default function Chatbot() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          lang: storedLang(),
           messages: history
             .filter((m) => m.role !== "tool")
             .map((m) => ({ role: m.role, content: m.content })),

@@ -49,6 +49,58 @@ export interface DeviceRegistry {
   /** 소속 고객사 */
   company_id?: number | null;
   company_name?: string | null;
+  /** 사업장 */
+  site_id?: number | null;
+  site_name?: string | null;
+  region?: string | null;
+  /** 3형(수소·메탄) / 4형(수소·메탄·온도·유면) */
+  model?: DeviceModel;
+  /** 설치 장소 (예: 제1전기실) */
+  place?: string;
+  /** 설비별 절연유 온도 경고 기준(℃). 없으면 공통 기준 */
+  temp_limit?: number | null;
+  /** 마지막으로 LED 해제 명령이 응답 완료된 시각 */
+  led_cleared_at?: string | null;
+  /** 실제로 값을 보낸 적이 있는 장비 (수신 기록 기준) */
+  has_data?: boolean;
+}
+
+export type DeviceModel = "3형" | "4형";
+
+/** 권역 */
+export const REGIONS = ["수도권", "강원", "충청", "호남", "영남", "제주"] as const;
+
+/**
+ * 알림 처리 상태
+ *   open = 미확인, acked = 확인, done = 조치 완료, info = 이력(복귀 등)
+ */
+export type EventStatus = "open" | "acked" | "done" | "info";
+
+export const EVENT_STATUS_LABEL: Record<EventStatus, string> = {
+  open: "미확인",
+  acked: "확인",
+  done: "완료",
+  info: "이력",
+};
+
+/** 사업장 관제 화면의 알림·이벤트 한 건 (같은 설비·항목의 미처리 건은 묶어서 한 건) */
+export interface SiteEvent {
+  ids: number[];
+  device_id: string | null;
+  unit: string;
+  item: string;
+  level: SeverityLevel;
+  kind: "sensor" | "link" | "admin";
+  status: EventStatus;
+  detail: string | null;
+  note: string | null;
+  created_at: string;
+  latest_at: string;
+  repeats: number;
+  acked_name: string | null;
+  acked_at: string | null;
+  done_at: string | null;
+  site_name: string | null;
 }
 
 // ---- 실시간 센서 원본값 (DB의 device_readings 테이블) ----

@@ -190,6 +190,7 @@ async function runTool(
               item AS 항목, level AS 등급, detail AS 내용
          FROM alarm_events
         WHERE created_at > now() - ($1 || ' hours')::interval
+          AND level <> 'normal'
           AND ($3::text[] IS NULL OR device_id = ANY($3))
         ORDER BY created_at DESC LIMIT $2`,
       [String(hours), limit, allowed]
@@ -244,6 +245,12 @@ interface AnthropicBlock {
   input?: Record<string, unknown>;
 }
 
+// 화면 언어가 영어·일본어면 그 언어로 답합니다.
+const LANG_NOTE: Record<string, string> = {
+  en: "\n\nThe user is using the English screen. Always answer in English.",
+  ja: "\n\nユーザーは日本語画面を使用しています。必ず日本語で回答してください。",
+};
+
 export async function POST(request: Request) {
   const user = await getSessionUser();
   if (!user) return NextResponse.json({ error: "로그인이 필요합니다." }, { status: 401 });
@@ -290,7 +297,7 @@ export async function POST(request: Request) {
           max_tokens: 1200,
           system: `${SYSTEM_PROMPT}\n\n현재 사용자: ${user.email} (등급: ${
             user.tier === "admin" ? "DH 관리자" : user.tier === "customer" ? `고객사 담당자(${user.company_name ?? "소속 미지정"})` : "DH 담당자"
-          })`,
+          })${LANG_NOTE[String(body?.lang ?? "ko")] ?? ""}`,
           tools: TOOLS,
           messages,
         }),

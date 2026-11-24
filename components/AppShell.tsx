@@ -7,6 +7,7 @@ import { useSession } from "@/lib/useSession";
 import { NAV, labelFor } from "@/lib/nav";
 import NavIcon from "./NavIcon";
 import Chatbot from "./Chatbot";
+import LangSwitch from "./LangSwitch";
 import { isAdminScreen } from "@/lib/cs/catalog";
 
 const TABS_KEY = "dh-open-tabs";
@@ -20,7 +21,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const { email, tier, companyName, loading, logout } = useSession();
-  const [tabs, setTabs] = useState<Tab[]>([{ href: "/", label: "홈" }]);
+  const [tabs, setTabs] = useState<Tab[]>([{ href: "/", label: "사업장 관제" }]);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [menuQuery, setMenuQuery] = useState("");
   const [collapsed, setCollapsed] = useState<string[]>([]);
@@ -59,10 +60,10 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (isAuthPage) return;
 
-    let stored: Tab[] = [{ href: "/", label: "홈" }];
+    let stored: Tab[] = [{ href: "/", label: "사업장 관제" }];
     try {
       const raw = sessionStorage.getItem(TABS_KEY);
-      if (raw) stored = JSON.parse(raw);
+      if (raw) stored = (JSON.parse(raw) as Tab[]).map((t) => ({ ...t, label: labelFor(t.href) === "페이지" ? t.label : labelFor(t.href) }));
     } catch {
       /* 손상된 값은 무시 */
     }
@@ -81,7 +82,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     e.preventDefault();
     e.stopPropagation();
     const next = tabs.filter((t) => t.href !== href);
-    const list = next.length ? next : [{ href: "/", label: "홈" }];
+    const list = next.length ? next : [{ href: "/", label: "사업장 관제" }];
     setTabs(list);
     try {
       sessionStorage.setItem(TABS_KEY, JSON.stringify(list));
@@ -146,6 +147,9 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         <span className="topbar-brand">DH 스마트파워 · 변압기 통합 모니터링</span>
 
         <div className="topbar-right">
+          <span className="topbar-lang">
+            <LangSwitch compact />
+          </span>
           {email && canRequestFix && (
             <Link href={`/cs/new?page=${encodeURIComponent(pathname)}`} className="topbar-link">
               수정 요청
@@ -261,6 +265,9 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         </nav>
 
         <div className="side-foot">
+          <div className="side-lang">
+            <LangSwitch compact />
+          </div>
           <p className="side-user">
             {loading ? "확인 중..." : email ? (
               <>

@@ -56,7 +56,7 @@ export async function GET(request: Request) {
   const allAlarms = await query<{ device_id: string | null; unit: string; level: string; count: number }>(
     `SELECT device_id, unit, level, count(*)::int AS count
        FROM alarm_events
-      WHERE created_at >= ${start} AND created_at < ${end}
+      WHERE created_at >= ${start} AND created_at < ${end} AND level <> 'normal'
       GROUP BY device_id, unit, level`,
     range
   );

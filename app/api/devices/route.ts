@@ -36,8 +36,19 @@ export async function GET() {
     query<{ device_id: string; bridge_id: string | null }>(
       `SELECT d.device_id, d.name, d.building, d.capacity, d.bridge_id, d.slave_addr, d.sort_order,
               d.link_type, d.online, d.last_seen_at, d.fw_version, d.interval_sec,
-              d.company_id, c.name AS company_name
-         FROM devices d LEFT JOIN companies c ON c.id = d.company_id
+              d.company_id, c.name AS company_name,
+              d.site_id, s.name AS site_name, s.region, d.model, d.place, d.temp_limit,
+              (SELECT max(k.acked_at) FROM device_commands k
+                WHERE k.command = 'led_clear' AND k.status = 'acked'
+                  AND (k.device_id = d.device_id OR (k.target_type = 'module' AND k.target_id = d.device_id))
+              ) AS led_cleared_at,
+              -- 실제로 값을 한 번이라도 보낸 장비인지 (수신 기록 기준)
+              (d.last_seen_at IS NOT NULL
+               OR EXISTS (SELECT 1 FROM device_readings r WHERE r.device_id = d.device_id)
+               OR EXISTS (SELECT 1 FROM telemetry t WHERE t.device_id = d.device_id)) AS has_data
+         FROM devices d
+         LEFT JOIN companies c ON c.id = d.company_id
+         LEFT JOIN sites s ON s.id = d.site_id
         ORDER BY d.sort_order, d.device_id`),
     query<{ bridge_id: string }>(`SELECT bridge_id, name, online, last_seen_at, kind, max_devices
              FROM bridges ORDER BY bridge_id`),
@@ -47,7 +58,7 @@ export async function GET() {
     ),
     query<{ device_id: string | null }>(`SELECT id, device_id, unit, item, level, detail, created_at
              FROM alarm_events
-            WHERE created_at > now() - interval '7 days'
+            WHERE created_at > now() - interval '7 days' AND level <> 'normal'
             ORDER BY created_at DESC
             LIMIT 50`),
     query<TrendRow>(`
@@ -106,9 +117,9 @@ export async function GET() {
 
   const alarms24h = await one<{ count: number }>(
     allowed === null
-      ? `SELECT count(*)::int AS count FROM alarm_events WHERE created_at > now() - interval '24 hours'`
+      ? `SELECT count(*)::int AS count FROM alarm_events WHERE created_at > now() - interval '24 hours' AND level <> 'normal'`
       : `SELECT count(*)::int AS count FROM alarm_events
-          WHERE created_at > now() - interval '24 hours' AND device_id = ANY($1)`,
+          WHERE created_at > now() - interval '24 hours' AND level <> 'normal' AND device_id = ANY($1)`,
     allowed === null ? [] : [allowed]
   );
 
@@ -209,9 +220,51 @@ export async function PATCH(request: Request) {
   if (!admin) return NextResponse.json({ error: "관리자 권한이 필요합니다." }, { status: 403 });
   const body = await request.json().catch(() => null);
   const deviceId = String(body?.device_id ?? "").trim();
-  const companyId = body?.company_id ? Number(body.company_id) : null;
   if (!deviceId) return NextResponse.json({ error: "설비를 지정하세요." }, { status: 400 });
-  const n = await execute(`UPDATE devices SET company_id = $1 WHERE device_id = $2`, [companyId, deviceId]);
-  if (!n) return NextResponse.json({ error: "설비를 찾을 수 없습니다." }, { status: 404 });
+
+  // 보낸 항목만 고칩니다.
+  const sets: string[] = [];
+  const values: unknown[] = [];
+  const set = (col: string, v: unknown) => {
+    values.push(v);
+    sets.push(`${col} = $${values.length}`);
+  };
+  if (body && "company_id" in body) set("company_id", body.company_id ? Number(body.company_id) : null);
+  if (body && "site_id" in body) set("site_id", body.site_id ? Number(body.site_id) : null);
+  if (body && "model" in body) {
+    if (!["3형", "4형"].includes(body.model)) {
+      return NextResponse.json({ error: "형식은 3형 또는 4형입니다." }, { status: 400 });
+    }
+    set("model", body.model);
+  }
+  if (body && "place" in body) set("place", String(body.place ?? "").trim().slice(0, 100));
+  let tempLimit: number | null | undefined;
+  if (body && "temp_limit" in body) {
+    tempLimit = body.temp_limit === null || body.temp_limit === "" ? null : Number(body.temp_limit);
+    if (tempLimit !== null && (!Number.isFinite(tempLimit) || tempLimit <= 0 || tempLimit > 150)) {
+      return NextResponse.json({ error: "온도 기준은 0 초과 150 이하로 입력하세요." }, { status: 400 });
+    }
+    set("temp_limit", tempLimit);
+  }
+  if (!sets.length) return NextResponse.json({ error: "변경할 항목이 없습니다." }, { status: 400 });
+
+  const before = await one<{ name: string; temp_limit: number | null }>(
+    `SELECT name, temp_limit FROM devices WHERE device_id = $1`,
+    [deviceId]
+  );
+  if (!before) return NextResponse.json({ error: "설비를 찾을 수 없습니다." }, { status: 404 });
+
+  values.push(deviceId);
+  await execute(`UPDATE devices SET ${sets.join(", ")} WHERE device_id = $${values.length}`, values);
+
+  // 온도 기준 변경은 이벤트 이력에 남깁니다.
+  if (tempLimit !== undefined && tempLimit !== before.temp_limit) {
+    const fmt = (v: number | null) => (v === null ? "공통 기준" : `${v} ℃`);
+    await execute(
+      `INSERT INTO alarm_events (device_id, unit, item, level, detail, status, kind, note)
+       VALUES ($1, $2, '온도 기준 변경', 'normal', $3, 'info', 'admin', $4)`,
+      [deviceId, before.name, `${fmt(before.temp_limit)} → ${fmt(tempLimit)}`, admin.full_name || admin.email]
+    );
+  }
   return NextResponse.json({ ok: true });
 }

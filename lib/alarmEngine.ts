@@ -7,7 +7,7 @@ import {
   SEVERITY_ORDER,
   ThresholdConfig,
 } from "./types";
-import { classifySensor, escalate } from "./thresholds";
+import { classifySensor, escalate, ruleFor } from "./thresholds";
 
 const NORMAL_LEVELS: SensorLevels = {
   h2: "normal",
@@ -61,18 +61,23 @@ export function evaluateDevice(
     };
   }
 
+  const is3 = registry.model === "3형";
   const sensorLevels: SensorLevels = {
     h2: classifySensor(reading.h2, config.h2, previous.h2, config.hysteresisMarginPct),
     ch4: classifySensor(reading.ch4, config.ch4, previous.ch4, config.hysteresisMarginPct),
-    temperature: classifySensor(
-      reading.temperature,
-      config.temperature,
-      previous.temperature,
-      config.hysteresisMarginPct
-    ),
+    // 3형은 온도·유면 센서가 없습니다.
+    temperature: is3
+      ? "normal"
+      : classifySensor(
+          reading.temperature,
+          ruleFor(config.temperature, registry.temp_limit),
+          previous.temperature,
+          config.hysteresisMarginPct
+        ),
     // 유면 저하 등급은 설정값입니다. 수집 서버(collector.py)와 같은 값을 씁니다.
-    oil_level:
-      reading.oil_level === "낮음"
+    oil_level: is3
+      ? "normal"
+      : reading.oil_level === "낮음"
         ? config.oilLowLevel ?? "warning"
         : reading.oil_level === "높음" && config.oilHighLevel && config.oilHighLevel !== "none"
           ? config.oilHighLevel

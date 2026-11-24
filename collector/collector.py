@@ -323,8 +323,27 @@ class Collector:
 
     def load_devices(self) -> None:
         with self.conn.cursor() as cur:
-            cur.execute("SELECT device_id FROM devices")
-            self.known_devices = {r["device_id"] for r in cur.fetchall()}
+            cur.execute("SELECT device_id, temp_limit FROM devices")
+            rows = cur.fetchall()
+        self.known_devices = {r["device_id"] for r in rows}
+        # 설비별 절연유 온도 경고 기준. 서버 판정에만 쓰며 장비로 보내지 않습니다.
+        self.temp_limits = {r["device_id"]: float(r["temp_limit"]) for r in rows if r["temp_limit"] is not None}
+
+    def rule_for(self, device_id: str, key: str) -> dict[str, Any]:
+        """
+        판정 기준. 온도는 설비별 경고 기준이 있으면 그 값을 경고로 쓰고,
+        주의는 공통 주의와 그 값 중 낮은 쪽, 위험은 공통 위험과 그 값 중 높은 쪽으로 둡니다.
+        (웹 화면 lib/thresholds.ts 의 ruleFor 와 같은 규칙)
+        """
+        rule = self.thresholds[key]
+        limit = getattr(self, "temp_limits", {}).get(device_id) if key == "temperature" else None
+        if limit is None:
+            return rule
+        return {
+            "caution": min(float(rule["caution"]), limit),
+            "warning": limit,
+            "danger": max(float(rule["danger"]), limit),
+        }
 
     # ---- 상태 보고 ----
 
@@ -416,6 +435,22 @@ class Collector:
         새로 만들었으면 True 를 돌려줍니다.
         """
         if device_id in self.known_devices:
+            # 실제로 들어온 경로가 등록 정보와 다르면(모듈 직결 → 브릿지 경유 등) 실제 경로로 맞춥니다.
+            path = (parent_id, link_type)
+            if getattr(self, "paths", {}).get(device_id) != path:
+                with self.conn.cursor() as cur:
+                    cur.execute(
+                        """
+                        UPDATE devices SET bridge_id = %s, link_type = %s
+                         WHERE device_id = %s
+                           AND (bridge_id IS DISTINCT FROM %s OR link_type IS DISTINCT FROM %s)
+                        """,
+                        (parent_id, link_type, device_id, parent_id, link_type),
+                    )
+                    if cur.rowcount:
+                        log.info("설비 %s 연결 경로를 실제 수신 경로로 변경 — %s %s", device_id, link_type, parent_id or "")
+                self.paths = getattr(self, "paths", {})
+                self.paths[device_id] = path
             return False
         with self.conn.cursor() as cur:
             cur.execute(
@@ -609,13 +644,22 @@ class Collector:
         with self.conn.cursor() as cur:
             cur.execute(
                 """
+                WITH before AS (SELECT online FROM devices WHERE device_id = %s)
                 UPDATE devices
                    SET online = true,
                        last_seen_at = GREATEST(COALESCE(last_seen_at, %s), %s)
                  WHERE device_id = %s
+             RETURNING name, (SELECT online FROM before) AS was_online,
+                       EXISTS (SELECT 1 FROM alarm_events a
+                                WHERE a.device_id = devices.device_id AND a.kind = 'link'
+                                  AND a.item = '통신 끊김') AS had_loss
                 """,
-                (measured_at, measured_at, device_id),
+                (device_id, measured_at, measured_at, device_id),
             )
+            row = cur.fetchone()
+        # 끊김으로 기록된 적이 있는 설비가 다시 들어오면 복구를 남깁니다.
+        if row and row["was_online"] is False and row["had_loss"]:
+            self.write_event(device_id, row["name"], "통신 복구", "link")
 
     def mark_stale_offline(self) -> None:
         """
@@ -629,9 +673,17 @@ class Collector:
                 UPDATE devices SET online = false
                  WHERE online = true
                    AND (last_seen_at IS NULL OR last_seen_at < now() - (%s || ' minutes')::interval)
+             RETURNING device_id, name
                 """,
                 (minutes,),
             )
+            lost = cur.fetchall()
+        for row in lost:
+            self.write_event(
+                row["device_id"], row["name"], "통신 끊김", "link",
+                level="warning", status="open", detail=f"{minutes}분 이상 수신 없음",
+            )
+        with self.conn.cursor() as cur:
             cur.execute(
                 """
                 UPDATE bridges SET online = false
@@ -679,7 +731,7 @@ class Collector:
                 # 값이 안 왔으면 직전 등급을 유지합니다. 임의로 정상으로 내리지 않습니다.
                 current[key] = prev.get(key, "normal")
                 continue
-            current[key] = classify(value, t[key], prev.get(key, "normal"), margin)
+            current[key] = classify(value, self.rule_for(device_id, key), prev.get(key, "normal"), margin)
 
         # 유면 저하를 몇 등급으로 볼지는 설정값입니다. 웹 화면과 같은 값을 씁니다.
         low_level = str(t.get("oilLowLevel", "warning"))
@@ -697,6 +749,10 @@ class Collector:
         name = self.device_name(device_id)
         for key, level in current.items():
             before = prev.get(key, "normal")
+            if level == "normal" and before != "normal":
+                # 이상에서 정상으로 돌아온 것은 처리할 일이 없는 이력으로 남깁니다.
+                self.write_event(device_id, name, f"{SENSOR_LABEL[key]} 정상 복귀", "sensor")
+                continue
             if SEVERITY_ORDER.index(level) <= SEVERITY_ORDER.index(before):
                 continue
             self.write_alarm(device_id, name, key, level, values.get(key), t)
@@ -750,7 +806,7 @@ class Collector:
         else:
             item = f"{label} {level_word} 임계치 초과"
             unit = SENSOR_UNIT.get(sensor, "")
-            limit = thresholds[sensor][level]
+            limit = self.rule_for(device_id, sensor)[level]
             detail = f"{fmt_num(value)} {unit} / 기준 {fmt_num(limit)}" if value is not None else f"기준 {fmt_num(limit)}"
 
         with self.conn.cursor() as cur:
@@ -760,6 +816,21 @@ class Collector:
             )
         self.stats["alarms"] += 1
         log.info("알람 기록 — %s %s (%s)", name, item, detail)
+
+    def write_event(
+        self, device_id: str, name: str, item: str, kind: str,
+        level: str = "normal", status: str = "info", detail: str = "",
+    ) -> None:
+        """복귀·통신 상태 기록. normal 등급은 알림을 보내지 않습니다."""
+        with self.conn.cursor() as cur:
+            cur.execute(
+                "INSERT INTO alarm_events (device_id, unit, item, level, detail, status, kind)"
+                " VALUES (%s,%s,%s,%s,%s,%s,%s)",
+                (device_id, name, item, level, detail, status, kind),
+            )
+        if status != "info":
+            self.stats["alarms"] += 1
+        log.info("이벤트 기록 — %s %s", name, item)
 
     def write_composite_alarm(
         self, device_id: str, name: str, level: str, count: int, labels: str,

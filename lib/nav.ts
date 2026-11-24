@@ -21,7 +21,8 @@ export const NAV: NavGroup[] = [
   {
     label: "모니터링",
     items: [
-      { href: "/", label: "홈", icon: "home" },
+      { href: "/", label: "사업장 관제", icon: "home" },
+      { href: "/national", label: "전국 통합 관제", icon: "building", staffOnly: true },
       { href: "/devices", label: "설비 현황", icon: "device" },
       { href: "/alarms", label: "알람 이력", icon: "bell" },
       { href: "/maintenance", label: "점검 이력", icon: "wrench" },

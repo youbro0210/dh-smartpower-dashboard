@@ -121,6 +121,17 @@ export async function POST(request: Request) {
     ]
   );
 
+  // LED 해제는 관리자 조치로 이벤트 이력에 남깁니다.
+  const ledDevice = command === "led_clear" ? (body.device_id ? String(body.device_id) : targetType === "module" ? targetId : null) : null;
+  if (ledDevice) {
+    await execute(
+      `INSERT INTO alarm_events (device_id, unit, item, level, detail, status, kind, note)
+       SELECT device_id, name, 'LED 해제 요청', 'normal', $2, 'info', 'admin', $3
+         FROM devices WHERE device_id = $1`,
+      [ledDevice, `명령 #${row?.id ?? ""}`, admin.full_name || admin.email]
+    );
+  }
+
   return NextResponse.json({ id: row?.id }, { status: 201 });
 }
 

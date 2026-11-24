@@ -35,6 +35,8 @@ interface DashboardState {
   connected: boolean;
   error: string | null;
   refresh: () => Promise<void>;
+  eventSeq: number;
+  lastReceived: { deviceId: string; at: number } | null;
   saveThresholds: (next: ThresholdConfig) => Promise<{ ok: boolean; error?: string }>;
   addDevice: (input: {
     name: string;
@@ -88,6 +90,10 @@ export function ConfigProvider({ children }: { children: ReactNode }) {
   const [connected, setConnected] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [tick, setTick] = useState(0);
+  // 이벤트(알람·복귀·통신)가 새로 기록될 때마다 1씩 늘어납니다. 이벤트 목록이 다시 읽는 신호입니다.
+  const [eventSeq, setEventSeq] = useState(0);
+  // 가장 최근에 계측값이 들어온 설비와 시각. 전송 경로 표시에 씁니다.
+  const [lastReceived, setLastReceived] = useState<{ deviceId: string; at: number } | null>(null);
 
   // 센서별 직전 등급. 히스테리시스 판정의 입력이며 렌더 중에는 건드리지 않습니다.
   const prevLevels = useRef<Record<string, SensorLevels>>({});
@@ -182,6 +188,7 @@ export function ConfigProvider({ children }: { children: ReactNode }) {
         try {
           const row = JSON.parse((event as MessageEvent).data) as DeviceReading;
           setReadings((prev) => ({ ...prev, [row.device_id]: row }));
+          setLastReceived({ deviceId: row.device_id, at: Date.now() });
         } catch {
           /* 무시 */
         }
@@ -190,6 +197,9 @@ export function ConfigProvider({ children }: { children: ReactNode }) {
       source.addEventListener("alarm_event", (event) => {
         try {
           const row = JSON.parse((event as MessageEvent).data);
+          setEventSeq((n) => n + 1);
+          // 복귀·통신 복구 같은 이력은 알람 목록과 건수에 넣지 않습니다.
+          if (row.level === "normal") return;
           setAlarms((prev) =>
             [
               {
@@ -343,6 +353,8 @@ export function ConfigProvider({ children }: { children: ReactNode }) {
         connected,
         error,
         refresh,
+        eventSeq,
+        lastReceived,
         saveThresholds,
         addDevice,
         removeDevice,

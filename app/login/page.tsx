@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import AuthAside from "@/components/AuthAside";
 import NavIcon from "@/components/NavIcon";
+import LangSwitch from "@/components/LangSwitch";
 
 function LoginForm() {
   const params = useSearchParams();
@@ -60,6 +61,9 @@ function LoginForm() {
 
       <div className="auth-main">
         <div className="auth-card">
+          <div className="auth-lang">
+            <LangSwitch />
+          </div>
           <div className="auth-brand">
             <div className="brand-mark">DH</div>
             <div className="brand-text">

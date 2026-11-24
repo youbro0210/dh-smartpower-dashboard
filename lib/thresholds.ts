@@ -29,3 +29,17 @@ export function escalate(level: SeverityLevel): SeverityLevel {
   const idx = SEVERITY_ORDER.indexOf(level);
   return SEVERITY_ORDER[Math.min(idx + 1, SEVERITY_ORDER.length - 1)];
 }
+
+/**
+ * 설비별 온도 기준을 반영한 판정 기준.
+ * 설비에 경고 기준(temp_limit)이 있으면 그 값을 경고로, 주의는 공통 주의와 그 값 중 낮은 쪽,
+ * 위험은 공통 위험과 그 값 중 높은 쪽으로 둡니다. 수집 서버(collector.py rule_for)와 같은 규칙입니다.
+ */
+export function ruleFor(rule: ThresholdRule, limit: number | null | undefined): ThresholdRule {
+  if (limit === null || limit === undefined || !Number.isFinite(limit)) return rule;
+  return {
+    caution: Math.min(rule.caution, limit),
+    warning: limit,
+    danger: Math.max(rule.danger, limit),
+  };
+}
