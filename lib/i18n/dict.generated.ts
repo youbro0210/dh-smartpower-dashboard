@@ -1202,4 +1202,5 @@ export const ENTRIES: [string, string, string][] = [
   ["· 브릿지 경유", "· Via bridge", "· ブリッジ経由"],
   ["{0} · 설비별", "{0} · per unit", "{0} · 設備別"],
   ["미조치 {0}건", "{0} unresolved", "未対応 {0}件"],
+  ["연결 정보", "Connection", "接続情報"],
 ];

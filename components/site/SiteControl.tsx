@@ -159,7 +159,7 @@ export default function SiteControl() {
       {error && <div className="banner error">{`데이터를 불러오지 못했습니다 — ${error}`}</div>}
       {notice && <div className={`banner ${notice.ok ? "ok" : "error"}`}>{notice.text}</div>}
 
-      <div className="kpi-strip">
+      <div className="kpi-strip sc-kpi">
         <div className="kpi">
           <div className="kpi-label">설치 변압기</div>
           <div className="kpi-value">{`${units.length}대`}</div>
@@ -194,13 +194,13 @@ export default function SiteControl() {
             <table className="fixed sc-unit-table">
               <colgroup>
                 <col />
-                <col style={{ width: 90 }} />
-                <col style={{ width: 90 }} />
-                <col style={{ width: 80 }} />
-                <col style={{ width: 70 }} />
-                <col style={{ width: 112 }} />
-                <col style={{ width: 112 }} />
-                <col style={{ width: 64 }} />
+                <col style={{ width: "15%" }} />
+                <col style={{ width: "15%" }} />
+                <col style={{ width: "12%" }} />
+                <col style={{ width: "9%" }} />
+                <col style={{ width: "12%" }} />
+                <col style={{ width: "13%" }} />
+                <col style={{ width: "7%" }} />
               </colgroup>
               <thead>
                 <tr>
@@ -228,10 +228,7 @@ export default function SiteControl() {
                   const gas = (level: SeverityLevel, v: number) =>
                     off ? (
                       // 통신이 끊기면 마지막으로 받은 값을 흐리게 둡니다.
-                      <span className="sc-last">
-                        {level === "normal" ? "미발생" : "발생"}
-                        <small>{fmtValue(v)}</small>
-                      </span>
+                      <span className="sc-last">{`${fmtValue(v)} ppm`}</span>
                     ) : (
                       <span className={`sq ${lv(level)}`}>
                         {level === "normal" ? "미발생" : "발생"}
@@ -251,8 +248,8 @@ export default function SiteControl() {
                           <span className="sc-cell-sub">{[d.place || d.building, d.model ?? "4형"].filter(Boolean).join(" · ")}</span>
                         </div>
                       </td>
-                      <td data-label="수소 H₂">{gas(d.sensorLevels.h2, d.h2)}</td>
-                      <td data-label="메탄 CH₄">{gas(d.sensorLevels.ch4, d.ch4)}</td>
+                      <td className="num" data-label="수소 H₂">{gas(d.sensorLevels.h2, d.h2)}</td>
+                      <td className="num" data-label="메탄 CH₄">{gas(d.sensorLevels.ch4, d.ch4)}</td>
                       <td className="num" data-label="절연유 온도">
                         {!is4 ? (
                           <span className="t-muted">-</span>
@@ -274,7 +271,7 @@ export default function SiteControl() {
                       <td className="center" data-label="상태">
                         <span className={`sq ${d.status === "normal" ? "ok" : d.status}`}>{STATUS_LABEL[d.status]}</span>
                       </td>
-                      <td className={`center${fresh(d) ? " sc-fresh" : ""}`} data-label="마지막 수신">
+                      <td className={`center${fresh(d) ? " sc-fresh" : ""}${off ? " t-danger" : ""}`} data-label="마지막 수신">
                         {new Date(d.updated_at).getTime() > 0 ? fmtWhen(d.updated_at) : "-"}
                       </td>
                       <td className={`num${n ? " t-warning" : ""}`} data-label="미조치">
@@ -502,11 +499,12 @@ function SelectedPanel({
         <span className={`sq ${d.status === "normal" ? "ok" : d.status}`}>{STATUS_LABEL[d.status]}</span>
       </div>
 
+      <div className="sc-detail-grid">
       <table className="fixed sc-measure">
         <colgroup>
-          <col style={{ width: 92 }} />
-          <col style={{ width: 88 }} />
-          <col style={{ width: 92 }} />
+          <col style={{ width: "24%" }} />
+          <col style={{ width: "22%" }} />
+          <col style={{ width: "22%" }} />
           <col />
         </colgroup>
         <thead>
@@ -533,9 +531,14 @@ function SelectedPanel({
 
       <table className="fixed sc-measure sc-facts">
         <colgroup>
-          <col style={{ width: 92 }} />
+          <col style={{ width: "26%" }} />
           <col />
         </colgroup>
+        <thead>
+          <tr>
+            <th colSpan={2}>연결 정보</th>
+          </tr>
+        </thead>
         <tbody>
           <tr>
             <th>전송 경로</th>
@@ -569,6 +572,8 @@ function SelectedPanel({
           </tr>
         </tbody>
       </table>
+
+      </div>
 
       <div className="sc-selected-actions">
         <button className="btn sm" onClick={onDetail}>
