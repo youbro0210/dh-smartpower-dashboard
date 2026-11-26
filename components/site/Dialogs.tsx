@@ -43,11 +43,14 @@ export function DeviceDetailDialog({
   device: d,
   events,
   thresholds,
+  staff,
   onClose,
 }: {
   device: DeviceEvaluated;
   events: SiteEvent[];
   thresholds: ThresholdConfig;
+  /** DH 직원이면 펌웨어 등 장비 정보를 함께 보여 줍니다. */
+  staff: boolean;
   onClose: () => void;
 }) {
   const is4 = d.model !== "3형";
@@ -61,7 +64,7 @@ export function DeviceDetailDialog({
     ["연결", `${LINK_TYPE_LABEL[d.link_type ?? "direct"]}${d.bridge_id ? ` · ${d.bridge_id}` : ""}`],
     ["상태", STATUS_LABEL[d.status]],
     ["마지막 수신", new Date(d.updated_at).getTime() > 0 ? fmtDateTime(d.updated_at, true) : "-"],
-    ["펌웨어", d.fw_version ?? "-"],
+    staff ? ["펌웨어", d.fw_version ?? "-"] : ["고객사", d.company_name ?? "-"],
   ];
   return (
     <Modal title={`${d.name} 장치 상세`} onClose={onClose} wide>

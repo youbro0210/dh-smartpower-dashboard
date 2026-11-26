@@ -18,12 +18,14 @@ export interface NavGroup {
 
 export const NAV: NavGroup[] = [
   // ── 고객사 담당자와 DH 직원이 함께 보는 메뉴 ──
+  // 권한 기준(관제 화면 시안): 고객사 담당자는 자기 사업장의 관제·알림 처리와 이력·보고서까지,
+  // 설비 등록 정보와 전문 진단(가스 진단·열화 수명)·전국 관제는 DH 직원만 봅니다.
   {
     label: "모니터링",
     items: [
       { href: "/", label: "사업장 관제", icon: "home" },
       { href: "/national", label: "전국 통합 관제", icon: "building", staffOnly: true },
-      { href: "/devices", label: "설비 현황", icon: "device" },
+      { href: "/devices", label: "설비 현황", icon: "device", staffOnly: true },
       { href: "/alarms", label: "알람 이력", icon: "bell" },
       { href: "/maintenance", label: "점검 이력", icon: "wrench" },
     ],
@@ -32,8 +34,8 @@ export const NAV: NavGroup[] = [
     label: "분석",
     items: [
       { href: "/trend", label: "추세 분석", icon: "chart" },
-      { href: "/diagnosis", label: "가스 진단", icon: "flask" },
-      { href: "/aging", label: "열화·수명", icon: "thermo" },
+      { href: "/diagnosis", label: "가스 진단", icon: "flask", staffOnly: true },
+      { href: "/aging", label: "열화·수명", icon: "thermo", staffOnly: true },
       { href: "/report", label: "운영 보고서", icon: "report" },
     ],
   },

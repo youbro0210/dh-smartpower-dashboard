@@ -397,6 +397,7 @@ export default function SiteControl() {
           device={devices.find((x) => x.device_id === detail.device_id) ?? detail}
           events={events}
           thresholds={thresholds}
+          staff={tier !== "customer"}
           onClose={() => setDetail(null)}
         />
       )}

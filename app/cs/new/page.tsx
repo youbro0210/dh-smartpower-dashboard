@@ -4,10 +4,14 @@ import PageHeader from "@/components/PageHeader";
 import { getSessionUser } from "@/lib/auth";
 import { query } from "@/lib/db";
 import { isAdminScreen, SCREENS, screenName } from "@/lib/cs/catalog";
+import { NAV } from "@/lib/nav";
 import { KIND_LABEL, STATUS_LABEL } from "@/lib/cs/engine";
 import CsForm from "./CsForm";
 
 export const dynamic = "force-dynamic";
+
+// 고객사 담당자에게 보이지 않는 화면은 요청 대상 목록에서도 뺍니다.
+const STAFF_SCREENS = new Set(NAV.flatMap((g) => g.items).filter((i) => i.staffOnly || i.adminOnly).map((i) => i.href));
 
 /** 요청 접수입니다. 아래는 내 요청이며, 답할 보완 요청을 맨 위에 둡니다. */
 export default async function CsNewPage({ searchParams }: { searchParams: Record<string, string | string[] | undefined> }) {
@@ -35,7 +39,10 @@ export default async function CsNewPage({ searchParams }: { searchParams: Record
           </Link>
         }
       />
-      <CsForm screens={SCREENS.filter(([h]) => !isAdminScreen(h))} initialPage={initialPage} />
+      <CsForm
+        screens={SCREENS.filter(([h]) => !isAdminScreen(h) && !(user.tier === "customer" && STAFF_SCREENS.has(h)))}
+        initialPage={initialPage}
+      />
 
       <h2 className="cs-section-title">내 요청</h2>
       <div className="table-wrap cs-mine">

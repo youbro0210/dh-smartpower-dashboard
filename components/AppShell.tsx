@@ -124,6 +124,11 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     );
     if (staffOnly) router.replace("/");
   }, [isCustomer, pathname, router]);
+
+  // 고객사 담당자에게는 직원 전용 화면 탭을 남기지 않습니다.
+  const hiddenForCustomer = (href: string) =>
+    isCustomer &&
+    NAV.flatMap((g) => g.items).some((i) => (i.staffOnly || i.adminOnly) && (href === i.href || href.startsWith(`${i.href}/`)));
   const canRequestFix = !pathname.startsWith("/cs") && !isAdminScreen(pathname);
 
   // 로그인·회원가입 화면은 셸 없이 그대로 보여줍니다.
@@ -287,7 +292,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       </aside>
 
       <nav className="tabbar" aria-label="열린 화면">
-        {tabs.map((tab) => (
+        {tabs.filter((tab) => !hiddenForCustomer(tab.href)).map((tab) => (
           <Link
             key={tab.href}
             href={tab.href}

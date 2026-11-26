@@ -23,6 +23,8 @@ const NORMAL_LIFE_HOURS = 180_000;
 export async function GET(request: Request) {
   const user = await getSessionUser();
   if (!user) return NextResponse.json({ error: "로그인이 필요합니다." }, { status: 401 });
+  // 전문 진단 결과는 DH 직원만 봅니다.
+  if (user.tier === "customer") return NextResponse.json({ error: "권한이 없습니다." }, { status: 403 });
 
   const params = new URL(request.url).searchParams;
   const days = Math.min(365, Math.max(1, parseInt(params.get("days") ?? "30", 10) || 30));
